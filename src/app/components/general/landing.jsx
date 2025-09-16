@@ -46,7 +46,7 @@ const HeroSection = () => (
     <h1 className="text-5xl md:text-7xl font-bold tracking-tight font-serif mb-4 max-w-4xl mx-auto">
         Manage 
     <span className=" ml-3 relative inline-block bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent animate-gradient">
-        Creative Content
+         Creative Content
     </span>
      End-to-End. In One Place.
     </h1>
