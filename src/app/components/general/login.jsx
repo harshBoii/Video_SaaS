@@ -14,10 +14,10 @@ export default function LoginPage() {
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8 }}
-        className="w-1/2 bg-gradient-to-br from-purple-700 via-purple-500 to-purple-300 flex items-center justify-center"
+        className="w-1/2 bg-gradient-to-br from-purple-700 via-purple-300 to-purple-600 flex items-center justify-center"
       >
         <motion.img
-          src="https://images.unsplash.com/photo-1515378791036-0648a3ef77b2"
+          src="https://images.unsplash.com/photo-1706274220670-ac4457da7bc7?q=80&w=1760&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Video SaaS Wallpaper"
           className="h-full w-full object-cover opacity-80"
           initial={{ scale: 1.1 }}
