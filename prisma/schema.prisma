@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+
+model Company {
+  id          String       @id @default(cuid())
+  name        String       
+  domain      String?      @unique// e.g., company.com
+  description String?
+  employees   Employee[]
+  departments Department[]
+  roles       Role[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id        String      @id @default(cuid())
+  name      String
+  company   Company     @relation(fields: [companyId], references: [id])
+  companyId String
+  parentId  String?     // self-relation for department tree
+  parent    Department? @relation("SubDepartments", fields: [parentId], references: [id])
+  children  Department[] @relation("SubDepartments")
+  employees Employee[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  company     Company      @relation(fields: [companyId], references: [id])
+  companyId   String
+  employees   Employee[]
+  permissions RolePermission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([name, companyId]) // 👈 add this
+
+}
+
+model Permission {
+  id          String          @id @default(cuid())
+  name        String          @unique// e.g., "view_dashboard", "manage_users"
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Employee {
+  id            String     @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String     @unique
+  passwordHash  String
+  status        EmployeeStatus @default(ACTIVE)
+  lastLogin     DateTime?
+  company       Company    @relation(fields: [companyId], references: [id])
+  companyId     String
+  role          Role?      @relation(fields: [roleId], references: [id])
+  roleId        String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  departmentId  String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
