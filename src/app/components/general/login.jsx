@@ -1,11 +1,49 @@
 'use client';
-
+// import CircularText from "@/components/CircularText";
+import CurvedLoop from "@/components/CircularText";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useRouter } from "next/router";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      // Save JWT in localStorage (later replace with cookie for production)
+      localStorage.setItem("token", data.token);
+
+      // Redirect user based on backend decision
+      router.push(data.redirect);
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong, please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-screen font-sans">
@@ -17,7 +55,7 @@ export default function LoginPage() {
         className="w-1/2 bg-gradient-to-br from-purple-700 via-purple-300 to-purple-600 flex items-center justify-center"
       >
         <motion.img
-          src="https://images.unsplash.com/photo-1706274220670-ac4457da7bc7?q=80&w=1760&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          src="/images/Login_Side.png"
           alt="Video SaaS Wallpaper"
           className="h-full w-full object-cover opacity-80"
           initial={{ scale: 1.1 }}
@@ -28,6 +66,16 @@ export default function LoginPage() {
 
       {/* Right Login Section */}
       <div className="w-1/2 flex flex-col items-center justify-center bg-white p-12 shadow-lg">
+      <CurvedLoop 
+        marqueeText="Create-OS ✦ Where Creativity Meets Control ✦"
+        speed={3}
+        curveAmount={500}
+        direction="right"
+        interactive={true}
+        className="-mt-20"
+
+        />
+
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -35,6 +83,7 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Logo / Title */}
+
           <motion.h1
             className="text-3xl font-bold text-purple-700 mb-6 tracking-wide text-center"
             initial={{ opacity: 0, y: -20 }}
@@ -79,11 +128,13 @@ export default function LoginPage() {
 
             {/* Login Button */}
             <motion.button
+              type="submit"
+              disabled={loading}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-purple-700 transition"
+              className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-purple-700 transition disabled:opacity-50"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </motion.button>
           </motion.form>
 
