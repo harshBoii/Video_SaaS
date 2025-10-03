@@ -30,7 +30,7 @@ export async function GET(req) {
         id: c.id,
         companyName: c.name,
         adminName: admin ? `${admin.firstName} ${admin.lastName}` : 'N/A',
-        adminEmail: admin?.email || 'N/A',
+        domain: c?.domain || 'N/A',
         package: "Standard",   // you could add `plan` field in Company later
         remaining: "Active"    // could be license expiry logic
       }

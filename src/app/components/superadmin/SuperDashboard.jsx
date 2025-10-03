@@ -6,6 +6,7 @@ import { FiUsers, FiBriefcase, FiPlus, FiSearch } from 'react-icons/fi';
 import AddCompanyModal from './AddCompanyModal';
 import CompanyEmployeesModal from './CompanyEmployeesModal';
 import DashboardCharts from'./DashboardCharts'
+import { TypeAnimation } from "react-type-animation"; 
 
 const StatCard = ({ icon, value, label }) => (
   <motion.div
@@ -86,25 +87,66 @@ const SuperDashboard = () => {
     >
       {/* Hero Section */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-purple-600 to-indigo-500 text-white p-8 rounded-2xl shadow-lg mb-8 flex justify-between items-center"
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="relative overflow-hidden 
+                 bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900 
+                 text-white p-10 rounded-3xl shadow-xl mb-8 
+                 flex justify-between items-center"
+    >
+      {/* Subtle floating glow shapes */}
+      <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 right-0 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl"></div>
+
+      {/* Text Section */}
+      <div>
+        <h2 className="text-4xl font-extrabold tracking-tight drop-shadow-md">
+          Welcome back,&nbsp;
+          <span className="bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+            <TypeAnimation
+              sequence={[
+                "Super Admin", 2000, // display for 2s
+                "Leader", 2000,
+                "Visionary", 2000,
+                "Super Admin", 2000,
+              ]}
+              wrapper="span"
+              cursor={true}
+              repeat={Infinity}
+            />
+          </span>
+        </h2>
+        <p className="mt-3 text-lg opacity-80 max-w-md">
+          Manage your <span className="font-semibold">companies</span> and{" "}
+          <span className="font-semibold">employees</span> with precision &
+          style.
+        </p>
+      </div>
+
+      {/* Action Button */}
+      <motion.button
+        whileHover={{
+          scale: 1.05,
+          backgroundColor: "rgba(255,255,255,0.1)",
+          backdropFilter: "blur(6px)",
+          color: "#fff",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+        }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 220 }}
+        className="relative z-10 bg-white/10 border border-white/20 
+                   backdrop-blur-md rounded-2xl px-6 py-3 
+                   flex items-center gap-3 text-white font-semibold shadow-lg"
+        onClick={() => setIsAddModalOpen(true)}
       >
-        <div>
-          <h2 className="text-3xl font-bold">Welcome back, Super Admin!</h2>
-          <p className="mt-2 opacity-90">Manage your companies and employees with speed and style .</p>
-        </div>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-3 bg-white text-purple-600 font-semibold rounded-xl shadow hover:bg-gray-100 transition"
-        >
-          <FiPlus /> Add Company
-        </button>
-      </motion.div>
+        <FiPlus className="text-xl" /> Add Company
+      </motion.button>
+    </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <StatCard icon={<FiUsers size={24} />} value={stats.totalEmployees} label="Employees Verified" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        {/* <StatCard icon={<FiUsers size={24} />} value={stats.totalEmployees} label="Employees Verified" /> */}
         <StatCard icon={<FiBriefcase size={24} />} value={stats.totalCompanies} label="Total Companies" />
         <StatCard icon={<FiPlus size={24} />} value={companies.length} label="Currently Active" />
       </div>
@@ -128,7 +170,7 @@ const SuperDashboard = () => {
         className="bg-white border border-gray-200 rounded-2xl p-6"
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">Newly Joined Companies</h3>
+          <h3 className="text-xl font-bold text-gray-800">Companies</h3>
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -180,8 +222,8 @@ const SuperDashboard = () => {
                   >
                     <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap flex items-center gap-3">
                       <Image
-                        src={`https://ui-avatars.com/api/?name=${company.adminName.replace(' ', '+')}&background=random`}
-                        alt={company.adminName}
+                        src={`https://ui-avatars.com/api/?name=${company.companyName.replace(' ', '+')}&background=random`}
+                        alt={company.companyName}
                         width={32}
                         height={32}
                         className="rounded-full"
@@ -189,7 +231,7 @@ const SuperDashboard = () => {
                       />
                       {company.companyName}
                     </th>
-                    <td className="px-6 py-4">{company.adminEmail}</td>
+                    <td className="px-6 py-4">{company.domain}</td>
                     <td className="px-6 py-4">
                       <span className="px-3 py-1 text-xs rounded-full bg-purple-100 text-purple-700 font-semibold">
                         {company.package}
