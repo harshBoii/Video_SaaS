@@ -1,9 +1,9 @@
 'use client';
-// import CircularText from "@/components/CircularText";
+
 import CurvedLoop from "@/components/CircularText";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function LoginPage() {
       }
 
       // Save JWT in localStorage (later replace with cookie for production)
-      localStorage.setItem("token", data.token);
+      // localStorage.setItem("token", data.token);
 
       // Redirect user based on backend decision
       router.push(data.redirect);
@@ -95,6 +95,7 @@ export default function LoginPage() {
 
           {/* Input fields */}
           <motion.form
+            onSubmit={handleSubmit}
             className="space-y-5"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

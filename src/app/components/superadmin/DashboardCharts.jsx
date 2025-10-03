@@ -46,7 +46,7 @@ const chartOptions = {
       padding: {
         top: 10,
         bottom: 20,
-      }
+      },
     },
   },
 };
@@ -60,8 +60,7 @@ const DashboardCharts = () => {
     const fetchChartData = async () => {
       try {
         setLoading(true);
-        // This API call will return data for ALL companies because the user is a Super Admin
-        const response = await fetch('/api/superadmin/charts-dashboard');
+        const response = await fetch('/api/superadmin/dashboardCharts');
         if (!response.ok) throw new Error('Failed to load chart data.');
         const data = await response.json();
         setChartData(data);
@@ -87,49 +86,73 @@ const DashboardCharts = () => {
   if (error) return <div className="h-[30vh] flex items-center justify-center"><p className="text-red-500">Error: {error}</p></div>;
   if (!chartData) return null;
 
-  // Prepare data for each chart from the API response
-  const verificationChartData = {
-    labels: ['Verified Employees', 'Pending Employees'],
+  // 1. Employee status (active vs inactive vs suspended)
+  const statusChartData = {
+    labels: chartData.statusData.map(s => s.status),
     datasets: [{
-      data: [chartData.verificationStats?.verified, chartData.verificationStats?.unverified],
-      backgroundColor: ['#3b82f6', '#93c5fd'], 
-      borderColor: ['black', 'white'],
+      data: chartData.statusData.map(s => s.count),
+      backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], // green, yellow, red
       borderWidth: 1,
     }],
   };
 
-  const campaignChartData = {
-    labels: chartData.campaignMembers.map(c => c.name),
+  // 2. Employees per role
+  const roleChartData = {
+    labels: chartData.roleData.map(r => r.role),
     datasets: [{
-      label: 'Members',
-      data: chartData.campaignMembers.map(c => c.members),
+      label: 'Employees',
+      data: chartData.roleData.map(r => r.count),
       backgroundColor: '#60a5fa',
       borderColor: '#2563eb',
       borderWidth: 1,
     }],
   };
-  
-  const companySizeChartData = {
-    labels: chartData.companySizes.map(c => c.name),
+
+  // 3. Employees per department
+  const deptChartData = {
+    labels: chartData.deptData.map(d => d.department),
     datasets: [{
       label: 'Employees',
-      data: chartData.companySizes.map(c => c.employees),
-      backgroundColor: '#3b82f6',
-      borderColor: '#93c5fd',
+      data: chartData.deptData.map(d => d.count),
+      backgroundColor: '#a78bfa',
+      borderColor: '#7c3aed',
       borderWidth: 1,
     }],
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[30vh]">
+      {/* Employee status */}
       <div className="bg-white p-4 rounded-lg shadow-md">
-        <Doughnut options={{...chartOptions, plugins: {...chartOptions.plugins, title: {...chartOptions.plugins.title, text: 'Overall Verification Status'}}}} data={verificationChartData} />
+        <Doughnut
+          options={{
+            ...chartOptions,
+            plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Employee Status' } },
+          }}
+          data={statusChartData}
+        />
       </div>
+
+      {/* Employees per role */}
       <div className="bg-white p-4 rounded-lg shadow-md">
-        <Bar options={{...chartOptions, plugins: {...chartOptions.plugins, title: {...chartOptions.plugins.title, text: 'Top Campaigns by Members'}}}} data={campaignChartData} />
+        <Bar
+          options={{
+            ...chartOptions,
+            plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Employees per Role' } },
+          }}
+          data={roleChartData}
+        />
       </div>
+
+      {/* Employees per department */}
       <div className="bg-white p-4 rounded-lg shadow-md">
-        <Bar options={{...chartOptions, plugins: {...chartOptions.plugins, title: {...chartOptions.plugins.title, text: 'Top Companies by Employee Size'}}}} data={companySizeChartData} />
+        <Bar
+          options={{
+            ...chartOptions,
+            plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Employees per Department' } },
+          }}
+          data={deptChartData}
+        />
       </div>
     </div>
   );

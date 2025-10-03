@@ -7,7 +7,7 @@ import Sparkle from "react-sparkle";
 import { useState } from 'react';
 import Marquee from "react-fast-marquee";
 import { FaTwitter, FaGithub, FaLinkedin } from "react-icons/fa";
-
+import Link from 'next/link';
 
 // Helper for animations
 const sectionAnimation = {
@@ -57,19 +57,21 @@ const HeroSection = () => (
         <button className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-colors duration-300">
           Start Free Trial
         </button>
-    <button className="relative bg-transparent border-2 border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors duration-300">
-      Watch Demo
-            <Sparkle
-            color="#FFD700" 
-            count={3}
-            minSize={20}
-            maxSize={25}
-            flicker={true}
-            fadeOutSpeed={10}
-            overflowPx={0}
-            style={{ position: "absolute", top: 0, right: 0 }}
-            />
-    </button>
+    <Link href="/login" passHref>
+      <button className="relative bg-transparent border-2 border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors duration-300">
+        Login
+        <Sparkle
+          color="#FFD700"
+          count={3}
+          minSize={20}
+          maxSize={25}
+          flicker={true}
+          fadeOutSpeed={10}
+          overflowPx={0}
+          style={{ position: "absolute", top: 0, right: 0 }}
+        />
+      </button>
+    </Link>
       </div>
     </motion.div>
     <motion.div

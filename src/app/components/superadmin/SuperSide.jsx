@@ -1,7 +1,7 @@
 'use client'; // Required for using hooks like usePathname
 import React from 'react';
 import styles from './SuperSide.module.css';
-
+import Logo from '../general/logo';
 // 1. Import Link for navigation and usePathname for active state
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -38,7 +38,7 @@ const SuperSide = () => {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
-        VETTIFY
+        <Logo/>
       </div>
       <nav className={styles.nav}>
         {/* 3. Use the corrected NavItem with href props for each link */}
