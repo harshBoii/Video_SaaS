@@ -6,7 +6,7 @@ import Logo from '../general/logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { FiGrid, FiUploadCloud, FiCheckSquare, FiBarChart2, FiHelpCircle, FiSettings,FiPlus,FiClipboard,FiCodesandbox } from 'react-icons/fi';
+import { FiGrid, FiUploadCloud, FiMap , FiCheckSquare, FiBarChart2, FiHelpCircle, FiSettings,FiPlus,FiClipboard,FiCodesandbox } from 'react-icons/fi';
 
 // 2. Modify NavItem to handle links and dynamic active state
 const NavItem = ({ icon, label, href }) => {
@@ -43,7 +43,7 @@ const AdminSide = () => {
       <nav className={styles.nav}>
         {/* 3. Use the corrected NavItem with href props for each link */}
         <NavItem icon={<FiGrid />} href="/admin" label="Dashboard" />
-        <NavItem icon={<FiClipboard />} href="/admin/approvalPipeline" label="Subscription" />
+        <NavItem icon={<FiMap />} href="/admin/approvalPipeline" label="Flow" />
         {/* <NavItem icon={<FiPlus />} href="/superadmin/role" label="Create Role" /> */}
         <NavItem icon={<FiBarChart2 />} href="/admin/reports" label="Reports" />
         <NavItem icon={<FiCodesandbox />} href="/admin/roles" label="Roles" />
