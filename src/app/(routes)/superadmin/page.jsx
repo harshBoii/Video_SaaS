@@ -1,6 +1,6 @@
-import SuperSide from '../components/superadmin/SuperSide';
-import SuperHead from '../components/superadmin/SuperHead';
-import SuperDashboard from '../components/superadmin/SuperDashboard';
+import SuperSide from '@/app/components/superadmin/SuperSide';
+import SuperHead from '@/app/components/superadmin/SuperHead';
+import SuperDashboard from '@/app/components/superadmin/SuperDashboard';
 
 export default function Companies() {
   return (
