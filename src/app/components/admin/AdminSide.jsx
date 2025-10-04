@@ -46,7 +46,7 @@ const AdminSide = () => {
         {/* <NavItem icon={<FiClipboard />} href="/superadmin/subscription" label="Subscription" /> */}
         {/* <NavItem icon={<FiPlus />} href="/superadmin/role" label="Create Role" /> */}
         <NavItem icon={<FiBarChart2 />} href="/admin/reports" label="Reports" />
-        {/* <NavItem icon={<FiCodesandbox />} href="/superadmin/agents" label="Agents" /> */}
+        <NavItem icon={<FiCodesandbox />} href="/admin/roles" label="Roles" />
       </nav>
       <div className={styles.footer}>
         <NavItem icon={<FiHelpCircle />} label="Help" /> {/* No href = not a link */}

@@ -11,6 +11,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // relationMode = "prisma"
+
 }
 
 enum EmployeeStatus {
@@ -19,6 +21,52 @@ enum EmployeeStatus {
   SUSPENDED
 }
 
+// -------Flow Chain----------------
+
+model FlowChain {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  steps       FlowStep[] // 👈 Each FlowChain contains multiple steps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model FlowStep {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  roleId        String?     // Which role executes this step
+  role          Role?       @relation(fields: [roleId], references: [id])
+  chainId       String
+  chain         FlowChain   @relation(fields: [chainId], references: [id])
+
+  // 👇 Relationships for transitions
+  nextSteps     FlowTransition[] @relation("NextStepRelation")
+  previousSteps FlowTransition[] @relation("PrevStepRelation")
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model FlowTransition {
+  id          String    @id @default(cuid())
+  fromStepId  String
+  toStepId    String
+  condition   TransitionCondition @default(SUCCESS) // success or failure
+
+  // Self-relation to FlowStep for flexible transitions
+  fromStep    FlowStep  @relation("NextStepRelation", fields: [fromStepId], references: [id])
+  toStep      FlowStep  @relation("PrevStepRelation", fields: [toStepId], references: [id])
+}
+
+enum TransitionCondition {
+  SUCCESS
+  FAILURE
+}
+// ---------------------------------
 
 model Company {
   id          String       @id @default(cuid())
@@ -27,15 +75,18 @@ model Company {
   description String?
   employees   Employee[]
   departments Department[]
-  roles       Role[]
+  roles       Role[]        
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  flowchains  FlowChain[]
+
+
 }
 
 model Department {
   id        String      @id @default(cuid())
   name      String
-  company   Company     @relation(fields: [companyId], references: [id])
+  company   Company     @relation(fields: [companyId], references: [id] )
   companyId String
   parentId  String?     // self-relation for department tree
   parent    Department? @relation("SubDepartments", fields: [parentId], references: [id])
@@ -53,6 +104,7 @@ model Role {
   companyId   String
   employees   Employee[]
   permissions RolePermission[]
+  FlowStep    FlowStep[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -64,6 +116,7 @@ model Permission {
   id          String          @id @default(cuid())
   name        String          @unique// e.g., "view_dashboard", "manage_users"
   description String?
+  group       String?
   roles       RolePermission[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
