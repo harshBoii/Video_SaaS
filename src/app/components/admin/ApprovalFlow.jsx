@@ -46,49 +46,121 @@ const FlowchainBuilder = () => {
     const otherSteps = steps.filter((s) => s.id !== fromStepId);
     if (otherSteps.length === 0) return Swal.fire('No other steps to link to.');
 
-    Swal.fire({
-      title: 'Add Transition',
-      html: `
-        <label>Condition:</label>
-        <select id="condition" class="swal2-select" style="width:100%">
-          <option value="SUCCESS">SUCCESS</option>
-          <option value="FAILURE">FAILURE</option>
+Swal.fire({
+  title: `
+    <div style="
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    ">
+      Add Transition
+    </div>
+    <p style="color:#6b7280; font-size: 0.875rem;">
+      Define how this step connects to the next one.
+    </p>
+  `,
+  html: `
+    <div style="
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+      font-family: 'Inter', sans-serif;
+    ">
+      <div>
+        <label for="condition" style="
+          display: block;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 0.25rem;
+        ">
+          Transition Condition
+        </label>
+        <select id="condition" class="swal2-select" style="
+          width: 85%;
+          padding: 0.6rem 0.75rem;
+          border-radius: 0.5rem;
+          border: 1px solid #e5e7eb;
+          background: #f9fafb;
+          color: #111827;
+          font-size: 0.9rem;
+          outline: none;
+          transition: all 0.2s;
+        " onfocus="this.style.borderColor='#6366f1'">
+          <option value="SUCCESS">✅ Success</option>
+          <option value="FAILURE">⚠️ Failure</option>
         </select>
-        <br><br>
-        <label>Target Step:</label>
-        <select id="toStep" class="swal2-select" style="width:100%">
+      </div>
+
+      <div>
+        <label for="toStep" style="
+          display: block;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 0.25rem;
+        ">
+          Target Step
+        </label>
+        <select id="toStep" class="swal2-select" style="
+          width: 85%;
+          padding: 0.6rem 0.75rem;
+          border-radius: 0.5rem;
+          border: 1px solid #e5e7eb;
+          background: #f9fafb;
+          color: #111827;
+          font-size: 0.9rem;
+          outline: none;
+          transition: all 0.2s;
+        " onfocus="this.style.borderColor='#6366f1'">
           ${otherSteps
-            .map((s) => `<option value="${s.name}">${s.name}</option>`)
+            .map(
+              (s) => `
+                <option value="${s.name}">
+                  🪜 ${s.name}
+                </option>
+              `
+            )
             .join('')}
         </select>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Add Link',
-      preConfirm: () => {
-        const condition = document.getElementById('condition').value;
-        const toStepName = document.getElementById('toStep').value;
-        return { condition, toStepName };
-      },
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const { condition, toStepName } = result.value;
-        setSteps((prev) =>
-          prev.map((s) =>
-            s.id === fromStepId
-              ? {
-                  ...s,
-                  transitions: [
-                    ...s.transitions,
-                    { condition, toStepName },
-                  ],
-                }
-              : s
-          )
-        );
-      }
-    });
-  };
-
+      </div>
+    </div>
+  `,
+  showCancelButton: true,
+  confirmButtonText: '<span style="font-weight:600">Add Transition</span>',
+  cancelButtonText: 'Cancel',
+  buttonsStyling: false,
+  focusConfirm: false,
+  customClass: {
+    popup:
+      'rounded-2xl shadow-lg p-6 bg-white border border-gray-100 text-left',
+    confirmButton:
+      'bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all',
+    cancelButton:
+      'bg-gray-100 text-gray-800 px-5 py-2.5 rounded-lg font-medium hover:bg-gray-200 ml-2 transition-all',
+  },
+  preConfirm: () => {
+    const condition = document.getElementById('condition').value;
+    const toStepName = document.getElementById('toStep').value;
+    return { condition, toStepName };
+  },
+}).then((result) => {
+  if (result.isConfirmed) {
+    const { condition, toStepName } = result.value;
+    setSteps((prev) =>
+      prev.map((s) =>
+        s.id === fromStepId
+          ? {
+              ...s,
+              transitions: [...s.transitions, { condition, toStepName }],
+            }
+          : s
+      )
+    );
+  }
+});
+  }
   const handleSubmit = async () => {
     if (!chainName.trim() || steps.length === 0) {
       return Swal.fire('Please enter a flowchain name and at least one step.');
