@@ -8,19 +8,18 @@ import { FiArrowLeft, FiSave, FiDownload } from 'react-icons/fi';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import Swal from 'sweetalert2';
 
-// Spinner loader
-const Spinner = ({ size = 20 }) => (
+const Spinner = ({ size = 22 }) => (
   <div className="flex items-center justify-center">
     <motion.div
       animate={{ rotate: 360 }}
       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-      className="rounded-full border-4 border-indigo-400 border-t-transparent"
+      className="rounded-full border-4 border-indigo-500 border-t-transparent"
       style={{ width: size, height: size }}
     />
   </div>
 );
 
-export default function AgencyContractViewer() {
+export default function ContractEditor() {
   const { tenure } = useParams();
   const router = useRouter();
 
@@ -29,15 +28,19 @@ export default function AgencyContractViewer() {
   const [pdfBytes, setPdfBytes] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Editable fields (MVP)
+  const signatureCanvasRef = useRef(null);
+
+  // Editable fields — these correspond to common placeholders in your offer letter
   const [fields, setFields] = useState({
-    client_name: '',
     company_name: '',
+    client_name: '',
     tenure: '',
     fee: '',
+    start_date: '',
+    end_date: '',
+    company_email: '',
+    company_mobile: '',
   });
-
-  const signatureCanvasRef = useRef(null);
 
   useEffect(() => {
     if (!tenure) return;
@@ -55,7 +58,7 @@ export default function AgencyContractViewer() {
       });
   }, [tenure]);
 
-  const updateField = (key, val) => setFields((p) => ({ ...p, [key]: val }));
+  const updateField = (key, val) => setFields((prev) => ({ ...prev, [key]: val }));
 
   async function buildEditedPdf() {
     const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -65,21 +68,28 @@ export default function AgencyContractViewer() {
     let y = page.getHeight() - 100;
     const fontSize = 12;
 
-    page.drawText(`Company: ${fields.company_name}`, {
-      x: 50,
-      y,
-      size: fontSize,
-      font: helv,
-      color: rgb(0, 0, 0),
-    });
-    y -= 16;
-    page.drawText(`Client: ${fields.client_name}`, { x: 50, y, size: fontSize, font: helv });
-    y -= 16;
-    page.drawText(`Tenure: ${fields.tenure}`, { x: 50, y, size: fontSize, font: helv });
-    y -= 16;
-    page.drawText(`Fee: ${fields.fee}`, { x: 50, y, size: fontSize, font: helv });
+    // Draw updated text fields onto the page
+    const drawText = (label, value) => {
+      page.drawText(`${label}: ${value}`, {
+        x: 50,
+        y,
+        size: fontSize,
+        font: helv,
+        color: rgb(0, 0, 0),
+      });
+      y -= 16;
+    };
 
-    // Add signature (if drawn)
+    drawText('Company', fields.company_name);
+    drawText('Client', fields.client_name);
+    drawText('Tenure', fields.tenure);
+    drawText('Fee', fields.fee);
+    drawText('Start Date', fields.start_date);
+    drawText('End Date', fields.end_date);
+    drawText('Company Email', fields.company_email);
+    drawText('Company Phone', fields.company_mobile);
+
+    // Add signature if drawn
     if (signatureCanvasRef.current) {
       const dataUrl = signatureCanvasRef.current.toDataURL();
       const imageBytes = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
@@ -87,7 +97,7 @@ export default function AgencyContractViewer() {
       const { width, height } = pngImage.scale(0.4);
       page.drawImage(pngImage, {
         x: page.getWidth() - width - 50,
-        y: 80,
+        y: 60,
         width,
         height,
       });
@@ -96,34 +106,32 @@ export default function AgencyContractViewer() {
     return await pdfDoc.save();
   }
 
-const handleSave = async () => {
-  try {
-    setSaving(true);
-    const newPdfBytes = await buildEditedPdf();
-    const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const newPdfBytes = await buildEditedPdf();
+      const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
 
-    // 🔁 Upload to backend
-    const formData = new FormData();
-    formData.append('file', blob, `edited_${tenure}`);
-    formData.append('filename', tenure);
+      // Upload edited PDF
+      const formData = new FormData();
+      formData.append('file', blob, `edited_${tenure}`);
+      formData.append('filename', tenure);
 
-    const response = await fetch('http://localhost:8000/upload-edited', {
-      method: 'POST',
-      body: formData,
-    });
+      const res = await fetch('http://localhost:8000/upload-edited', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!response.ok) throw new Error('Upload failed');
-    const data = await response.json();
+      if (!res.ok) throw new Error('Upload failed');
 
-    Swal.fire('Saved!', 'Edited contract has been uploaded successfully.', 'success');
-    console.log('Uploaded file URL:', data.url);
-  } catch (err) {
-    console.error(err);
-    Swal.fire('Error', 'Could not save or upload the PDF.', 'error');
-  } finally {
-    setSaving(false);
-  }
-};
+      Swal.fire('Success', 'Edited contract saved successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to save edited PDF.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) return <Spinner size={40} />;
 
@@ -132,7 +140,10 @@ const handleSave = async () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-700 hover:text-indigo-600">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
+          >
             <FiArrowLeft /> Back
           </button>
           <div className="flex gap-3">
@@ -147,12 +158,12 @@ const handleSave = async () => {
               disabled={saving}
               className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg px-4 py-2 flex items-center gap-2 shadow-md hover:shadow-lg"
             >
-              {saving ? <Spinner size={16} /> : <FiSave />} Save PDF
+              {saving ? <Spinner size={16} /> : <FiSave />} Save Contract
             </button>
           </div>
         </div>
 
-        {/* Main Layout */}
+        {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* PDF Viewer */}
           <div className="lg:col-span-2 bg-white rounded-xl p-4 shadow border">
@@ -163,37 +174,22 @@ const handleSave = async () => {
             </Worker>
           </div>
 
-          {/* Edit Panel */}
+          {/* Editable Field Panel */}
           <div className="bg-white rounded-xl p-4 shadow border">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Edit Contract</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Edit Offer Letter</h3>
 
-            <label className="text-sm text-gray-600">Company Name</label>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              value={fields.company_name}
-              onChange={(e) => updateField('company_name', e.target.value)}
-            />
-
-            <label className="text-sm text-gray-600">Client Name</label>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              value={fields.client_name}
-              onChange={(e) => updateField('client_name', e.target.value)}
-            />
-
-            <label className="text-sm text-gray-600">Tenure</label>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              value={fields.tenure}
-              onChange={(e) => updateField('tenure', e.target.value)}
-            />
-
-            <label className="text-sm text-gray-600">Fee</label>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              value={fields.fee}
-              onChange={(e) => updateField('fee', e.target.value)}
-            />
+            {Object.entries(fields).map(([key, val]) => (
+              <div key={key} className="mb-3">
+                <label className="text-sm text-gray-600 capitalize">
+                  {key.replace(/_/g, ' ')}
+                </label>
+                <input
+                  className="w-full border rounded px-3 py-2 mt-1"
+                  value={val}
+                  onChange={(e) => updateField(key, e.target.value)}
+                />
+              </div>
+            ))}
 
             <h4 className="text-sm font-medium text-gray-700 mt-4 mb-2">Signature</h4>
             <SignatureCanvas ref={signatureCanvasRef} />
@@ -221,7 +217,7 @@ const SignatureCanvas = React.forwardRef((_, ref) => {
     const draw = (e) => {
       if (!drawing) return;
       ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.strokeStyle = '#1e1b4b';
+      ctx.strokeStyle = '#4f46e5';
       ctx.lineWidth = 2;
       ctx.stroke();
     };
