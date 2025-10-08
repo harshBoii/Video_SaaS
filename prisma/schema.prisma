@@ -79,8 +79,8 @@ model Company {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   flowchains  FlowChain[]
-
-
+  email       String?
+  mobile      String?
 }
 
 model Department {

@@ -15,7 +15,7 @@ const NavItem = ({ icon, label, href }) => {
 
   const active = href === pathname;
 
-  // If an href is provided, wrap the item in a Next.js Link component
+
   if (href) {
     return (
       <Link href={href} className={`${styles.navItem} ${active ? styles.active : ''}`}>
@@ -44,7 +44,7 @@ const AdminSide = () => {
         {/* 3. Use the corrected NavItem with href props for each link */}
         <NavItem icon={<FiGrid />} href="/admin" label="Dashboard" />
         <NavItem icon={<FiMap />} href="/admin/approvalPipeline" label="Flow" />
-        {/* <NavItem icon={<FiPlus />} href="/superadmin/role" label="Create Role" /> */}
+        <NavItem icon={<FiClipboard />} href="/admin/contract/add" label="Contract" />
         <NavItem icon={<FiBarChart2 />} href="/admin/reports" label="Reports" />
         <NavItem icon={<FiCodesandbox />} href="/admin/roles" label="Roles" />
       </nav>

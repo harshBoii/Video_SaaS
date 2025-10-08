@@ -16,7 +16,7 @@ export async function GET(req) {
       include: {
         role: true,
         company: {
-          select: { name: true, domain: true }
+          select: { name: true, domain: true , email:true , mobile:true}
         }
       }
     })
