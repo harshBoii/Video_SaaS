@@ -7,6 +7,7 @@ import '@react-pdf-viewer/core/lib/styles/index.css';
 import { FiArrowLeft, FiSave, FiDownload } from 'react-icons/fi';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import Swal from 'sweetalert2';
+import React from 'react';
 
 const Spinner = ({ size = 22 }) => (
   <div className="flex items-center justify-center">
@@ -190,7 +191,6 @@ export default function ContractEditor() {
                 />
               </div>
             ))}
-
             <h4 className="text-sm font-medium text-gray-700 mt-4 mb-2">Signature</h4>
             <SignatureCanvas ref={signatureCanvasRef} />
           </div>

@@ -3,10 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Swal from 'sweetalert2';
 import { FiSend, FiUser, FiBriefcase, FiCalendar, FiDollarSign, FiList } from 'react-icons/fi';
+import AgencyEmailModal from './AgencyEmailModal';
 
 export default function AgencyContractGenerator() {
   const [loading, setLoading] = useState(false);
   const [company, setCompany] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [apiResponse, setApiResponse] = useState(''); // ✅ fix
 
   // Form fields
   const [agencyName, setAgencyName] = useState('');
@@ -48,8 +51,8 @@ export default function AgencyContractGenerator() {
           agency_name: agencyName,
           client_name: clientName,
           company_name: company?.name,
-          company_email:company?.email||" ",
-          company_mobile:company?.mobile|| " ",
+          company_email: company?.email || ' ',
+          company_mobile: company?.mobile || ' ',
           tenure,
           fee,
           requirement_list: requirements.split(',').map((r) => r.trim()),
@@ -58,7 +61,11 @@ export default function AgencyContractGenerator() {
       });
 
       if (!response.ok) throw new Error('Failed to generate agency contract.');
-      const data = await response.json();
+
+      // ✅ FastAPI returns plain text, not JSON
+      const data = await response.text();
+      setApiResponse(data);
+      setModalOpen(true);
 
       Swal.fire({
         title: 'Success!',
@@ -66,8 +73,6 @@ export default function AgencyContractGenerator() {
         icon: 'success',
         confirmButtonColor: '#4f46e5',
       });
-
-      console.log('API Response:', data);
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'Failed to generate contract.', 'error');
@@ -77,19 +82,17 @@ export default function AgencyContractGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-6 font-sans flex justify-center items-center ">
+    <div className="min-h-screen bg-gray-50 py-12 px-6 font-sans flex justify-center items-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className=" w-[80vw] min-h-[85vh] mx-auto bg-white border border-gray-100 rounded-3xl shadow-xl p-8"
+        className="w-[80vw] min-h-[85vh] mx-auto bg-white border border-gray-100 rounded-3xl shadow-xl p-8"
       >
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">
-              Agency Contract Generator
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-800">Agency Contract Generator</h1>
             <p className="text-sm text-gray-500 mt-1">
               Create and generate custom agency contracts instantly.
             </p>
@@ -211,6 +214,13 @@ export default function AgencyContractGenerator() {
           </div>
         </form>
       </motion.div>
+
+      {/* ✅ Properly wired modal */}
+      <AgencyEmailModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        apiResponse={apiResponse}
+      />
     </div>
   );
 }
