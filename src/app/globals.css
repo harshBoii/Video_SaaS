@@ -155,3 +155,18 @@
     @apply bg-background text-foreground;
   }
 }
+.ql-editor {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #1f2937;
+  padding: 16px 20px;
+}
+
+.ql-editor strong {
+  color: #111827;
+}
+
+.ql-editor em {
+  color: #4b5563;
+}

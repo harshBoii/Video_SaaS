@@ -109,7 +109,6 @@ model Role {
   updatedAt   DateTime     @updatedAt
 
   @@unique([name, companyId]) // 👈 add this
-
 }
 
 model Permission {

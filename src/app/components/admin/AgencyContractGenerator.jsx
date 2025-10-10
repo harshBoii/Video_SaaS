@@ -3,13 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Swal from 'sweetalert2';
 import { FiSend, FiUser, FiBriefcase, FiCalendar, FiDollarSign, FiList } from 'react-icons/fi';
+import AgencyLetterReviewModal from './AgencyLetterReviewModal';
 import AgencyEmailModal from './AgencyEmailModal';
 
 export default function AgencyContractGenerator() {
   const [loading, setLoading] = useState(false);
   const [company, setCompany] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [apiResponse, setApiResponse] = useState(''); // ✅ fix
+  const [apiResponse, setApiResponse] = useState(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [finalEmailData, setFinalEmailData] = useState(null);
 
   // Form fields
   const [agencyName, setAgencyName] = useState('');
@@ -36,50 +39,56 @@ export default function AgencyContractGenerator() {
 
   // Submit handler
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!agencyName || !tenure || !fee || !joiningDate || !requirements) {
-      return Swal.fire('Missing Fields', 'Please fill in all required fields.', 'warning');
-    }
+  if (!agencyName || !tenure || !fee || !joiningDate || !requirements) {
+    return Swal.fire('Missing Fields', 'Please fill in all required fields.', 'warning');
+  }
 
-    setLoading(true);
-    try {
-      const response = await fetch('http://localhost:8000/generate-agency-output', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agency_name: agencyName,
-          client_name: clientName,
-          company_name: company?.name,
-          company_email: company?.email || ' ',
-          company_mobile: company?.mobile || ' ',
-          tenure,
-          fee,
-          requirement_list: requirements.split(',').map((r) => r.trim()),
-          joining_date: joiningDate,
-        }),
-      });
+  setLoading(true);
+  try {
+    const response = await fetch('http://localhost:8000/start-letter-generation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agency_name: agencyName,
+        client_name: clientName,
+        company_name: company?.name,
+        company_email: company?.email || ' ',
+        company_mobile: company?.mobile || ' ',
+        tenure,
+        fee,
+        requirement_list: requirements.split(',').map((r) => r.trim()),
+        joining_date: joiningDate,
+      }),
+    });
 
-      if (!response.ok) throw new Error('Failed to generate agency contract.');
+    if (!response.ok) throw new Error('Failed to generate draft letter.');
 
-      // ✅ FastAPI returns plain text, not JSON
-      const data = await response.text();
-      setApiResponse(data);
-      setModalOpen(true);
+    const data = await response.json();
 
-      Swal.fire({
-        title: 'Success!',
-        text: 'Agency contract generated successfully.',
-        icon: 'success',
-        confirmButtonColor: '#4f46e5',
-      });
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Error', 'Failed to generate contract.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setApiResponse({
+      sessionId: data.session_id,
+      checkpointId: data.checkpoint_id,
+      tenure_template: data.tenure_template, // ✅ Use the actual letter content
+    });
+
+    setModalOpen(true); // open HITL modal
+  } catch (err) {
+    console.error(err);
+    Swal.fire('Error', 'Failed to generate contract draft.', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Handler for when HITL modal finishes and backend returns the final email
+const handleLetterFinalized = (finalData) => {
+  setModalOpen(false);
+  setFinalEmailData(finalData);
+  setEmailModalOpen(true);
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-6 font-sans flex justify-center items-center">
@@ -215,12 +224,20 @@ export default function AgencyContractGenerator() {
         </form>
       </motion.div>
 
-      {/* ✅ Properly wired modal */}
-      <AgencyEmailModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        apiResponse={apiResponse}
-      />
+
+    <AgencyLetterReviewModal
+      isOpen={modalOpen}
+      onClose={() => setModalOpen(false)}
+      apiResponse={apiResponse}
+      onLetterFinalized={handleLetterFinalized}
+    />
+
+    <AgencyEmailModal
+      isOpen={emailModalOpen}
+      onClose={() => setEmailModalOpen(false)}
+      apiResponse={finalEmailData?.email_draft}
+      pdfLink={finalEmailData?.pdf_path}
+    />
     </div>
   );
 }
