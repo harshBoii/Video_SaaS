@@ -14,6 +14,7 @@ export async function GET(req) {
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
     const search = searchParams.get("search")?.trim() || "";
     const roleName = searchParams.get("role");
+    const isAdminParam = searchParams.get("is_admin");
 
     const whereClause = {};
     if (companyId) whereClause.companyId = companyId;
@@ -26,14 +27,10 @@ export async function GET(req) {
       ];
     }
 
-    // ✅ Correct nested role filter
-    if (roleName) {
-      whereClause.role = {
-        is: {
-          name: { equals: roleName, mode: "insensitive" },
-        },
-      };
+    if (isAdminParam !== null) {
+      whereClause.is_admin = isAdminParam === "true";
     }
+
 
     const cacheKey = `employees:${companyId || "all"}:${roleName || "any"}:${search}:${sortBy}:${sortOrder}:${cursor || "start"}:${take}`;
 

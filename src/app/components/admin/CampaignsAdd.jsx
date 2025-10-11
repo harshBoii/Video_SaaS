@@ -19,7 +19,7 @@ export default function AddCampaignModal({ isOpen, onClose, onSuccess, companyId
   useEffect(() => {
     if (!isOpen) return;
     (async () => {
-      const res = await fetch(`/api/admin/employees?companyId=${companyId}&role=ADMIN`);
+      const res = await fetch(`/api/admin/employees?companyId=${companyId}&role=ADMIN&is_admin=true`);
       const data = await res.json();
       setAdmins(data.data || []);
     })();
@@ -89,7 +89,7 @@ export default function AddCampaignModal({ isOpen, onClose, onSuccess, companyId
               </option>
               {admins.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.firstName} {a.lastName} ({a.role?.name})
+                  {a.firstName} {a.lastName} 
                 </option>
               ))}
             </select>

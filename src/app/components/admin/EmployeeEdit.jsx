@@ -108,6 +108,23 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, onSuccess
               <option value="INACTIVE">Inactive</option>
               <option value="SUSPENDED">Suspended</option>
             </select>
+            {/* iPhone-style Admin Toggle */}
+            <div className="col-span-2 flex items-center justify-between bg-gray-50 px-4 py-3 border rounded-lg">
+              <label className="text-gray-700 font-medium">Admin Access</label>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, is_admin: !prev.is_admin }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  form.is_admin ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    form.is_admin ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">

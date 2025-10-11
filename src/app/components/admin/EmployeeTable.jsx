@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { FiSearch, FiChevronDown, FiPlus, FiEdit3 } from 'react-icons/fi';
 import AddEmployeeModal from './AddEmployeeModal';
 import EditEmployeeModal from './EmployeeEdit';
+import { Medal } from 'lucide-react';
 
 // ---------------- Fetch Employees ----------------
 const fetchEmployees = async ({ pageParam = null, queryKey }) => {
@@ -195,7 +196,7 @@ export default function EmployeesPage() {
                       className="rounded-full"
                       unoptimized
                     />
-                    {emp.firstName} {emp.lastName}
+                    <span>{emp.firstName} {emp.lastName} </span> {emp.is_admin&&<Medal size="24" color='gold'/>}
                   </td>
                   <td className="px-6 py-4 text-gray-700">
                     {emp.lastLogin

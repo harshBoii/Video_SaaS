@@ -5,6 +5,7 @@ import Logo from '../general/logo';
 // 1. Import Link for navigation and usePathname for active state
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { FiBriefcase } from 'react-icons/fi';
 
 import { FiGrid, FiUploadCloud, FiMap , FiCheckSquare, FiBarChart2, FiHelpCircle, FiSettings,FiPlus,FiClipboard,FiCodesandbox } from 'react-icons/fi';
 
@@ -47,6 +48,7 @@ const AdminSide = () => {
         <NavItem icon={<FiClipboard />} href="/admin/contract/add" label="Contract" />
         <NavItem icon={<FiBarChart2 />} href="/admin/reports" label="Reports" />
         <NavItem icon={<FiCodesandbox />} href="/admin/roles" label="Roles" />
+        <NavItem icon={<FiBriefcase/>} href="admin/employees" label="Employees"/>
       </nav>
       <div className={styles.footer}>
         <NavItem icon={<FiHelpCircle />} label="Help" /> {/* No href = not a link */}

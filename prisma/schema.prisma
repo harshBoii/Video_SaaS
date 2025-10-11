@@ -153,6 +153,7 @@ model Employee {
   campaigns     Campaign[]
   teams         Team[]      @relation("TeamMembers")
   ownedTeams    Team[]      @relation("AdminTeams")
+  is_admin      Boolean?    @default(false) 
 }
 model Team {
   id          String      @id @default(cuid())

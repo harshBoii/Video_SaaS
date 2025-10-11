@@ -5,7 +5,7 @@ export async function PUT(req, { params }) {
   try {
     const { id } = params;
     const body = await req.json();
-    const { firstName, lastName, roleId, status } = body;
+    const { firstName, lastName, roleId, status,is_admin } = body;
 
     const existing = await prisma.employee.findUnique({ where: { id } });
     if (!existing) {
@@ -19,6 +19,7 @@ export async function PUT(req, { params }) {
         ...(lastName && { lastName }),
         ...(roleId && { roleId }),
         ...(status && { status }),
+        ...(typeof is_admin === 'boolean' && { is_admin }),
         updatedAt: new Date(),
       },
       select: {
