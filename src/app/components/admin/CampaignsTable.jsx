@@ -1,225 +1,211 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import Image from 'next/image';
-import Swal from 'sweetalert2';
-import { Search, Loader2 } from 'lucide-react';
-import CampaignInsightsModal from './CampaignMembersModal';
-import EditCampaignModal from './EditCampaignModal';
-import styles from './CampaignsTable.module.css';
-import { FiCameraOff, FiCheck, FiCheckCircle, FiClock,FiThumbsUp,FiWatch} from 'react-icons/fi';
-import { Zap } from 'lucide-react';
-import Link from 'next/link';
-import LoadingGlass from '../LoadingGlass';
-// A helper component for the main loading state
-const TableLoadingSpinner = () => (
-    <tr>
-        <td colSpan="5" className="text-center py-20">
-            <div className="flex justify-center items-center">
-                <LoadingGlass className="h-10 w-10 animate-spin text-blue-600" />
-            </div>
-        </td>
-    </tr>
-);
+import { useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import {
+  FiSearch,
+  FiChevronDown,
+  FiPlus,
+} from 'react-icons/fi';
+import AddCampaignModal from './CampaignsAdd';
+import EditCampaignRow from './CampiagnEditRow';
 
-export default function CampaignsTable() {
-    // --- STATE MANAGEMENT ---
-    const [campaigns, setCampaigns] = useState([]); // Will hold data fetched from the API
-    const [isLoading, setIsLoading] = useState(true); // For initial data fetch
-    const [error, setError] = useState(null); // To store any fetch errors
-    
-    // State for modals and search
-    const [viewingCampaign, setViewingCampaign] = useState(null);
-    const [editingCampaign, setEditingCampaign] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
+// ---------------- Fetch Campaigns ----------------
+const fetchCampaigns = async ({ pageParam = null, queryKey }) => {
+  const [_key, { search, sortBy, sortOrder, companyId }] = queryKey;
 
-    // --- DATA FETCHING ---
-    const fetchCampaigns = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const response = await fetch('/api/campaigns'); // Your endpoint to get all campaigns
-            if (!response.ok) {
-                throw new Error('Failed to fetch campaigns.');
-            }
-            const data = await response.json();
-            console.log(data)
-            setCampaigns(data);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  if (!companyId) return { data: [], nextCursor: null };
 
-    // Fetch data when the component mounts
-    useEffect(() => {
-        fetchCampaigns();
-    }, []);
+  const params = new URLSearchParams({
+    companyId,
+    take: 50,
+    sortBy,
+    sortOrder,
+  });
+  if (pageParam) params.append('cursor', pageParam);
+  if (search) params.append('search', search);
 
-    // --- MEMOIZED FILTERING (No Changes Needed) ---
-    const filteredData = useMemo(() => {
-        if (!searchQuery) {
-            return campaigns; 
-        }
-        return campaigns.filter(campaign =>
-            campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [campaigns, searchQuery]);
-
-    // --- API HANDLERS (Rewritten for API interaction) ---
-
-    // Handler to update a campaign
-    const handleUpdateCampaign = async () => {
-        // The actual API call is now handled inside EditCampaignModal.
-        // This function's only job is to close the modal and refetch the data.
-        setEditingCampaign(null); // Close the modal
-        await fetchCampaigns();   // Refetch data to show the update
-    };
-    
-    // Handler to delete a campaign
-    const handleDeleteCampaign = async () => {
-        // The actual API call is now handled inside EditCampaignModal.
-        setEditingCampaign(null); // Close the modal
-        await fetchCampaigns();   // Refetch data to show the change
-    };
-
-    return (
-        <>
-            <div className={styles.tableContainer}>
-                <div className="md:flex md:items-center md:justify-between mb-4 sticky top-135 bg-white rounded-2xl">
-                    <div>
-                        <h3 className={styles.tableTitle}>Campaigns List</h3>
-                        <p className="text-sm text-gray-500">
-                            Search for a campaign or click a row to view insights.
-                        </p>
-                    </div>
-                    <div className="relative mt-4 md:mt-0 w-full max-w-md">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Search className="h-5 w-5 text-blue-400" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Search campaigns..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="
-                        block w-full rounded-xl 
-                        border border-blue-200 
-                        bg-gradient-to-r from-blue-50 to-blue-100 
-                        pl-10 pr-4 py-2 
-                        text-gray-700 placeholder-gray-400 
-                        shadow-md 
-                        focus:border-blue-400 focus:ring-2 focus:ring-blue-300 focus:outline-none 
-                        transition-all duration-300
-                        "
-                    />
-                    </div>
-                </div>
-
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>Campaign Name</th>
-                            <th>Total Members</th>
-                            <th>Verified</th>
-                            <th>Pending</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <TableLoadingSpinner />
-                        ) : error ? (
-                            <tr><td colSpan="5" className="text-center py-8 text-red-500">Error: {error}</td></tr>
-                        ) : filteredData.length > 0 ? (
-                            filteredData.map((campaign) => (
-                                <tr 
-                                    key={campaign.id} 
-                                    className={`${styles.clickableRow} hover:bg-gray-50 transition-colors duration-150 hover:text-emerald-300`}
-                                    onClick={() => setViewingCampaign(campaign)}
-                                    tabIndex={0}
-                                    onKeyDown={(e) => e.key === 'Enter' && setViewingCampaign(campaign)}
-                                >
-                                    <td>
-                                        <div className={styles.userCell}>
-                                            <Image 
-                                                src={`https://ui-avatars.com/api/?name=${campaign.name.replace(/\s+/g, '+')}&background=random`} 
-                                                alt={`${campaign.name} logo`}
-                                                width={32} 
-                                                height={32} 
-                                                className={styles.avatar}
-                                                unoptimized={true}
-                                            />
-                                            <span className="font-medium text-gray-800">{campaign.name}</span>
-                                            <span className="relative group inline-flex items-center">
-                                            {campaign.status === "Active" ? (
-                                                <Zap className="cursor-pointer h-4 text-green-600" />
-                                            ) : campaign.status === "Upcoming" ? (
-                                                <FiClock className="cursor-pointer text-yellow-800" />
-                                            ) : campaign.status === "Finished" ? (
-                                                <FiCheckCircle className="cursor-pointer text-gray-800 " />
-                                            ) : (
-                                                <FiCameraOff className="cursor-pointer " />
-                                            )}
-
-                                            {/* Tooltip */}
-                                            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
-                                                            whitespace-nowrap px-2 py-1 rounded bg-gray-800 text-white text-xs 
-                                                            opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {campaign.status === "Active"
-                                                ? "Active"
-                                                : campaign.status === "Upcoming"
-                                                ? "Upcoming"
-                                                : campaign.status === "Finished"
-                                                ? "Finished"
-                                                : "Unknown"}
-                                            </span>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td>{Number(campaign.totalVerified) + Number(campaign.notVerified)} Members</td>
-                                    <td className="text-green-600 font-semibold ">{campaign.totalVerified}</td>
-                                    <td className="text-amber-600 font-semibold ">{campaign.notVerified}</td>
-                                    <td>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingCampaign(campaign);
-                                            }}
-                                            className="font-medium text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-100 transition-colors"
-                                        >
-                                            Edit
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="5" className="text-center py-8 text-gray-500">
-                                    {searchQuery ? `No campaigns found for "${searchQuery}"` : "No campaigns found."}
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {viewingCampaign && (
-                <CampaignInsightsModal 
-                    campaignId={viewingCampaign.id}
-                    onClose={() => setViewingCampaign(null)}
-                />
-            )}
-            
-            {editingCampaign && (
-                <EditCampaignModal
-                    campaign={editingCampaign}
-                    onClose={() => setEditingCampaign(null)}
-                    // The onSuccess prop will be called by the modal after a successful update or delete
-                    onSuccess={handleUpdateCampaign} // Re-using the same handler for simplicity
-                />
-            )}
-        </>
-    );
+  const res = await fetch(`/api/admin/campaigns?${params.toString()}`);
+  if (!res.ok) throw new Error('Failed to fetch campaigns');
+  return res.json();
 };
+
+// ---------------- Main Component ----------------
+export default function CampaignTable({ companyId }) {
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // 🔁 Infinite Query
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isFetching,
+    status,
+    error,
+  } = useInfiniteQuery({
+    queryKey: ['campaigns', { search, sortBy, sortOrder, companyId }],
+    queryFn: fetchCampaigns,
+    enabled: !!companyId,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
+
+  const campaigns = data?.pages.flatMap((p) => p.data) ?? [];
+
+  // ♻️ Refresh list after add or edit
+  const handleCampaignUpdated = () => {
+    queryClient.invalidateQueries(['campaigns']);
+  };
+
+  // ⏳ Infinite Scroll
+  const loadMoreRef = useRef();
+  useEffect(() => {
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchNextPage();
+      },
+      { threshold: 1 }
+    );
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, fetchNextPage]);
+
+  // ⏱ Debounce search
+  useEffect(() => {
+    const delay = setTimeout(() => refetch(), 400);
+    return () => clearTimeout(delay);
+  }, [search, sortBy, sortOrder]);
+
+  // 🌀 Loading / Error states
+  if (status === 'loading') {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8 text-red-600">
+        Failed to load campaigns. Please refresh.
+      </div>
+    );
+  }
+
+  // ---------------- UI ----------------
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h3 className="text-2xl font-bold text-gray-800">Campaigns</h3>
+
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Add Button */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition font-semibold shadow-sm"
+          >
+            <FiPlus size={18} /> Add Campaign
+          </button>
+
+          {/* Sort Toggle */}
+          <button
+            className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            onClick={() =>
+              setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+            }
+          >
+            Sort by:{' '}
+            <span className="capitalize">
+              {sortBy === 'updatedAt' ? 'Date Modified' : sortBy}
+            </span>
+            <FiChevronDown
+              className={`text-gray-500 transition-transform ${
+                sortOrder === 'asc' ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {/* Search */}
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name or admin..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 w-72 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 transition"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        {campaigns.length === 0 && !isFetching ? (
+          <p className="text-center p-8 text-gray-500">No campaigns found.</p>
+        ) : (
+          <table className="w-full text-sm text-left text-gray-600">
+            <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+              <tr>
+                <th className="px-6 py-3">Name</th>
+                <th className="px-6 py-3">Admin</th>
+                <th className="px-6 py-3">Team</th>
+                <th className="px-6 py-3">Budget</th>
+                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map((camp) => (
+                <EditCampaignRow
+                  key={camp.id}
+                  campaign={camp}
+                  onUpdated={handleCampaignUpdated}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Infinite Scroll Loader */}
+      <div
+        ref={loadMoreRef}
+        className="flex justify-center py-4 text-sm text-gray-500"
+      >
+        {isFetchingNextPage ? (
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading more...</span>
+          </div>
+        ) : hasNextPage ? (
+          'Scroll to load more'
+        ) : (
+          'No more campaigns'
+        )}
+      </div>
+
+      {/* Add Campaign Modal */}
+      <AddCampaignModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleCampaignUpdated}
+        companyId={companyId}
+      />
+    </motion.div>
+  );
+}

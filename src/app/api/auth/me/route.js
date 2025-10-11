@@ -16,7 +16,7 @@ export async function GET(req) {
       include: {
         role: true,
         company: {
-          select: { name: true, domain: true , email:true , mobile:true}
+          select: { id: true,name: true, domain: true , email:true , mobile:true}
         }
       }
     })
@@ -30,7 +30,8 @@ export async function GET(req) {
       email: user.email,
       role: user.role?.name,
       company: user.company,
-      lastLogin: user.lastLogin
+      lastLogin: user.lastLogin,
+      companyId:user.company.id
     })
   } catch (err) {
     console.error(err)

@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { FiUsers, FiUserCheck, FiX, FiSearch, FiClock } from 'react-icons/fi';
 import DashboardCharts from './DashboardCharts';
 import Image from 'next/image';
+import EmployeesPage from './EmployeeTable';
+import CampaignTable from './CampaignsTable';
 
 const StatCard = ({ icon, value, label }) => (
   <motion.div
@@ -28,15 +30,19 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [companyId,setCompanyId]=useState('');
 
-  // ✅ 1. Fetch Logged-in Admin
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const res = await fetch('/api/auth/me');
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
+        // console.log("data is :",data)
         setUser(data);
+        setCompanyId(data.companyId);
+
       } catch (err) {
         console.error(err);
         setError('Failed to load user info');
@@ -153,80 +159,9 @@ export default function AdminDashboard() {
       </motion.div>
 
       {/* Employees Table */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="bg-white border border-gray-200 rounded-2xl p-6"
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">Employees</h3>
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 w-64 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 transition"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          {employees.length === 0 ? (
-            <p className="text-center p-8 text-gray-500">No employees found.</p>
-          ) : (
-            <table className="w-full text-sm text-left text-gray-600">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-6 py-3">Employee Name</th>
-                  <th className="px-6 py-3">Email</th>
-                  <th className="px-6 py-3">Role</th>
-                  <th className="px-6 py-3">Department</th>
-                  <th className="px-6 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map(emp => (
-                  <motion.tr
-                    key={emp.id}
-                    whileHover={{ scale: 1.01, backgroundColor: "#f9fafb" }}
-                    transition={{ type: "spring", stiffness: 150 }}
-                    className="border-b"
-                  >
-                    <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
-                      <Image
-                        src={`https://ui-avatars.com/api/?name=${emp.firstName}+${emp.lastName}&background=random`}
-                        alt={emp.firstName}
-                        width={32}
-                        height={32}
-                        className="rounded-full"
-                        unoptimized
-                      />
-                      {emp.firstName} {emp.lastName}
-                    </td>
-                    <td className="px-6 py-4">{emp.email}</td>
-                    <td className="px-6 py-4">{emp.role?.name || '—'}</td>
-                    <td className="px-6 py-4">{emp.department?.name || '—'}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 text-xs rounded-full font-semibold ${
-                        emp.status === 'ACTIVE'
-                          ? 'bg-green-100 text-green-700'
-                          : emp.status === 'INACTIVE'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}>
-                        {emp.status}
-                      </span>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </motion.div>
+     <CampaignTable
+     companyId={user.companyId}
+     />
     </motion.div>
   );
 }
