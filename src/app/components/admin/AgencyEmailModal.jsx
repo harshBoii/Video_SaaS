@@ -19,7 +19,7 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
     const subjectMatch = response.match(/^Subject:\s*(.*)$/m);
     const subject = subjectMatch ? subjectMatch[1] : 'Offer Letter';
 
-    const linkMatch = response.match(/➡️ (https?:\/\/[^\s]+)/);
+    const linkMatch = response.match(/^Attachment:\s*(.*)$/m);
     const link = linkMatch ? linkMatch[1] : '';
 
     const cleanedBody = response
