@@ -58,73 +58,47 @@ const HeroSection = () => (
           Start Free Trial
         </button>
 <Link href="/login" passHref>
-  <button className="group relative overflow-hidden bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 backdrop-blur-xl border-2 border-emerald-400/40 text-white font-bold py-4 px-11 rounded-full shadow-[0_10px_40px_rgba(59,130,246,0.4),0_5px_20px_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_15px_50px_rgba(59,130,246,0.6),0_8px_30px_rgba(16,185,129,0.5),0_0_80px_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] transition-all duration-600 hover:scale-110 active:scale-95">
+  <button className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50 backdrop-blur-xl border-2 border-blue-200/60 text-gray-800 font-bold py-4 px-10 rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.25)] hover:shadow-[0_12px_48px_rgba(59,130,246,0.4)] transition-all duration-500 hover:scale-110 active:scale-95">
     
-    {/* Animated liquid bubbles */}
+    {/* Gradient overlay on hover */}
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
+    
+    {/* Animated liquid bubbles - NOW VISIBLE */}
     <div className="absolute inset-0 overflow-hidden rounded-full">
-      <div className="absolute w-26 h-26 bg-gradient-to-br from-blue-300/50 to-cyan-400/50 rounded-full blur-3xl -top-13 -left-13 group-hover:scale-[2.2] transition-transform duration-1100" />
-      
-      <div className="absolute w-24 h-24 bg-gradient-to-br from-emerald-300/60 to-emerald-400/60 rounded-full blur-2xl top-2 -right-12 group-hover:scale-[2.5] group-hover:brightness-110 transition-all duration-1100 delay-100 animate-pulse" />
-      
-      <div className="absolute w-22 h-22 bg-gradient-to-br from-purple-300/45 to-indigo-400/45 rounded-full blur-2xl -bottom-11 left-0 group-hover:scale-[2] transition-transform duration-1100 delay-150" />
-      
-      <div className="absolute w-20 h-20 bg-gradient-to-br from-teal-300/55 to-cyan-300/55 rounded-full blur-xl -bottom-10 -right-10 group-hover:scale-[2.3] transition-transform duration-1100 delay-200" />
-      
-      <div className="absolute w-18 h-18 bg-gradient-to-br from-emerald-400/60 to-green-400/60 rounded-full blur-xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group-hover:scale-[3.5] group-hover:rotate-180 transition-all duration-1200 delay-250" />
+      <div className="absolute w-24 h-24 bg-blue-400/60 rounded-full blur-2xl -top-12 -left-12 group-hover:scale-[2] transition-transform duration-1000 ease-out" />
+      <div className="absolute w-20 h-20 bg-purple-500/50 rounded-full blur-2xl -bottom-10 -right-10 group-hover:scale-[2] transition-transform duration-1000 delay-150 ease-out" />
+      <div className="absolute w-16 h-16 bg-pink-400/50 rounded-full blur-xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group-hover:scale-[2.5] transition-transform duration-1000 delay-300 ease-out" />
     </div>
     
-    {/* Prismatic glass layers */}
-    <div className="absolute inset-0 bg-gradient-to-br from-white/25 via-emerald-100/15 to-blue-100/10 rounded-full group-hover:from-white/35 group-hover:via-emerald-100/25 transition-colors duration-600" />
+    {/* Glossy highlight - more visible */}
+    <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/80 via-white/40 to-transparent rounded-t-full" />
     
-    {/* Top glossy highlight */}
-    <div className="absolute top-0 inset-x-0 h-2/5 bg-gradient-to-b from-white/60 via-emerald-100/25 to-transparent rounded-t-full" />
+    {/* Shimmer effect */}
+    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-12" />
     
-    {/* Rotating emerald shine effect */}
-    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-      <div className="absolute top-0 left-1/2 w-1/2 h-full bg-gradient-to-br from-emerald-300/30 to-transparent rounded-r-full group-hover:rotate-45 transition-transform duration-1000 origin-left" />
-    </div>
-    
-    {/* Cross shimmer */}
-    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1300 bg-gradient-to-r from-transparent via-emerald-200/40 to-transparent skew-x-12" />
-    
-    <div className="absolute inset-0 translate-y-full group-hover:-translate-y-full transition-transform duration-1500 bg-gradient-to-b from-transparent via-cyan-200/30 to-transparent delay-150" />
-    
-    {/* Text with emerald shadow */}
-    <span className="relative z-10 flex items-center gap-3 ">
-      <span className="text-lg font-extrabold tracking-wide">Login</span>
-      <svg className="w-5 h-5 group-hover:rotate-12 group-hover:scale-110 group-hover:drop-shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+    {/* Text - NOW VISIBLE on white */}
+    <span className="relative z-10 flex items-center gap-2.5 font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+      Login
+      <svg className="w-5 h-5 text-blue-600 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
       </svg>
     </span>
     
-    {/* Triple-layer gemstone glow */}
-    <div className="absolute -inset-1 bg-gradient-to-r from-blue-200 via-purple-300  to-blue-500 rounded-full blur-md opacity-35 group-hover:opacity-75 transition-opacity duration-600 -z-10 animate-pulse" />
+    {/* Outer glow */}
+    <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 -z-10" />
     
-    <div className="absolute -inset-2 bg-gradient-to-br rounded-full blur-xl opacity-20 group-hover:opacity-70 transition-opacity duration-700 -z-10" />
-    
-    <div className="absolute -inset-3  rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-800 -z-10 group-hover:animate-pulse" />
-    
-    {/* Mixed sparkles */}
     <Sparkle
-      color="#10B981"
-      count={8}
-      minSize={14}
-      maxSize={24}
-      flicker={true}
-      fadeOutSpeed={8}
-      overflowPx={18}
-    />
-    <Sparkle
-      color="#FFFFFF"
+      color="#3B82F6"
       count={6}
-      minSize={10}
-      maxSize={20}
+      minSize={12}
+      maxSize={18}
       flicker={true}
       fadeOutSpeed={12}
-      overflowPx={15}
+      overflowPx={10}
     />
   </button>
 </Link>
+
 
       </div>
     </motion.div>
