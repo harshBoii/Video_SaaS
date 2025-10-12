@@ -57,21 +57,37 @@ const HeroSection = () => (
         <button className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-colors duration-300">
           Start Free Trial
         </button>
-    <Link href="/login" passHref>
-      <button className="relative bg-transparent border-2 border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors duration-300">
-        Login
-        <Sparkle
-          color="#FFD700"
-          count={3}
-          minSize={20}
-          maxSize={25}
-          flicker={true}
-          fadeOutSpeed={10}
-          overflowPx={0}
-          style={{ position: "absolute", top: 0, right: 0 }}
-        />
-      </button>
-    </Link>
+        <Link href="/login" passHref>
+          <button className="group relative overflow-hidden bg-gradient-to-br from-blue-400/20 via-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/30 text-gray-900 font-bold py-4 px-10 rounded-2xl shadow-[0_8px_32px_0_rgba(59,130,246,0.3)] hover:shadow-[0_8px_48px_0_rgba(59,130,246,0.5)] transition-all duration-500 hover:scale-105 active:scale-95">
+            {/* Glass shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            {/* Liquid shimmer animation */}
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12" />
+            
+            {/* Button text */}
+            <span className="relative z-10 flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:from-blue-500 group-hover:to-purple-500 transition-all duration-300">
+              Login
+              <svg className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </span>
+            
+            {/* Glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 -z-10" />
+            
+            {/* Sparkle effects */}
+            <Sparkle
+              color="#60A5FA"
+              count={5}
+              minSize={15}
+              maxSize={20}
+              flicker={true}
+              fadeOutSpeed={15}
+              overflowPx={8}
+            />
+          </button>
+        </Link>
       </div>
     </motion.div>
     <motion.div
