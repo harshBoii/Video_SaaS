@@ -6,18 +6,11 @@ import { FiX, FiEdit3, FiSend, FiDownload, FiFileText, FiMail, FiExternalLink } 
 export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
   const [editableBody, setEditableBody] = useState('');
   const [subject, setSubject] = useState('');
+  const [pdfPath, setPdfPath] = useState('');
+  const [agencyName, setAgencyName] = useState('');
+  const [clientName, setClientName] = useState('');
 
-  useEffect(() => {
-    if (apiResponse) {
-      const parsedData = parseApiResponse(apiResponse);
-      setEditableBody(parsedData.body);
-      setSubject(parsedData.subject);
-    }
-  }, [apiResponse]);
-
-  if (!isOpen) return null;
-
-  // Parse the API response JSON
+  // Parse the API response JSON - MOVED BEFORE useEffect
   const parseApiResponse = (response) => {
     try {
       const jsonData = typeof response === 'string' ? JSON.parse(response) : response;
@@ -27,7 +20,7 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
       const extractedSubject = subjectMatch ? subjectMatch[1].trim() : 'Offer Letter';
       
       const attachmentMatch = emailDraft.match(/\[Attachment:\s*(.+?)\]/);
-      const pdfPath = attachmentMatch ? attachmentMatch[1].trim() : jsonData?.next_state?.pdf_path || '';
+      const extractedPdfPath = attachmentMatch ? attachmentMatch[1].trim() : jsonData?.next_state?.pdf_path || '';
       
       const cleanedBody = emailDraft
         .replace(/^Subject:.*$/m, '')
@@ -37,18 +30,38 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
       return { 
         subject: extractedSubject, 
         body: cleanedBody, 
-        pdfPath,
+        pdfPath: extractedPdfPath,
         agencyName: jsonData?.next_state?.agency_name || '',
         clientName: jsonData?.next_state?.client_name || ''
       };
     } catch (error) {
       console.error('Error parsing API response:', error);
-      return { subject: '', body: '', pdfPath: '' };
+      return { 
+        subject: '', 
+        body: '', 
+        pdfPath: '',
+        agencyName: '',
+        clientName: ''
+      };
     }
   };
 
-  const parsedData = parseApiResponse(apiResponse);
-  const { pdfPath, agencyName, clientName } = parsedData;
+  // Update ALL state when apiResponse changes
+  useEffect(() => {
+    if (apiResponse) {
+      console.log('Raw API Response:', apiResponse); // Debug log
+      const parsedData = parseApiResponse(apiResponse);
+      console.log('Parsed Data:', parsedData); // Debug log
+      
+      setSubject(parsedData.subject);
+      setEditableBody(parsedData.body);
+      setPdfPath(parsedData.pdfPath);
+      setAgencyName(parsedData.agencyName);
+      setClientName(parsedData.clientName);
+    }
+  }, [apiResponse]);
+
+  if (!isOpen) return null;
 
   const handleSave = () => {
     console.log('Edited email:', { subject, body: editableBody });
