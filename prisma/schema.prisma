@@ -85,6 +85,11 @@ model Company {
   campaigns   Campaign[]
   permissionCombos PermissionCombo[]  // 👈 NEW
 
+  @@index([id, updatedAt(sort: Desc)]) // For sorted list queries
+  @@index([id, name])                  // For search by name
+  @@unique([name, id])                 // Prevent duplicate names per company
+
+
 }
 
 model Department {
