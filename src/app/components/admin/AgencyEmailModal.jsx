@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiEdit3, FiSend, FiDownload, FiFileText, FiMail, FiExternalLink } from 'react-icons/fi';
 
@@ -10,11 +10,28 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
   const [agencyName, setAgencyName] = useState('');
   const [clientName, setClientName] = useState('');
 
-  // Parse the API response JSON - MOVED BEFORE useEffect
-  const parseApiResponse = (response) => {
+  // Parse the API response - using useMemo to ensure it only runs when apiResponse changes
+  const parsedData = useMemo(() => {
+    if (!apiResponse) {
+      return { 
+        subject: '', 
+        body: '', 
+        pdfPath: '',
+        agencyName: '',
+        clientName: ''
+      };
+    }
+
     try {
-      const jsonData = typeof response === 'string' ? JSON.parse(response) : response;
+      console.log('Parsing API Response:', apiResponse);
+      console.log('API Response Type:', typeof apiResponse);
+      
+      // Handle both string and object formats
+      const jsonData = typeof apiResponse === 'string' ? JSON.parse(apiResponse) : apiResponse;
+      console.log('Parsed JSON Data:', jsonData);
+      
       const emailDraft = jsonData?.next_state?.email_draft || '';
+      console.log('Email Draft:', emailDraft);
       
       const subjectMatch = emailDraft.match(/^Subject:\s*(.*)$/m);
       const extractedSubject = subjectMatch ? subjectMatch[1].trim() : 'Offer Letter';
@@ -27,13 +44,16 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
         .replace(/\[Attachment:.*?\]/, '')
         .trim();
 
-      return { 
+      const result = { 
         subject: extractedSubject, 
         body: cleanedBody, 
         pdfPath: extractedPdfPath,
         agencyName: jsonData?.next_state?.agency_name || '',
         clientName: jsonData?.next_state?.client_name || ''
       };
+      
+      console.log('Final Parsed Result:', result);
+      return result;
     } catch (error) {
       console.error('Error parsing API response:', error);
       return { 
@@ -44,32 +64,42 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
         clientName: ''
       };
     }
-  };
-
-  // Update ALL state when apiResponse changes
-  useEffect(() => {
-    if (apiResponse) {
-      console.log('Raw API Response:', apiResponse); // Debug log
-      const parsedData = parseApiResponse(apiResponse);
-      console.log('Parsed Data:', parsedData); // Debug log
-      
-      setSubject(parsedData.subject);
-      setEditableBody(parsedData.body);
-      setPdfPath(parsedData.pdfPath);
-      setAgencyName(parsedData.agencyName);
-      setClientName(parsedData.clientName);
-    }
   }, [apiResponse]);
+
+  // Update state whenever parsedData changes
+  useEffect(() => {
+    console.log('useEffect triggered with parsedData:', parsedData);
+    setSubject(parsedData.subject);
+    setEditableBody(parsedData.body);
+    setPdfPath(parsedData.pdfPath);
+    setAgencyName(parsedData.agencyName);
+    setClientName(parsedData.clientName);
+  }, [parsedData]);
+
+  // Additional effect to log when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Modal opened with apiResponse:', apiResponse);
+    }
+  }, [isOpen, apiResponse]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    console.log('Edited email:', { subject, body: editableBody });
+    const updatedData = {
+      subject,
+      body: editableBody,
+      pdfPath,
+      agencyName,
+      clientName
+    };
+    console.log('Saving edited email:', updatedData);
     onClose();
   };
 
   const handleOpenPdf = () => {
     if (pdfPath) {
+      console.log('Opening PDF:', pdfPath);
       window.open(pdfPath, '_blank', 'noopener,noreferrer');
     }
   };
@@ -163,6 +193,11 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
 
             {/* Main Content Area */}
             <div className="px-8 py-6 max-h-[calc(85vh-180px)] overflow-y-auto custom-scrollbar">
+              {/* Debug Info - Remove this after testing */}
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
+                <p><strong>Debug:</strong> Subject length: {subject.length}, Body length: {editableBody.length}</p>
+              </div>
+
               {/* PDF Attachment Alert - Top Priority */}
               {pdfPath && (
                 <motion.div
