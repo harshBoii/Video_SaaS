@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiEdit3, FiSend, FiDownload, FiFileText, FiMail, FiExternalLink } from 'react-icons/fi';
 
@@ -10,7 +10,7 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
   const [agencyName, setAgencyName] = useState('');
   const [clientName, setClientName] = useState('');
 
-  // Parse the API response - using useMemo to ensure it only runs when apiResponse changes
+  // Parse the API response - handles both JSON object and plain text email format
   const parsedData = useMemo(() => {
     if (!apiResponse) {
       return { 
@@ -26,39 +26,82 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
       console.log('Parsing API Response:', apiResponse);
       console.log('API Response Type:', typeof apiResponse);
       
-      // Handle both string and object formats
-      const jsonData = typeof apiResponse === 'string' ? JSON.parse(apiResponse) : apiResponse;
-      console.log('Parsed JSON Data:', jsonData);
+      let emailText = '';
+      let extractedPdfPath = '';
+      let extractedAgencyName = '';
+      let extractedClientName = '';
       
-      const emailDraft = jsonData?.next_state?.email_draft || '';
-      console.log('Email Draft:', emailDraft);
+      // Check if it's a JSON object or plain text
+      if (typeof apiResponse === 'string' && (apiResponse.trim().startsWith('{') || apiResponse.trim().startsWith('['))) {
+        // It's a JSON string
+        try {
+          const jsonData = JSON.parse(apiResponse);
+          emailText = jsonData?.next_state?.email_draft || jsonData?.email_draft || apiResponse;
+          extractedPdfPath = jsonData?.next_state?.pdf_path || jsonData?.pdf_path || '';
+          extractedAgencyName = jsonData?.next_state?.agency_name || jsonData?.agency_name || '';
+          extractedClientName = jsonData?.next_state?.client_name || jsonData?.client_name || '';
+        } catch (e) {
+          // If JSON parse fails, treat as plain text
+          emailText = apiResponse;
+        }
+      } else if (typeof apiResponse === 'object') {
+        // It's already an object
+        emailText = apiResponse?.next_state?.email_draft || apiResponse?.email_draft || '';
+        extractedPdfPath = apiResponse?.next_state?.pdf_path || apiResponse?.pdf_path || '';
+        extractedAgencyName = apiResponse?.next_state?.agency_name || apiResponse?.agency_name || '';
+        extractedClientName = apiResponse?.next_state?.client_name || apiResponse?.client_name || '';
+      } else {
+        // It's plain text (the email itself)
+        emailText = apiResponse;
+      }
       
-      const subjectMatch = emailDraft.match(/^Subject:\s*(.*)$/m);
+      console.log('Email Text:', emailText);
+      
+      // Extract subject from email text
+      const subjectMatch = emailText.match(/^Subject:\s*(.*)$/m);
       const extractedSubject = subjectMatch ? subjectMatch[1].trim() : 'Offer Letter';
       
-      const attachmentMatch = emailDraft.match(/\[Attachment:\s*(.+?)\]/);
-      const extractedPdfPath = attachmentMatch ? attachmentMatch[1].trim() : jsonData?.next_state?.pdf_path || '';
+      // Extract PDF attachment from email text if not already found
+      if (!extractedPdfPath) {
+        const attachmentMatch = emailText.match(/\[Attachment:\s*(.+?)\]/);
+        extractedPdfPath = attachmentMatch ? attachmentMatch[1].trim() : '';
+      }
       
-      const cleanedBody = emailDraft
+      // Extract agency name from email signature if not already found
+      if (!extractedAgencyName) {
+        const agencyMatch = emailText.match(/The\s+(.+?)\s+Team/i) || 
+                           emailText.match(/from\s+(.+?)\s+for/i);
+        extractedAgencyName = agencyMatch ? agencyMatch[1].trim() : '';
+      }
+      
+      // Extract client name from greeting if not already found
+      if (!extractedClientName) {
+        const clientMatch = emailText.match(/Dear\s+(.+?),/i);
+        extractedClientName = clientMatch ? clientMatch[1].trim() : '';
+      }
+      
+      // Clean the email body (remove subject and attachment lines)
+      const cleanedBody = emailText
         .replace(/^Subject:.*$/m, '')
-        .replace(/\[Attachment:.*?\]/, '')
+        .replace(/\[Attachment:.*?\]/g, '')
         .trim();
 
       const result = { 
         subject: extractedSubject, 
         body: cleanedBody, 
         pdfPath: extractedPdfPath,
-        agencyName: jsonData?.next_state?.agency_name || '',
-        clientName: jsonData?.next_state?.client_name || ''
+        agencyName: extractedAgencyName,
+        clientName: extractedClientName
       };
       
       console.log('Final Parsed Result:', result);
       return result;
     } catch (error) {
       console.error('Error parsing API response:', error);
+      // Even on error, try to use apiResponse as-is
       return { 
-        subject: '', 
-        body: '', 
+        subject: 'Offer Letter', 
+        body: typeof apiResponse === 'string' ? apiResponse : '', 
         pdfPath: '',
         agencyName: '',
         clientName: ''
@@ -75,13 +118,6 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
     setAgencyName(parsedData.agencyName);
     setClientName(parsedData.clientName);
   }, [parsedData]);
-
-  // Additional effect to log when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      console.log('Modal opened with apiResponse:', apiResponse);
-    }
-  }, [isOpen, apiResponse]);
 
   if (!isOpen) return null;
 
@@ -193,11 +229,6 @@ export default function AgencyEmailModal({ isOpen, onClose, apiResponse }) {
 
             {/* Main Content Area */}
             <div className="px-8 py-6 max-h-[calc(85vh-180px)] overflow-y-auto custom-scrollbar">
-              {/* Debug Info - Remove this after testing */}
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
-                <p><strong>Debug:</strong> Subject length: {subject.length}, Body length: {editableBody.length}</p>
-              </div>
-
               {/* PDF Attachment Alert - Top Priority */}
               {pdfPath && (
                 <motion.div
