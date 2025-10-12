@@ -1,17 +1,7 @@
-// {
-//   "compilerOptions": {
-//     "paths": {
-//       "@/*": ["./src/*"]
-//     }
-//   }
-// }
 {
   "compilerOptions": {
-    "baseUrl": "src",
     "paths": {
-      "@/*": ["*"],
-      "@lib/*": ["app/lib/*"]
-    },
-    "ignoreDeprecations": "6.0"
+      "@/*": ["./src/*"]
+    }
   }
 }

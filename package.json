@@ -23,6 +23,7 @@
     "ioredis": "^5.8.1",
     "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lru-cache": "^11.2.2",
     "lucide-react": "^0.544.0",
     "marked": "^16.4.0",
     "motion": "^12.23.22",

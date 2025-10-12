@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthUser, generateToken } from '@/lib/auth';
-
+import { getAuthUser, generateToken } from '@/app/lib/auth';
 import prisma from '@/app/lib/prisma';
 
 export async function POST(request) {
