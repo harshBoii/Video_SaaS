@@ -83,6 +83,8 @@ model Company {
   mobile      String?
   teams       Team[]
   campaigns   Campaign[]
+  permissionCombos PermissionCombo[]  // 👈 NEW
+
 }
 
 model Department {
@@ -123,6 +125,7 @@ model Permission {
   roles       RolePermission[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  combos      ComboPermission[]   // 👈 NEW many-to-many link
 }
 
 model RolePermission {
@@ -180,3 +183,24 @@ model Campaign {
   updatedAt  DateTime @updatedAt
 }
 
+model PermissionCombo {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  company     Company            @relation(fields: [companyId], references: [id])
+  companyId   String
+  permissions ComboPermission[]  // 👈 join table
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([name, companyId])    // 👈 Each combo name unique per company
+}
+
+model ComboPermission {
+  comboId      String
+  permissionId String
+  combo        PermissionCombo  @relation(fields: [comboId], references: [id])
+  permission   Permission       @relation(fields: [permissionId], references: [id])
+
+  @@id([comboId, permissionId])
+}

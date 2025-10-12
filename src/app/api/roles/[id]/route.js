@@ -22,7 +22,7 @@ export async function PUT(request, { params }) {
 // DELETE → Remove role and related RolePermissions
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Cascade delete role-permissions first
     await prisma.rolePermission.deleteMany({
