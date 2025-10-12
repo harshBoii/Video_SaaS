@@ -77,7 +77,7 @@ const HeroSection = () => (
     <div className="absolute inset-0 bg-gradient-to-br from-white/25 via-emerald-100/15 to-blue-100/10 rounded-full group-hover:from-white/35 group-hover:via-emerald-100/25 transition-colors duration-600" />
     
     {/* Top glossy highlight */}
-    <div className="absolute top-0 inset-x-0 h-2/5 bg-gradient-to-b from-white/60 via-emerald-100/25 via-white/15 to-transparent rounded-t-full" />
+    <div className="absolute top-0 inset-x-0 h-2/5 bg-gradient-to-b from-white/60 via-emerald-100/25 to-transparent rounded-t-full" />
     
     {/* Rotating emerald shine effect */}
     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
@@ -85,7 +85,7 @@ const HeroSection = () => (
     </div>
     
     {/* Cross shimmer */}
-    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1300 bg-gradient-to-r from-transparent via-emerald-200/40 via-white/35 to-transparent skew-x-12" />
+    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1300 bg-gradient-to-r from-transparent via-emerald-200/40 to-transparent skew-x-12" />
     
     <div className="absolute inset-0 translate-y-full group-hover:-translate-y-full transition-transform duration-1500 bg-gradient-to-b from-transparent via-cyan-200/30 to-transparent delay-150" />
     
