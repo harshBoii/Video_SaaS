@@ -274,3 +274,73 @@ export function generateToken(user) {
     { expiresIn: '1h' }
   );
 }
+
+export async function verifyJWT(request) {
+  try {
+    let token;
+
+    // 1. Try to get token from cookies (your primary method)
+    token = request.cookies.get('token')?.value;
+
+    // 2. Fallback to Authorization header (for API clients)
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
+
+    // 3. Check if token exists
+    if (!token) {
+      return { error: 'Missing authentication token', status: 401 };
+    }
+
+    // 4. Verify JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 5. Get employee from database
+    const employee = await prisma.employee.findUnique({
+      where: { 
+        id: decoded.id, // Your JWT uses 'id' field
+      },
+      select: {
+        id: true,
+        email: true,
+        companyId: true,
+        is_admin: true,
+        status: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!employee) {
+      return { error: 'Employee not found', status: 404 };
+    }
+
+    if (employee.status !== 'ACTIVE') {
+      return { error: 'Account is not active', status: 403 };
+    }
+
+    return { employee };
+
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return { error: 'Invalid token', status: 401 };
+    }
+    if (error.name === 'TokenExpiredError') {
+      return { error: 'Token expired', status: 401 };
+    }
+    return { error: 'Authentication failed', status: 500 };
+  }
+}
+
+// Helper to check if user is admin
+export function requireAdmin(employee) {
+  if (!employee.is_admin) {
+    return { error: 'Admin access required', status: 403 };
+  }
+  return null;
+}

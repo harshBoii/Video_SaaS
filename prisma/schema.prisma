@@ -116,6 +116,9 @@ model Role {
   FlowStep    FlowStep[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  parentId    String?      // Reference to parent role
+  parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id])
+  children    Role[]       @relation("RoleHierarchy")
 
   @@unique([name, companyId]) // 👈 add this
 }
