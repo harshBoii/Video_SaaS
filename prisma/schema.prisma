@@ -32,6 +32,8 @@ model FlowChain {
   steps       FlowStep[] // 👈 Each FlowChain contains multiple steps
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  campaignFlows CampaignFlow[]
+
 }
 
 model FlowStep {
@@ -119,6 +121,9 @@ model Role {
   parentId    String?      // Reference to parent role
   parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id])
   children    Role[]       @relation("RoleHierarchy")
+  
+  campaignAssignments CampaignAssignment[]
+  campaignSchedules   CampaignSchedule[]
 
   @@unique([name, companyId]) // 👈 add this
 }
@@ -165,6 +170,9 @@ model Employee {
   teams         Team[]      @relation("TeamMembers")
   ownedTeams    Team[]      @relation("AdminTeams")
   is_admin      Boolean?    @default(false) 
+
+  campaignAssignments CampaignAssignment[]  // campaigns where employee is a member
+
 }
 model Team {
   id          String      @id @default(cuid())
@@ -189,6 +197,12 @@ model Campaign {
   team       Team?    @relation(fields: [teamId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  assignments CampaignAssignment[]   // employees + role membership for campaign
+  flows       CampaignFlow[]         // flows tagged to this campaign
+  schedules   CampaignSchedule[]     // calendar entries
+
+
 }
 
 model PermissionCombo {
@@ -211,4 +225,56 @@ model ComboPermission {
   permission   Permission       @relation(fields: [permissionId], references: [id])
 
   @@id([comboId, permissionId])
+}
+
+// Which employees/roles are part of a campaign; used for aggregation
+model CampaignAssignment {
+  id         String   @id @default(cuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaignId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  role       Role     @relation(fields: [roleId], references: [id])
+  roleId     String
+
+  // optional metadata
+  joinedAt   DateTime @default(now())
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([campaignId, employeeId]) // one assignment per employee per campaign
+  @@index([campaignId, roleId])
+}
+
+// Tag a flow (FlowChain) to a campaign or create a new flow specific to campaign
+model CampaignFlow {
+  id         String    @id @default(cuid())
+  campaign   Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId String
+  flowChain  FlowChain @relation(fields: [flowChainId], references: [id])
+  flowChainId String
+  isDefault  Boolean   @default(false) // indicates if this flow is the active one
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([campaignId, flowChainId])
+}
+
+// Calendar entries — which role owns which date range; color is stored for UI
+model CampaignSchedule {
+  id         String   @id @default(cuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaignId String
+  role       Role     @relation(fields: [roleId], references: [id])
+  roleId     String
+  title      String?           // optional text label
+  startDate  DateTime
+  endDate    DateTime
+  color      String?           // e.g. "yellow" or hex "#FACC15"
+  createdBy  String?           // employeeId of the user who created it
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([campaignId, startDate, endDate])
 }
