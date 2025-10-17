@@ -14,12 +14,13 @@ import {
   Share2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import CampaignOverview from '@/components/campaign/CampaignOverview';
-import CampaignTeam from '@/components/campaign/CampaignTeam';
-import CampaignFlows from '@/components/campaign/CampaignFlows';
-import CampaignCalendar from '@/components/campaign/CampaignCalendar';
-import CampaignSettings from '@/components/campaign/CampaignSettings';
-import { showSuccess, showError, showConfirm } from '@/lib/swal';
+import CampaignOverview from '@/app/components/campaign/CampaignOverview';
+import CampaignTeam from '@/app/components/campaign/CampaignTeam';
+import CampaignFlows from '@/app/components/campaign/CampaignFlows';
+import CampaignCalendar from '@/app/components/campaign/CampaignCalendar';
+import CampaignSettings from '@/app/components/campaign/CampaignSettings';
+import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
+
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: TrendingUp },
