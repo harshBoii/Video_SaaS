@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { id: campaignId } = params;
+    const { id: campaignId } = await params;
 
     if (!campaignId || typeof campaignId !== 'string') {
       return NextResponse.json(
@@ -158,7 +158,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { id: campaignId } = params;
+    const { id: campaignId } = await params;
     const body = await request.json();
     const { employeeId, roleId, note } = body;
 

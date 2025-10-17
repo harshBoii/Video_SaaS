@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { id: campaignId } = params;
+    const { id: campaignId } = await params;
     const { searchParams } = new URL(request.url);
     
     // Optional query params for filtering
@@ -183,7 +183,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { id: campaignId } = params;
+    const { id: campaignId } = await params;
     const body = await request.json();
     const { roleId, title, startDate, endDate, color } = body;
 

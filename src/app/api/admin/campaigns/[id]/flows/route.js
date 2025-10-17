@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { id: campaignId } = params;
+    const { id: campaignId } = await params;
 
     if (!campaignId || typeof campaignId !== 'string') {
       return NextResponse.json(
