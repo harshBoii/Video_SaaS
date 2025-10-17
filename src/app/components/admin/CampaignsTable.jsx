@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import AddCampaignModal from './CampaignsAdd';
 import EditCampaignRow from './CampiagnEditRow';
+import Link from 'next/link';
 
 // ---------------- Fetch Campaigns ----------------
 const fetchCampaigns = async ({ pageParam = null, queryKey }) => {
@@ -260,6 +261,7 @@ export default function CampaignTable({ companyId }) {
             <tbody className="bg-white divide-y divide-gray-100">
               <AnimatePresence>
                 {campaigns.map((camp, index) => (
+                  <Link href={`/campaigns/${camp.id}`}>
                   <EditCampaignRow
                     key={camp.id}
                     campaign={camp}
@@ -267,6 +269,7 @@ export default function CampaignTable({ companyId }) {
                     index={index}
                     companyId={companyId}
                   />
+                  </Link>
                 ))}
               </AnimatePresence>
             </tbody>
