@@ -10,7 +10,7 @@ import {
   XCircle,
   ArrowRight
 } from 'lucide-react';
-import { showSuccess, showError, showConfirm } from '@/lib/swal';
+import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 
 export default function CampaignFlows({ campaignId }) {
   const [flowsData, setFlowsData] = useState(null);

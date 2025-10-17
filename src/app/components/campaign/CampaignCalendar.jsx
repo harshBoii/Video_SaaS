@@ -8,7 +8,7 @@ import {
   Clock,
   User
 } from 'lucide-react';
-import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/lib/swal';
+import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
 
 export default function CampaignCalendar({ campaignId }) {
   const [schedules, setSchedules] = useState(null);

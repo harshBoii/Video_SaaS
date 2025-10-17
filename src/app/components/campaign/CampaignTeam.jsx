@@ -11,7 +11,7 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/lib/swal';
+import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
 
 export default function CampaignTeam({ campaignId }) {
   const [assignments, setAssignments] = useState(null);

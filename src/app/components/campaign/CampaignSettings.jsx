@@ -6,7 +6,7 @@ import {
   AlertTriangle,
   CheckCircle2
 } from 'lucide-react';
-import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/lib/swal';
+import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
 
 export default function CampaignSettings({ campaign, onUpdate }) {
   const [formData, setFormData] = useState({
