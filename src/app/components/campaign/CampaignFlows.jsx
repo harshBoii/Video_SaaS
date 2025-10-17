@@ -24,7 +24,7 @@ export default function CampaignFlows({ campaignId }) {
   const loadFlows = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/flows`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/flows`, {
         credentials: 'include',
       });
 

@@ -27,7 +27,7 @@ export default function CampaignTeam({ campaignId }) {
   const loadAssignments = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/assignments`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/assignments`, {
         credentials: 'include',
       });
 
@@ -279,7 +279,7 @@ function AddMemberModal({ campaignId, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/assignments`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/assignments`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

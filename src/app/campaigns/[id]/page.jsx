@@ -46,7 +46,7 @@ export default function CampaignDetailPage({ params }) {
   const loadCampaignData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}`, {
         credentials: 'include',
       });
 

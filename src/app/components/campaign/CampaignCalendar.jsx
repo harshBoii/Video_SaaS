@@ -24,7 +24,7 @@ export default function CampaignCalendar({ campaignId }) {
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/schedules`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/schedules`, {
         credentials: 'include',
       });
 
@@ -312,7 +312,7 @@ function AddScheduleModal({ campaignId, onClose, onSuccess }) {
     showLoading('Creating schedule...', 'Please wait');
 
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/schedules`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/schedules`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
