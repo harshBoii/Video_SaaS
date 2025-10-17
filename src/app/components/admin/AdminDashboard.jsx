@@ -39,8 +39,8 @@ export default function AdminDashboard() {
         const res = await fetch('/api/auth/me');
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
-        // console.log("data is :",data)
-        setUser(data);
+        console.log("data is :",data)
+        setUser(data.employee);
         setCompanyId(data.companyId);
 
       } catch (err) {

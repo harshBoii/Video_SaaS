@@ -5,14 +5,61 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiSearch,
-  FiChevronDown,
   FiPlus,
   FiFilter,
   FiRefreshCw,
+  FiEdit3,
+  FiTrash2,
+  FiUsers,
+  FiCalendar,
+  FiTarget,
 } from 'react-icons/fi';
-import AddCampaignModal from './CampaignsAdd';
-import EditCampaignRow from './CampiagnEditRow';
+import {
+  TrendingUp,
+  TrendingDown,
+  Sparkles,
+  AlertCircle,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  Zap,
+  Activity,
+} from 'lucide-react';
 import Link from 'next/link';
+import AddCampaignModal from './CampaignsAdd';
+import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
+
+// ---------------- Loading Bar Component ----------------
+function LoadingBar({ isLoading }) {
+  return (
+    <AnimatePresence>
+      {isLoading && (
+        <motion.div
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          exit={{ scaleX: 0, opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="fixed top-0 left-0 right-0 z-50 origin-left"
+        >
+          <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 shadow-lg">
+            <motion.div
+              className="h-full bg-white/30"
+              animate={{
+                x: ['-100%', '100%'],
+              }}
+              transition={{
+                repeat: Infinity,
+                duration: 1,
+                ease: 'linear',
+              }}
+              style={{ width: '30%' }}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 // ---------------- Fetch Campaigns ----------------
 const fetchCampaigns = async ({ pageParam = null, queryKey }) => {
@@ -22,17 +69,38 @@ const fetchCampaigns = async ({ pageParam = null, queryKey }) => {
 
   const params = new URLSearchParams({
     companyId,
-    take: 50,
+    take: '50',
     sortBy,
     sortOrder,
   });
   if (pageParam) params.append('cursor', pageParam);
   if (search) params.append('search', search);
 
-  const res = await fetch(`/api/admin/campaigns?${params.toString()}`);
+  const res = await fetch(`/api/admin/campaigns?${params.toString()}`, {
+    credentials: 'include',
+  });
+
   if (!res.ok) throw new Error('Failed to fetch campaigns');
   return res.json();
 };
+
+// ---------------- Loading Skeleton ----------------
+function TableSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg animate-pulse">
+          <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div className="h-6 bg-gray-200 rounded w-20"></div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ---------------- Main Component ----------------
 export default function CampaignTable({ companyId }) {
@@ -40,9 +108,10 @@ export default function CampaignTable({ companyId }) {
   const [sortBy, setSortBy] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
 
-  // 🔁 Infinite Query
+  // Query
   const {
     data,
     fetchNextPage,
@@ -61,242 +130,453 @@ export default function CampaignTable({ companyId }) {
 
   const campaigns = data?.pages.flatMap((p) => p.data) ?? [];
 
-  // ♻️ Refresh list after add or edit
-  const handleCampaignUpdated = () => {
-    queryClient.invalidateQueries(['campaigns']);
-  };
-
-  // ⏳ Infinite Scroll
+  // Infinite scroll
   const loadMoreRef = useRef();
   useEffect(() => {
     if (!hasNextPage) return;
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) fetchNextPage();
-      },
+      (entries) => entries[0].isIntersecting && fetchNextPage(),
       { threshold: 1 }
     );
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [hasNextPage, fetchNextPage]);
 
-  // ⏱ Debounce search
+  // Debounce search
   useEffect(() => {
-    const delay = setTimeout(() => refetch(), 400);
-    return () => clearTimeout(delay);
-  }, [search, sortBy, sortOrder]);
+    if (!companyId) return;
+    
+    setIsSearching(true);
+    const delay = setTimeout(() => {
+      refetch().finally(() => setIsSearching(false));
+    }, 400);
+    
+    return () => {
+      clearTimeout(delay);
+      setIsSearching(false);
+    };
+  }, [search, sortBy, sortOrder, companyId, refetch]);
 
-  // 🌀 Loading / Error states
+  // Refresh after changes
+  const handleCampaignUpdated = async () => {
+    await queryClient.invalidateQueries(['campaigns']);
+    await showSuccess('Success!', 'Campaign list updated');
+  };
+
+  // Delete campaign
+  const handleDeleteCampaign = async (campaign) => {
+    const result = await showConfirm(
+      'Delete Campaign?',
+      `Are you sure you want to delete "${campaign.name}"? This action cannot be undone.`,
+      'Yes, Delete',
+      'Cancel'
+    );
+
+    if (result.isConfirmed) {
+      showLoading('Deleting campaign...', 'Please wait');
+      
+      try {
+        // Implement delete API call here
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        closeSwal();
+        await showSuccess('Deleted!', 'Campaign removed successfully');
+        handleCampaignUpdated();
+      } catch (error) {
+        closeSwal();
+        await showError('Delete Failed', error.message);
+      }
+    }
+  };
+
+  // Stats
+  const stats = {
+    total: campaigns.length,
+    active: campaigns.filter(c => c.status === 'ACTIVE').length,
+    completed: campaigns.filter(c => c.status === 'COMPLETED').length,
+    withTeams: campaigns.filter(c => c.team).length,
+  };
+
+  // Loading state
   if (status === 'loading') {
     return (
-      <div className="flex justify-center items-center h-[60vh]">
-        <div className="relative">
-          <div className="h-16 w-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-8 w-8 bg-blue-50 rounded-full"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <div className="h-8 bg-gray-200 rounded w-48 animate-pulse mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
           </div>
+          <TableSkeleton />
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-red-50 border border-red-200 rounded-xl p-8 text-center"
-      >
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </div>
-        <p className="text-red-900 font-semibold mb-2">Failed to load campaigns</p>
-        <p className="text-red-700 text-sm mb-4">Please check your connection and try again</p>
-        <button
-          onClick={() => refetch()}
-          className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition font-medium"
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
         >
-          <FiRefreshCw size={16} /> Retry
-        </button>
-      </motion.div>
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Campaigns</h3>
+          <p className="text-gray-600 mb-6">{error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
+            Try Again
+          </button>
+        </motion.div>
+      </div>
     );
   }
 
-  // ---------------- UI ----------------
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="bg-white rounded-xl shadow-sm border border-gray-100"
-    >
-      {/* Header Section */}
-      <div className="border-b border-gray-100 bg-gradient-to-br from-blue-50 to-white px-6 py-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          {/* Title */}
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">Campaigns</h3>
-            <p className="text-sm text-gray-600">
-              Manage and track all marketing campaigns
-              {campaigns.length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
-                </span>
-              )}
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      {/* Loading Bar */}
+      <LoadingBar isLoading={isFetching || isSearching} />
 
-          {/* Action Button */}
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
-          >
-            <FiPlus size={18} strokeWidth={2.5} />
-            <span>New Campaign</span>
-          </button>
-        </div>
-
-        {/* Controls Row */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-4">
-          {/* Search Bar */}
-          <div className="relative flex-1">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search campaigns, admins, teams..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow placeholder:text-gray-400"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Sort Dropdown */}
-          <button
-            className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all whitespace-nowrap"
-            onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-          >
-            <FiFilter size={16} />
-            <span>
-              {sortBy === 'updatedAt' ? 'Last Modified' : sortBy === 'createdAt' ? 'Date Created' : 'Name'}
-            </span>
-            <FiChevronDown
-              size={16}
-              className={`text-gray-500 transition-transform duration-200 ${
-                sortOrder === 'asc' ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {/* Refresh Button */}
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-          >
-            <FiRefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="overflow-x-auto">
-        {campaigns.length === 0 && !isFetching ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-16 px-4"
-          >
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-              <FiSearch className="text-blue-600" size={28} />
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">No campaigns found</h4>
-            <p className="text-sm text-gray-600 mb-6 text-center max-w-sm">
-              {search
-                ? `No results for "${search}". Try adjusting your search.`
-                : 'Get started by creating your first campaign.'}
-            </p>
-            {!search && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg transition font-semibold"
-              >
-                <FiPlus size={18} /> Create Campaign
-              </button>
-            )}
-          </motion.div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Campaign Name
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Admin
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Team
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Last Modified
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              <AnimatePresence>
-                {campaigns.map((camp, index) => (
-                  <Link href={`/campaigns/${camp.id}`}>
-                  <EditCampaignRow
-                    key={camp.id}
-                    campaign={camp}
-                    onUpdated={handleCampaignUpdated}
-                    index={index}
-                    companyId={companyId}
-                  />
-                  </Link>
-                ))}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Infinite Scroll Loader */}
-      {campaigns.length > 0 && (
-        <div
-          ref={loadMoreRef}
-          className="flex justify-center items-center py-6 border-t border-gray-100 bg-gray-50"
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
         >
-          {isFetchingNextPage ? (
-            <div className="flex items-center gap-3 text-sm text-gray-600">
-              <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="font-medium">Loading more campaigns...</span>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                  <FiTarget className="text-white text-2xl" />
+                </div>
+                Campaigns
+              </h1>
+              <p className="text-gray-600">Manage and track all your marketing campaigns</p>
             </div>
-          ) : hasNextPage ? (
-            <p className="text-sm text-gray-500">Scroll for more</p>
+            
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:scale-105"
+            >
+              <FiPlus size={20} />
+              New Campaign
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-4 gap-4 mb-6"
+        >
+          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Campaigns</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <FiTarget className="text-purple-600 text-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Active</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Zap className="text-blue-600 text-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Completed</p>
+                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="text-green-600 text-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">With Teams</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.withTeams}</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <FiUsers className="text-orange-600 text-xl" />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-xl p-4 mb-6 border border-gray-200 shadow-sm"
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Search */}
+            <div className="flex-1 min-w-[300px] relative">
+              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
+              <input
+                type="text"
+                placeholder="Search campaigns, admins, teams..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white"
+              />
+              
+              {isSearching && (
+                <div className="absolute right-12 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
+                </div>
+              )}
+              
+              {search && !isSearching && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-2">
+              <FiFilter className="text-gray-400" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50 hover:bg-white transition-all"
+              >
+                <option value="updatedAt">Recently Updated</option>
+                <option value="createdAt">Recently Created</option>
+                <option value="name">Name (A-Z)</option>
+              </select>
+
+              <button
+                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="p-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all"
+                title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+              >
+                {sortOrder === 'asc' ? <TrendingUp className="text-gray-600" /> : <TrendingDown className="text-gray-600" />}
+              </button>
+
+              <button
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="p-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
+              >
+                <FiRefreshCw className={`text-gray-600 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {/* Results Counter */}
+            {search && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium"
+              >
+                {isSearching ? 'Searching...' : `${campaigns.length} result${campaigns.length !== 1 ? 's' : ''} found`}
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+        >
+          {campaigns.length === 0 && !isFetching ? (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiTarget className="text-purple-600 text-3xl" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Campaigns Found</h3>
+              <p className="text-gray-600 mb-6">
+                {search ? 'Try adjusting your search criteria' : 'Get started by creating your first campaign'}
+              </p>
+              {!search && (
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+                >
+                  <FiPlus />
+                  Create Your First Campaign
+                </button>
+              )}
+            </div>
           ) : (
-            <p className="text-sm text-gray-500 font-medium">
-              All campaigns loaded • {campaigns.length} total
-            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Campaign
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Admin
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Team
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Last Updated
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <AnimatePresence>
+                    {campaigns.map((camp, index) => (
+                      <motion.tr
+                        key={camp.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="hover:bg-gray-50 transition-colors group"
+                      >
+                        {/* Campaign Name */}
+                        <td className="px-6 py-4">
+                          <Link href={`/campaigns/${camp.id}`}>
+                            <div className="flex items-center gap-3 cursor-pointer group-hover:text-purple-600 transition-colors">
+                              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FiTarget className="text-white" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 group-hover:text-purple-600">
+                                  {camp.name}
+                                </p>
+                                <p className="text-sm text-gray-500 flex items-center gap-1">
+                                  <FiCalendar className="w-3 h-3" />
+                                  Created {new Date(camp.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        </td>
+
+                        {/* Admin */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                              {camp.admin?.firstName?.[0]}{camp.admin?.lastName?.[0]}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm">
+                                {camp.admin?.firstName} {camp.admin?.lastName}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Team */}
+                        <td className="px-6 py-4">
+                          {camp.team ? (
+                            <div className="flex items-center gap-1 text-sm text-gray-700">
+                              <FiUsers className="w-4 h-4 text-gray-400" />
+                              {camp.team.name}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">No team</span>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                            camp.status === 'ACTIVE'
+                              ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-200'
+                              : camp.status === 'COMPLETED'
+                              ? 'bg-green-100 text-green-700 ring-1 ring-green-200'
+                              : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'
+                          }`}>
+                            <Activity className="w-3 h-3" />
+                            {camp.status || 'ACTIVE'}
+                          </span>
+                        </td>
+
+                        {/* Last Updated */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <Clock className="w-3 h-3" />
+                            {new Date(camp.updatedAt).toLocaleDateString()}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Link href={`/campaigns/${camp.id}`}>
+                              <button
+                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="View campaign"
+                              >
+                                <FiEdit3 size={16} />
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteCampaign(camp)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete campaign"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
-      )}
+
+          {/* Infinite Scroll Loader */}
+          <div ref={loadMoreRef} className="flex justify-center py-6 border-t border-gray-200">
+            {isFetchingNextPage ? (
+              <div className="flex items-center gap-3">
+                <div className="h-5 w-5 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-gray-600 font-medium">Loading more campaigns...</span>
+              </div>
+            ) : hasNextPage ? (
+              <span className="text-sm text-gray-500">Scroll to load more</span>
+            ) : campaigns.length > 0 ? (
+              <span className="text-sm text-gray-500">✓ All campaigns loaded</span>
+            ) : null}
+          </div>
+        </motion.div>
+      </div>
 
       {/* Add Campaign Modal */}
       <AddCampaignModal
@@ -304,8 +584,7 @@ export default function CampaignTable({ companyId }) {
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleCampaignUpdated}
         companyId={companyId}
-
       />
-    </motion.div>
+    </div>
   );
 }

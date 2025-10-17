@@ -5,6 +5,9 @@ import bcrypt from "bcryptjs";
 export async function GET(req) {
   try {
     // Verify admin authentication
+    // console.log(req.json())
+    console.log("req.json()")
+
     const { employee: currentUser, error, status } = await verifyJWT(req);
     if (error) {
       return new Response(JSON.stringify({ success: false, message: error }), {
@@ -22,7 +25,7 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
-    const companyId = searchParams.get("companyId");
+    let companyId = searchParams.get("companyId");
     const take = Number(searchParams.get("take")) || 50;
     const cursor = searchParams.get("cursor") || null;
     const sortBy = searchParams.get("sortBy") || "updatedAt";
@@ -30,15 +33,9 @@ export async function GET(req) {
     const search = searchParams.get("search")?.trim() || "";
     const isAdminParam = searchParams.get("is_admin");
 
-    // Build where clause
-    const whereClause = {};
-
-    // Must provide companyId
+    // ✅ FIX: If no companyId provided, use current user's company
     if (!companyId) {
-      return new Response(
-        JSON.stringify({ success: false, message: "Company ID is required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+      companyId = currentUser.companyId;
     }
 
     // Verify user has access to this company
@@ -52,7 +49,10 @@ export async function GET(req) {
       );
     }
 
-    whereClause.companyId = companyId;
+    // Build where clause
+    const whereClause = {
+      companyId: companyId,
+    };
 
     // Search filter
     if (search) {
@@ -69,7 +69,9 @@ export async function GET(req) {
     }
 
     console.log("🔍 Admin Employee Query:", {
-      companyId,
+      requestedCompanyId: searchParams.get("companyId"),
+      usingCompanyId: companyId,
+      userCompanyId: currentUser.companyId,
       search,
       whereClause: JSON.stringify(whereClause, null, 2),
     });
