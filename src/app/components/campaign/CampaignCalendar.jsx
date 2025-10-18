@@ -288,7 +288,6 @@ function ScheduleCalendarView({ schedules, currentDate, viewMode }) {
     </div>
   );
 }
-
 // Add Schedule Modal
 function AddScheduleModal({ campaignId, onClose, onSuccess }) {
   const [roles, setRoles] = useState([]);
@@ -300,11 +299,44 @@ function AddScheduleModal({ campaignId, onClose, onSuccess }) {
     color: '#3b82f6',
   });
   const [loading, setLoading] = useState(false);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [companyId, setCompanyId] = useState(null);
 
   const colors = [
     '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', 
     '#10b981', '#06b6d4', '#6366f1', '#ef4444'
   ];
+
+  // Load roles on mount
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
+  const loadRoles = async () => {
+    setRolesLoading(true);
+    try {
+      // Get user's company ID
+      const authRes = await fetch('/api/auth/me', { credentials: 'include' });
+      const authData = await authRes.json();
+      const userCompanyId = authData.employee?.companyId;
+      setCompanyId(userCompanyId);
+
+      // Fetch roles
+      const response = await fetch(`/api/admin/companies/${userCompanyId}/roles`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) throw new Error('Failed to load roles');
+
+      const result = await response.json();
+      setRoles(result.data);
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      await showError('Load Failed', 'Failed to load roles');
+    } finally {
+      setRolesLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -337,112 +369,135 @@ function AddScheduleModal({ campaignId, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Add Schedule Entry</h2>
           <p className="text-sm text-gray-600 mt-1">Create a new calendar entry for a role</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Role *
-            </label>
-            <select
-              value={formData.roleId}
-              onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a role...</option>
-              {/* Map roles here */}
-            </select>
+        {rolesLoading ? (
+          <div className="p-12 flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-gray-600">Loading roles...</span>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g., Q4 Campaign Sprint"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date *
+                Role *
               </label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              <select
+                value={formData.roleId}
+                onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">Select a role...</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                    {role.description && ` - ${role.description}`}
+                    {role.parent && ` (Reports to ${role.parent.name})`}
+                  </option>
+                ))}
+              </select>
+              {roles.length === 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  No roles available. Please create roles first.
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                End Date *
+                Title
               </label>
               <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                required
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Q4 Campaign Sprint"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Color
-            </label>
-            <div className="flex gap-2">
-              {colors.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, color })}
-                  className={`w-10 h-10 rounded-lg transition-all ${
-                    formData.color === color
-                      ? 'ring-2 ring-offset-2 ring-blue-500 scale-110'
-                      : 'hover:scale-105'
-                  }`}
-                  style={{ backgroundColor: color }}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
-            >
-              {loading ? 'Creating...' : 'Create Schedule'}
-            </button>
-          </div>
-        </form>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Date *
+                </label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  required
+                  min={formData.startDate}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Color
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {colors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color })}
+                    className={`w-10 h-10 rounded-lg transition-all ${
+                      formData.color === color
+                        ? 'ring-2 ring-offset-2 ring-blue-500 scale-110'
+                        : 'hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || roles.length === 0}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating...' : 'Create Schedule'}
+              </button>
+            </div>
+          </form>
+        )}
       </motion.div>
     </div>
   );

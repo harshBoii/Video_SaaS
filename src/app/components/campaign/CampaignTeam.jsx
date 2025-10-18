@@ -28,7 +28,7 @@ export default function CampaignTeam({ campaignId }) {
   const loadAssignments = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/assignments`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/assignments`, {
         credentials: 'include',
       });
 
@@ -108,7 +108,7 @@ export default function CampaignTeam({ campaignId }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -354,7 +354,7 @@ function AddMemberModal({ campaignId, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/assignments`, {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/assignments`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

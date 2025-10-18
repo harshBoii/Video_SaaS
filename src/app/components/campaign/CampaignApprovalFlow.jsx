@@ -20,6 +20,7 @@ export default function FlowchainBuilderModal({ campaignId, onClose, onSuccess }
   const [loading, setLoading] = useState(false);
   const [rolesLoading, setRolesLoading] = useState(true);
   const [companyId, setCompanyId] = useState(null);
+  const [setAsDefault, setSetAsDefault] = useState(false);
   
   // Transition modal state
   const [showTransitionModal, setShowTransitionModal] = useState(false);
@@ -129,7 +130,9 @@ export default function FlowchainBuilderModal({ campaignId, onClose, onSuccess }
     showLoading('Creating flowchain...', 'Please wait');
 
     try {
-      const response = await fetch('/api/flowchains', {
+      // Step 1: Create the flowchain
+      console.log('📝 Creating flowchain...');
+      const flowchainResponse = await fetch('/api/flowchains', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -137,7 +140,6 @@ export default function FlowchainBuilderModal({ campaignId, onClose, onSuccess }
           name: chainName,
           description: chainDesc,
           companyId: companyId,
-          campaignId: campaignId,
           steps: steps.map((s) => ({
             name: s.name,
             description: s.description,
@@ -147,17 +149,42 @@ export default function FlowchainBuilderModal({ campaignId, onClose, onSuccess }
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save');
+      if (!flowchainResponse.ok) {
+        const error = await flowchainResponse.json();
+        throw new Error(error.error || 'Failed to create flowchain');
       }
 
+      const flowchainResult = await flowchainResponse.json();
+      const flowChainId = flowchainResult.data.id;
+      
+      console.log('✅ Flowchain created:', flowChainId);
+
+      // Step 2: Link flowchain to campaign
+      console.log('🔗 Linking flowchain to campaign...');
+      const linkResponse = await fetch(`/api/admin/campaigns/${campaignId}/flows`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          flowChainId: flowChainId,
+          isDefault: setAsDefault,
+        }),
+      });
+
+      if (!linkResponse.ok) {
+        const error = await linkResponse.json();
+        // Flowchain was created but linking failed
+        throw new Error(error.error || 'Flowchain created but failed to link to campaign');
+      }
+
+      console.log('✅ Flowchain linked to campaign');
+
       closeSwal();
-      await showSuccess('Success!', 'Flowchain created successfully');
+      await showSuccess('Success!', 'Flowchain created and linked to campaign');
       onSuccess();
     } catch (err) {
       closeSwal();
-      console.error(err);
+      console.error('❌ Error:', err);
       await showError('Error!', err.message || 'Failed to create flowchain');
     } finally {
       setLoading(false);
@@ -227,6 +254,20 @@ export default function FlowchainBuilderModal({ campaignId, onClose, onSuccess }
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
+                </div>
+
+                {/* Set as Default Checkbox */}
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <input
+                    type="checkbox"
+                    id="setAsDefault"
+                    checked={setAsDefault}
+                    onChange={(e) => setSetAsDefault(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <label htmlFor="setAsDefault" className="text-sm text-gray-700 cursor-pointer">
+                    Set as default workflow for this campaign
+                  </label>
                 </div>
 
                 {/* Add Step Button */}
@@ -375,7 +416,7 @@ export default function FlowchainBuilderModal({ campaignId, onClose, onSuccess }
                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" />
-                {loading ? 'Saving...' : 'Save Flowchain'}
+                {loading ? 'Saving...' : 'Save & Link to Campaign'}
               </button>
             </div>
           </div>

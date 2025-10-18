@@ -90,8 +90,13 @@ export default function AdminDashboard() {
     return () => clearTimeout(handler);
   }, [search]);
 
-  if (loading)
-    return <p className="p-10 text-center text-gray-500">Loading dashboard...</p>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (error)
     return <p className="p-10 text-center text-red-500">Error: {error}</p>;

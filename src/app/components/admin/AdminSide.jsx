@@ -44,7 +44,6 @@ const AdminSide = () => {
       <nav className={styles.nav}>
         {/* 3. Use the corrected NavItem with href props for each link */}
         <NavItem icon={<FiGrid />} href="/admin" label="Dashboard" />
-        <NavItem icon={<FiMap />} href="/admin/approvalPipeline" label="Flow" />
         <NavItem icon={<FiClipboard />} href="/admin/contract/add" label="Contract" />
         <NavItem icon={<FiBarChart2 />} href="/admin/reports" label="Reports" />
         <NavItem icon={<FiCodesandbox />} href="/admin/roles" label="Roles" />

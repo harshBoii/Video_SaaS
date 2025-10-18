@@ -9,7 +9,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { campaignId, assignmentId } = params;
+    const { campaignId, assignmentId } = await params;
 
     if (!campaignId || !assignmentId) {
       return NextResponse.json(

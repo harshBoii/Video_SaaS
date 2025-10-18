@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { companyId } = params;
+    const { companyId } = await params;
 
     if (!companyId) {
       return NextResponse.json(
