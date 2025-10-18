@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { companyId } = params;
+    const { id:companyId } = params;
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get('campaignId');
 
