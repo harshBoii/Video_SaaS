@@ -9,7 +9,8 @@ import {
   Building2,
   X,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
 
@@ -27,7 +28,7 @@ export default function CampaignTeam({ campaignId }) {
   const loadAssignments = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/campaigns/${campaignId}/assignments`, {
+      const response = await fetch(`/api/campaigns/${campaignId}/assignments`, {
         credentials: 'include',
       });
 
@@ -36,7 +37,6 @@ export default function CampaignTeam({ campaignId }) {
       const result = await response.json();
       setAssignments(result.data);
       
-      // Expand all roles by default
       const allRoleIds = new Set(result.data.assignmentsByRole.map(r => r.role.id));
       setExpandedRoles(allRoleIds);
     } catch (error) {
@@ -57,6 +57,42 @@ export default function CampaignTeam({ campaignId }) {
     setExpandedRoles(newExpanded);
   };
 
+  // Handle remove assignment
+  const handleRemoveAssignment = async (assignmentId, employeeName) => {
+    const result = await showConfirm(
+      'Remove Team Member?',
+      `Are you sure you want to remove ${employeeName} from this campaign?`,
+      'Yes, Remove',
+      'Cancel'
+    );
+
+    if (!result.isConfirmed) return;
+
+    showLoading('Removing member...', 'Please wait');
+
+    try {
+      const response = await fetch(
+        `/api/admin/campaigns/${campaignId}/assignments/${assignmentId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      closeSwal();
+      await showSuccess('Member Removed!', 'Team member removed successfully');
+      loadAssignments();
+    } catch (error) {
+      closeSwal();
+      await showError('Removal Failed', error.message);
+    }
+  };
+
   const filteredAssignments = assignments?.assignmentsByRole.filter(roleGroup => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -72,7 +108,7 @@ export default function CampaignTeam({ campaignId }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     );
   }
@@ -215,10 +251,12 @@ export default function CampaignTeam({ campaignId }) {
                             {assignment.employee.status}
                           </span>
                           <button
-                            onClick={() => {
-                              // Handle remove
-                            }}
+                            onClick={() => handleRemoveAssignment(
+                              assignment.assignmentId, 
+                              assignment.employee.fullName
+                            )}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Remove from campaign"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -248,7 +286,7 @@ export default function CampaignTeam({ campaignId }) {
         )}
       </div>
 
-      {/* Add Member Modal - Implement separately */}
+      {/* Add Member Modal */}
       {showAddModal && (
         <AddMemberModal
           campaignId={campaignId}
@@ -268,18 +306,55 @@ function AddMemberModal({ campaignId, onClose, onSuccess }) {
   const [selectedRole, setSelectedRole] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [companyId, setCompanyId] = useState(null);
 
-  // Load employees and roles on mount
   useEffect(() => {
-    // Implement API calls to fetch available employees and roles
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setDataLoading(true);
+    try {
+      // Get user's company
+      const authRes = await fetch('/api/auth/me', { credentials: 'include' });
+      const authData = await authRes.json();
+      const userCompanyId = authData.employee?.companyId;
+      setCompanyId(userCompanyId);
+
+      // Load employees and roles in parallel
+      const [employeesRes, rolesRes] = await Promise.all([
+        fetch(`/api/admin/companies/${userCompanyId}/available-employees?campaignId=${campaignId}`, {
+          credentials: 'include',
+        }),
+        fetch(`/api/admin/companies/${userCompanyId}/roles`, {
+          credentials: 'include',
+        }),
+      ]);
+
+      if (!employeesRes.ok || !rolesRes.ok) {
+        throw new Error('Failed to load data');
+      }
+
+      const employeesData = await employeesRes.json();
+      const rolesData = await rolesRes.json();
+
+      setEmployees(employeesData.data);
+      setRoles(rolesData.data);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      await showError('Load Failed', 'Failed to load employees and roles');
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/admin/campaigns/${campaignId}/assignments`, {
+      const response = await fetch(`/api/campaigns/${campaignId}/assignments`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -306,78 +381,98 @@ function AddMemberModal({ campaignId, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Add Team Member</h2>
           <p className="text-sm text-gray-600 mt-1">Assign an employee to this campaign</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Employee
-            </label>
-            <select
-              value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Choose an employee...</option>
-              {/* Map employees */}
-            </select>
+        {dataLoading ? (
+          <div className="p-12 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Employee *
+              </label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Choose an employee...</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.fullName} ({emp.email}) {emp.role?.name && `- ${emp.role.name}`}
+                  </option>
+                ))}
+              </select>
+              {employees.length === 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  All employees are already assigned to this campaign
+                </p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Assign Role
-            </label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Choose a role...</option>
-              {/* Map roles */}
-            </select>
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assign Role *
+              </label>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Choose a role...</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name} {role.parent && `(Reports to ${role.parent.name})`}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Note (Optional)
-            </label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              placeholder="Add any notes about this assignment..."
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Note (Optional)
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                placeholder="Add any notes about this assignment..."
+              />
+            </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
-            >
-              {loading ? 'Adding...' : 'Add Member'}
-            </button>
-          </div>
-        </form>
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || employees.length === 0}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Adding...' : 'Add Member'}
+              </button>
+            </div>
+          </form>
+        )}
       </motion.div>
     </div>
   );
