@@ -8,20 +8,21 @@ import {
   Layers,
   CheckCircle2,
   XCircle,
-  ArrowRight,
   Loader2,
-  X,
-  FiTrash2,
-  Link2
+  Trash2,
+  X
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
 import FlowchainBuilderModal from './CampaignApprovalFlow';
+import EditFlowchainModal from './EditFlowchainModal';
 
 export default function CampaignFlows({ campaignId }) {
   const [flowsData, setFlowsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedFlow, setSelectedFlow] = useState(null);
   const [showFlowBuilder, setShowFlowBuilder] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingFlowChainId, setEditingFlowChainId] = useState(null);
 
   useEffect(() => {
     loadFlows();
@@ -53,6 +54,81 @@ export default function CampaignFlows({ campaignId }) {
   const handleFlowCreated = () => {
     setShowFlowBuilder(false);
     loadFlows();
+  };
+
+  const handleEditFlow = (flowChainId) => {
+    setEditingFlowChainId(flowChainId);
+    setShowEditModal(true);
+  };
+
+  const handleFlowEdited = () => {
+    setShowEditModal(false);
+    setEditingFlowChainId(null);
+    loadFlows();
+  };
+
+  // ✅ MISSING FUNCTION - Added here
+  const handleSetDefault = async (flowId) => {
+    showLoading('Setting as default...', 'Please wait');
+
+    try {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/flows/${flowId}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isDefault: true }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      closeSwal();
+      await showSuccess('Success!', 'Default workflow updated');
+      loadFlows();
+    } catch (error) {
+      closeSwal();
+      await showError('Update Failed', error.message);
+    }
+  };
+
+  // ✅ OPTIONAL - Delete flow handler
+  const handleDeleteFlow = async (flowId, flowName) => {
+    const result = await showConfirm(
+      'Remove Workflow?',
+      `Are you sure you want to remove "${flowName}" from this campaign?`,
+      'Yes, Remove',
+      'Cancel'
+    );
+
+    if (!result.isConfirmed) return;
+
+    showLoading('Removing workflow...', 'Please wait');
+
+    try {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/flows/${flowId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      closeSwal();
+      await showSuccess('Removed!', 'Workflow removed from campaign');
+      
+      if (selectedFlow === flowId) {
+        setSelectedFlow(null);
+      }
+      
+      loadFlows();
+    } catch (error) {
+      closeSwal();
+      await showError('Removal Failed', error.message);
+    }
   };
 
   if (loading) {
@@ -93,49 +169,62 @@ export default function CampaignFlows({ campaignId }) {
           ) : (
             <div className="space-y-2">
               {flowsData?.flows.map((flow) => (
-                <motion.button
+                <motion.div
                   key={flow.id}
-                  onClick={() => setSelectedFlow(flow.flowChain.id)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                    selectedFlow === flow.flowChain.id
-                      ? 'bg-blue-50 border-blue-500'
-                      : 'bg-white border-gray-200 hover:border-blue-300'
-                  }`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="group relative"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                        <GitBranch className="w-4 h-4 text-white" />
+                  <button
+                    onClick={() => setSelectedFlow(flow.flowChain.id)}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                      selectedFlow === flow.flowChain.id
+                        ? 'bg-blue-50 border-blue-500'
+                        : 'bg-white border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                          <GitBranch className="w-4 h-4 text-white" />
+                        </div>
+                        <h4 className="font-semibold text-gray-900">
+                          {flow.flowChain.name}
+                        </h4>
                       </div>
-                      <h4 className="font-semibold text-gray-900">
-                        {flow.flowChain.name}
-                      </h4>
+                      {flow.isDefault && (
+                        <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                          <Star className="w-3 h-3 fill-current" />
+                          Default
+                        </span>
+                      )}
                     </div>
-                    {flow.isDefault && (
-                      <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                        <Star className="w-3 h-3 fill-current" />
-                        Default
-                      </span>
+                    
+                    {flow.flowChain.description && (
+                      <p className="text-sm text-gray-600 mb-3">
+                        {flow.flowChain.description}
+                      </p>
                     )}
-                  </div>
-                  
-                  {flow.flowChain.description && (
-                    <p className="text-sm text-gray-600 mb-3">
-                      {flow.flowChain.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
-                      {flow.flowChain.totalSteps} steps
-                    </span>
-                    <ChevronRight className={`w-4 h-4 transition-colors ${
-                      selectedFlow === flow.flowChain.id ? 'text-blue-600' : 'text-gray-400'
-                    }`} />
-                  </div>
-                </motion.button>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">
+                        {flow.flowChain.totalSteps} steps
+                      </span>
+                      <ChevronRight className={`w-4 h-4 transition-colors ${
+                        selectedFlow === flow.flowChain.id ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                    </div>
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={() => handleDeleteFlow(flow.id, flow.flowChain.name)}
+                    className="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove workflow"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </motion.div>
               ))}
             </div>
           )}
@@ -146,6 +235,8 @@ export default function CampaignFlows({ campaignId }) {
           {selectedFlow ? (
             <FlowVisualization 
               flow={flowsData.flows.find(f => f.flowChain.id === selectedFlow)} 
+              onSetDefault={handleSetDefault}
+              onEdit={handleEditFlow}
             />
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center h-full flex items-center justify-center">
@@ -166,12 +257,25 @@ export default function CampaignFlows({ campaignId }) {
           onSuccess={handleFlowCreated}
         />
       )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditFlowchainModal
+          flowChainId={editingFlowChainId}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingFlowChainId(null);
+          }}
+          onSuccess={handleFlowEdited}
+        />
+      )}
     </>
   );
 }
 
 // Flow Visualization Component
-function FlowVisualization({ flow }) {
+// ✅ FIXED - Added props to function signature
+function FlowVisualization({ flow, onSetDefault, onEdit }) {
   if (!flow) return null;
 
   return (
@@ -274,11 +378,17 @@ function FlowVisualization({ flow }) {
       <div className="p-6 border-t border-gray-200 bg-gray-50">
         <div className="flex gap-3">
           {!flow.isDefault && (
-            <button className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition-colors font-medium text-sm">
+            <button 
+              onClick={() => onSetDefault(flow.id)}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition-colors font-medium text-sm"
+            >
               Set as Default
             </button>
           )}
-          <button className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+          <button 
+            onClick={() => onEdit(flow.flowChain.id)}
+            className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+          >
             Edit Workflow
           </button>
         </div>
