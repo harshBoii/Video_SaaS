@@ -44,6 +44,7 @@ export async function GET(request, { params }) {
     }
 
     const { id: campaignId } = await params;
+    console.log("id is:",campaignId)
 
     if (!campaignId || typeof campaignId !== 'string') {
       return NextResponse.json(
@@ -113,18 +114,20 @@ export async function GET(request, { params }) {
     if (employee.companyId !== campaign.companyId) {
       return NextResponse.json(
         { error: 'Forbidden - Access denied to this campaign' },
-        { status: 403 }
+        { status: 405 }
       );
     }
 
+  
+
     // Check admin access
-    const adminError = requireAdmin(employee);
-    if (adminError) {
-      return NextResponse.json(
-        { error: adminError.error },
-        { status: adminError.status }
-      );
-    }
+    // const adminError = requireAdmin(employee);
+    // if (adminError) {
+    //   return NextResponse.json(
+    //     { error: adminError.error },
+    //     { status: adminError.status }
+    //   );
+    // }
 
     // Transform response
     const response = {

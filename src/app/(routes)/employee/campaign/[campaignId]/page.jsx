@@ -1,3 +1,59 @@
+// "use client";
+
+// import { useEffect, useState } from "react";
+// import { useParams } from "next/navigation";
+
+// export default function CampaignPage() {
+//   const { campaignId } = useParams();
+//   const [data, setData] = useState(null);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => {
+//     if (!campaignId) return;
+
+//     async function fetchData() {
+//       const res = await fetch(
+//         `/api/auth/campaign?campaignId=${campaignId}`,
+//         {
+//             method:"GET",
+//             credentials:"include",
+//             headers:{
+//                 "content-Type":"application/json"
+//             }
+//         }
+//       );
+
+//       const json = await res.json();
+//       setData(json);
+//       setLoading(false);
+//     }
+
+//     fetchData();
+//   }, [campaignId]);
+
+//   if (loading) return <div className="p-4">Loading...</div>;
+//   if (data?.error) return <div className="p-4 text-red-500">{data.error}</div>;
+
+//   return (
+//     <div className="p-6 space-y-4">
+//       <h1 className="text-3xl font-bold">Campaign Access</h1>
+
+//       <div className="border p-4 rounded-lg shadow">
+//         <p><strong>Employee:</strong> {data.employeeName}</p>
+//         <p><strong>Campaign:</strong> {data.campaignName}</p>
+//         <p><strong>Role:</strong> {data.role}</p>
+
+//         <h2 className="text-xl font-semibold mt-4">Permissions</h2>
+//         <ul className="list-disc ml-6">
+//           {data.permissions.map((perm, i) => (
+//             <li key={i}>{perm}</li>
+//           ))}
+//         </ul>
+//       </div>
+//     </div>
+//   );
+// }
+
 "use client"
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,7 +78,7 @@ import CampaignCalendar from '@/app/components/campaign/CampaignCalendar';
 import CampaignSettings from '@/app/components/campaign/CampaignSettings';
 import CampaignVideo    from '@/app/components/campaign/CampaignVideo';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
-
+import { useParams } from 'next/navigation';
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: TrendingUp },
@@ -33,9 +89,10 @@ const tabs = [
   { id:'videos',    label:'Videos',    icon:Video}
 ];
 
-export default function CampaignDetailPage({ params }) {
+export default function CampaignDetailPage() {
   const router = useRouter();
-  const campaignId = params.id;
+  const params=useParams()
+  const campaignId = params.campaignId;
   
   const [activeTab, setActiveTab] = useState('overview');
   const [campaign, setCampaign] = useState(null);
@@ -300,7 +357,7 @@ export default function CampaignDetailPage({ params }) {
               <CampaignSettings campaign={campaign} onUpdate={loadCampaignData} />
             )}
             {activeTab === 'videos' && (
-              <CampaignVideo campaign={campaign} onUpdate={loadCampaignData} />
+              <CampaignVideo campaign={campaign} onUpdate={loadCampaignData} campaignId={campaignId} />
             )}
           </motion.div>
         </AnimatePresence>

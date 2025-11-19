@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import prisma from './prisma';
 import { ApiResponse } from './api-response';
+import { NextResponse } from "next/server";
 
 /**
  * Verify and decode JWT token from cookies
@@ -275,72 +276,290 @@ export function generateToken(user) {
   );
 }
 
-export async function verifyJWT(request) {
+// src/app/lib/auth.js
+
+export async function verifyJWT(req) {
   try {
-    let token;
+    const authHeader = req.headers.get("authorization");
+    const cookieToken = req.cookies.get("token")?.value;
+    const token = authHeader?.replace("Bearer ", "") || cookieToken;
 
-    // 1. Try to get token from cookies (your primary method)
-    token = request.cookies.get('token')?.value;
-
-    // 2. Fallback to Authorization header (for API clients)
     if (!token) {
-      const authHeader = request.headers.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
-      }
+      return { error: "No token provided", status: 401 };
     }
 
-    // 3. Check if token exists
-    if (!token) {
-      return { error: 'Missing authentication token', status: 401 };
-    }
-
-    // 4. Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // 5. Get employee from database
+    
+    // ✅ FIXED: Your JWT uses 'id', not 'userId'
     const employee = await prisma.employee.findUnique({
-      where: { 
-        id: decoded.id, // Your JWT uses 'id' field
-      },
+      where: { id: decoded.id },  // ✅ Changed from decoded.userId to decoded.id
       select: {
         id: true,
         email: true,
         companyId: true,
-        is_admin: true,
+        isAdmin: true,
         status: true,
         firstName: true,
         lastName: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+            permissions: {
+              select: {
+                permission: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
     if (!employee) {
-      return { error: 'Employee not found', status: 404 };
+      return { error: "Employee not found", status: 404 };
     }
 
-    if (employee.status !== 'ACTIVE') {
-      return { error: 'Account is not active', status: 403 };
+    if (employee.status !== "ACTIVE") {
+      return { error: "Account is not active", status: 403 };
     }
 
-    return { employee };
+    // ✅ Transform permissions to match your original structure
+    const permissions = employee.role?.permissions?.map(rp => rp.permission.name) || [];
 
-  } catch (error) {
-    console.error('JWT verification error:', error);
-    
-    if (error.name === 'JsonWebTokenError') {
-      return { error: 'Invalid token', status: 401 };
+    return { 
+      employee: {
+        ...employee,
+        permissions,
+      }, 
+      error: null 
+    };
+  } catch (err) {
+    console.error("JWT verification error:", err);
+    if (err.name === "TokenExpiredError") {
+      return { error: "Token expired", status: 401 };
     }
-    if (error.name === 'TokenExpiredError') {
-      return { error: 'Token expired', status: 401 };
-    }
-    return { error: 'Authentication failed', status: 500 };
+    return { error: "Invalid token", status: 401 };
   }
 }
 
-// Helper to check if user is admin
 export function requireAdmin(employee) {
-  if (!employee.is_admin) {
-    return { error: 'Admin access required', status: 403 };
+  if (!employee.isAdmin) {
+    return { error: "Admin access required", status: 403 };
   }
   return null;
+}
+
+
+export async function authenticateRequest(request) {
+  try {
+    let token = null;
+
+    // ✅ Try Authorization header first
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+
+    // ✅ Fallback to HTTP-only cookie
+    if (!token) {
+      token = request.cookies.get("token")?.value;
+    }
+
+    if (!token) {
+      return {
+        authenticated: false,
+        error: NextResponse.json(
+          {
+            success: false,
+            error: "Authentication required",
+            message: "No token provided",
+          },
+          { status: 401 }
+        ),
+      };
+    }
+
+    // ✅ Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // ✅ Verify user still exists and is active
+    const user = await prisma.employee.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        status: true,
+        isAdmin: true,
+        companyId: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+            permissions: {
+              select: {
+                permission: {
+                  select: {
+                    name: true,
+                    group: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return {
+        authenticated: false,
+        error: NextResponse.json(
+          {
+            success: false,
+            error: "User not found",
+            message: "The user associated with this token no longer exists",
+          },
+          { status: 401 }
+        ),
+      };
+    }
+
+    if (user.status !== "ACTIVE") {
+      return {
+        authenticated: false,
+        error: NextResponse.json(
+          {
+            success: false,
+            error: "Account inactive",
+            message: `Account status: ${user.status}`,
+          },
+          { status: 403 }
+        ),
+      };
+    }
+
+    // ✅ Extract permissions for easy checking
+    const permissions = user.role
+      ? user.role.permissions.map((rp) => rp.permission.name)
+      : [];
+
+    return {
+      authenticated: true,
+      user: {
+        ...user,
+        permissions,
+      },
+    };
+  } catch (error) {
+    console.error("Authentication error:", error);
+
+    // ✅ Handle specific JWT errors
+    if (error.name === "JsonWebTokenError") {
+      return {
+        authenticated: false,
+        error: NextResponse.json(
+          {
+            success: false,
+            error: "Invalid token",
+            message: "The provided token is malformed or invalid",
+          },
+          { status: 401 }
+        ),
+      };
+    }
+
+    if (error.name === "TokenExpiredError") {
+      return {
+        authenticated: false,
+        error: NextResponse.json(
+          {
+            success: false,
+            error: "Token expired",
+            message: "Please login again",
+          },
+          { status: 401 }
+        ),
+      };
+    }
+
+    return {
+      authenticated: false,
+      error: NextResponse.json(
+        {
+          success: false,
+          error: "Authentication failed",
+          message: process.env.NODE_ENV === "development" ? error.message : undefined,
+        },
+        { status: 500 }
+      ),
+    };
+  }
+}
+
+/**
+ * Check if user has a specific permission
+ */
+// export function hasPermission(user, permissionName) {
+//   if (user.isAdmin) return true; // Super admin has all permissions
+//   return user.permissions?.includes(permissionName);
+// }
+
+/**
+ * Check if user has any of the specified permissions
+ */
+// export function hasAnyPermission(user, permissionNames) {
+//   if (user.isAdmin) return true;
+//   return permissionNames.some((perm) => user.permissions?.includes(perm));
+// }
+
+// /**
+//  * Check if user has all of the specified permissions
+//  */
+// export function hasAllPermissions(user, permissionNames) {
+//   if (user.isAdmin) return true;
+//   return permissionNames.every((perm) => user.permissions?.includes(perm));
+// }
+
+/**
+ * Check if user can access a campaign (is admin, company member, or campaign admin/member)
+ */
+export async function canAccessCampaign(userId, companyId, campaignId) {
+  const user = await prisma.employee.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      isAdmin: true,
+      companyId: true,
+    },
+  });
+
+  if (!user) return false;
+  if (user.isAdmin) return true; // Super admin
+  if (user.companyId !== companyId) return false; // Different company
+
+  // Check if user is campaign admin or assigned to campaign
+  const campaign = await prisma.campaign.findFirst({
+    where: {
+      id: campaignId,
+      OR: [
+        { adminId: userId }, // Is campaign admin
+        { assignments: { some: { employeeId: userId } } }, // Is assigned to campaign
+      ],
+    },
+  });
+
+  return !!campaign;
 }

@@ -15,266 +15,602 @@ datasource db {
 
 }
 
+// ===================== ENUMS =====================
+
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
 }
 
-// -------Flow Chain----------------
-
-model FlowChain {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  companyId   String
-  company     Company    @relation(fields: [companyId], references: [id])
-  steps       FlowStep[] // 👈 Each FlowChain contains multiple steps
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  campaignFlows CampaignFlow[]
-
-}
-
-model FlowStep {
-  id            String      @id @default(cuid())
-  name          String
-  description   String?
-  roleId        String?     // Which role executes this step
-  role          Role?       @relation(fields: [roleId], references: [id])
-  chainId       String
-  chain         FlowChain   @relation(fields: [chainId], references: [id])
-
-  // 👇 Relationships for transitions
-  nextSteps     FlowTransition[] @relation("NextStepRelation")
-  previousSteps FlowTransition[] @relation("PrevStepRelation")
-
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-}
-
-model FlowTransition {
-  id          String    @id @default(cuid())
-  fromStepId  String
-  toStepId    String
-  condition   TransitionCondition @default(SUCCESS) // success or failure
-
-  // Self-relation to FlowStep for flexible transitions
-  fromStep    FlowStep  @relation("NextStepRelation", fields: [fromStepId], references: [id])
-  toStep      FlowStep  @relation("PrevStepRelation", fields: [toStepId], references: [id])
-}
-
 enum TransitionCondition {
   SUCCESS
   FAILURE
 }
-// ---------------------------------
+enum UploadStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  ABORTED
+}
+
+// ===================== CORE MODELS =====================
 
 model Company {
   id          String       @id @default(cuid())
-  name        String       
-  domain      String?      @unique// e.g., company.com
-  description String?
-  employees   Employee[]
-  departments Department[]
-  roles       Role[]        
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  flowchains  FlowChain[]
-  email       String?
-  mobile      String?
-  teams       Team[]
-  campaigns   Campaign[]
-  permissionCombos PermissionCombo[]  // 👈 NEW
+  name        String       @db.VarChar(255)
+  domain      String?      @unique @db.VarChar(255)
+  description String?      @db.Text
+  email       String?      @db.VarChar(255)
+  mobile      String?      @db.VarChar(50)
+  
+  // Relations
+  employees        Employee[]
+  departments      Department[]
+  roles            Role[]
+  teams            Team[]
+  campaigns        Campaign[]
+  flowchains       FlowChain[]
+  permissionCombos PermissionCombo[]
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@index([id, updatedAt(sort: Desc)]) // For sorted list queries
-  @@index([id, name])                  // For search by name
-  @@unique([name, id])                 // Prevent duplicate names per company
-
-
+  // Indexes for performance
+  @@index([name])
+  @@index([domain])
+  @@index([updatedAt(sort: Desc)])
+  @@index([id, updatedAt(sort: Desc)])
+  @@index([id, name])
+  @@unique([name, id])
 }
 
 model Department {
-  id        String      @id @default(cuid())
-  name      String
-  company   Company     @relation(fields: [companyId], references: [id] )
+  id        String  @id @default(cuid())
+  name      String  @db.VarChar(255)
   companyId String
-  parentId  String?     // self-relation for department tree
-  parent    Department? @relation("SubDepartments", fields: [parentId], references: [id])
+  parentId  String?
+  
+  // Relations
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  parent    Department?  @relation("SubDepartments", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   children  Department[] @relation("SubDepartments")
   employees Employee[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([companyId])
+  @@index([parentId])
+  @@index([companyId, name])
+  @@unique([name, companyId])
 }
 
 model Role {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  company     Company      @relation(fields: [companyId], references: [id])
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
   companyId   String
-  employees   Employee[]
-  permissions RolePermission[]
-  FlowStep    FlowStep[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  parentId    String?      // Reference to parent role
-  parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id])
-  children    Role[]       @relation("RoleHierarchy")
+  parentId    String?
   
+  // Relations
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  parent              Role?                @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  children            Role[]               @relation("RoleHierarchy")
+  employees           Employee[]
+  permissions         RolePermission[]
+  FlowStep            FlowStep[]
   campaignAssignments CampaignAssignment[]
   campaignSchedules   CampaignSchedule[]
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@unique([name, companyId]) // 👈 add this
+  // Indexes
+  @@index([companyId])
+  @@index([parentId])
+  @@index([companyId, name])
+  @@unique([name, companyId])
 }
 
-
-
 model Permission {
-  id          String          @id @default(cuid())
-  name        String          @unique// e.g., "view_dashboard", "manage_users"
-  description String?
-  group       String?
-  roles       RolePermission[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  combos      ComboPermission[]   // 👈 NEW many-to-many link
+  id          String  @id @default(cuid())
+  name        String  @unique @db.VarChar(255)
+  description String? @db.Text
+  group       String? @db.VarChar(100)
+  
+  // Relations
+  roles  RolePermission[]
+  combos ComboPermission[]
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([name])
+  @@index([group])
 }
 
 model RolePermission {
   roleId       String
   permissionId String
-  role         Role       @relation(fields: [roleId], references: [id])
-  permission   Permission @relation(fields: [permissionId], references: [id])
+  
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
 }
 
 model Employee {
-  id            String     @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String     @unique
-  passwordHash  String
-  status        EmployeeStatus @default(ACTIVE)
-  lastLogin     DateTime?
-  company       Company    @relation(fields: [companyId], references: [id])
-  companyId     String
-  role          Role?      @relation(fields: [roleId], references: [id])
-  roleId        String?
-  department    Department? @relation(fields: [departmentId], references: [id])
-  departmentId  String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  campaigns     Campaign[]
-  teams         Team[]      @relation("TeamMembers")
-  ownedTeams    Team[]      @relation("AdminTeams")
-  is_admin      Boolean?    @default(false) 
+  id           String         @id @default(cuid())
+  firstName    String         @db.VarChar(255)
+  lastName     String         @db.VarChar(255)
+  email        String         @unique @db.VarChar(255)
+  passwordHash String         @db.VarChar(255)
+  status       EmployeeStatus @default(ACTIVE)
+  isAdmin      Boolean        @default(false) @map("is_admin")
+  lastLogin    DateTime?      @db.Timestamptz(3)
+  companyId    String
+  roleId       String?
+  departmentId String?
+  
+  // Relations
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role                Role?                @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  department          Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  campaigns           Campaign[]
+  teams               Team[]               @relation("TeamMembers")
+  ownedTeams          Team[]               @relation("AdminTeams")
+  campaignAssignments CampaignAssignment[]
+  uploadedVideos      Video[]              @relation("VideoUploader")
+  videoVersions       VideoVersion[]       @relation("VersionUploader")
+  uploadSessions      UploadSession[]      @relation("UploadSessions")
+  compressionJobs     CompressionJob[]     @relation("CompressionRequests")
 
-  campaignAssignments CampaignAssignment[]  // campaigns where employee is a member
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  // Indexes for common queries
+  @@index([email])
+  @@index([companyId])
+  @@index([roleId])
+  @@index([departmentId])
+  @@index([companyId, status])
+  @@index([companyId, email])
+  @@index([lastLogin(sort: Desc)])
 }
+
 model Team {
-  id          String      @id @default(cuid())
-  name        String
-  adminId     String      // Admin who owns the team
+  id        String @id @default(cuid())
+  name      String @db.VarChar(255)
+  adminId   String
+  companyId String
+  
+  // Relations
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  teamAdmin Employee   @relation("AdminTeams", fields: [adminId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  members   Employee[] @relation("TeamMembers")
+  campaigns Campaign[]
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([companyId])
+  @@index([adminId])
+}
+
+
+
+model FlowChain {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
   companyId   String
-  company     Company     @relation(fields: [companyId], references: [id])
-  campaigns   Campaign[]  // optional, if teams run campaigns
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  teamAdmin   Employee    @relation("AdminTeams", fields: [adminId], references: [id])
-  members     Employee[]  @relation("TeamMembers")
+  
+  // Relations
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  steps         FlowStep[]
+  campaignFlows CampaignFlow[]
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([companyId])
+  @@index([companyId, name])
+  @@index([updatedAt(sort: Desc)])
 }
+
+model FlowStep {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  chainId     String
+  roleId      String?
+  
+  // Relations
+  chain         FlowChain        @relation(fields: [chainId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role          Role?            @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  nextSteps     FlowTransition[] @relation("NextStepRelation")
+  previousSteps FlowTransition[] @relation("PrevStepRelation")
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([chainId])
+  @@index([roleId])
+  @@index([chainId, roleId])
+}
+
+model FlowTransition {
+  id         String              @id @default(cuid())
+  fromStepId String
+  toStepId   String
+  condition  TransitionCondition @default(SUCCESS)
+  
+  // Relations
+  fromStep FlowStep @relation("NextStepRelation", fields: [fromStepId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  toStep   FlowStep @relation("PrevStepRelation", fields: [toStepId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  // Indexes
+  @@index([fromStepId])
+  @@index([toStepId])
+  @@index([fromStepId, condition])
+  @@unique([fromStepId, toStepId, condition])
+}
+
+// ===================== CAMPAIGN MODELS =====================
+
 model Campaign {
-  id         String   @id @default(cuid())
-  name       String
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id])
-  adminId    String   // tagged admin
-  admin      Employee @relation(fields: [adminId], references: [id])
-  teamId     String?
-  team       Team?    @relation(fields: [teamId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String  @id @default(cuid())
+  name      String  @db.VarChar(255)
+  companyId String
+  adminId   String
+  teamId    String?
+  status     String   @default("active") @db.VarChar(50) // active, deleted, archived
+  deletedAt  DateTime? @db.Timestamptz(3) //  Soft delete timestamp
+  deletedBy  String?  // Who deleted it (Employee ID)
+  uploadSessions UploadSession[]
 
-  assignments CampaignAssignment[]   // employees + role membership for campaign
-  flows       CampaignFlow[]         // flows tagged to this campaign
-  schedules   CampaignSchedule[]     // calendar entries
+  // Relations
+  company     Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  admin       Employee             @relation(fields: [adminId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  team        Team?                @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  assignments CampaignAssignment[]
+  flows       CampaignFlow[]
+  schedules   CampaignSchedule[]
+  videos      Video[]  // <-- ADD THIS
 
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  // Indexes
+  @@index([companyId])
+  @@index([adminId])
+  @@index([teamId])
+  @@index([companyId, name])
+  @@index([companyId, updatedAt(sort: Desc)])
 }
+
+model CampaignAssignment {
+  id         String   @id @default(cuid())
+  campaignId String
+  employeeId String
+  roleId     String
+  note       String?  @db.Text
+  joinedAt   DateTime @default(now()) @db.Timestamptz(3)
+  
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role     Role     @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([campaignId])
+  @@index([employeeId])
+  @@index([roleId])
+  @@index([campaignId, roleId])
+  @@unique([campaignId, employeeId])
+}
+
+model CampaignFlow {
+  id          String  @id @default(cuid())
+  campaignId  String
+  flowChainId String
+  isDefault   Boolean @default(false)
+  
+  // Relations
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  flowChain FlowChain @relation(fields: [flowChainId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes
+  @@index([campaignId])
+  @@index([flowChainId])
+  @@index([campaignId, isDefault])
+  @@unique([campaignId, flowChainId])
+}
+
+model CampaignSchedule {
+  id         String   @id @default(cuid())
+  campaignId String
+  roleId     String
+  title      String?  @db.VarChar(500)
+  startDate  DateTime @db.Timestamptz(3)
+  endDate    DateTime @db.Timestamptz(3)
+  color      String?  @db.VarChar(50)
+  createdBy  String?
+  
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role     Role     @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Indexes - crucial for calendar queries
+  @@index([campaignId])
+  @@index([roleId])
+  @@index([campaignId, startDate, endDate])
+  @@index([startDate, endDate])
+  @@index([campaignId, roleId])
+}
+
+// ===================== VIDEO MODELS =====================
+
+
+model Video {
+  id              String   @id @default(cuid())
+  title           String   @db.VarChar(500)
+  description     String?  @db.Text
+  filename        String   @db.VarChar(255)
+  originalSize    BigInt
+  duration        Int?     // seconds
+  resolution      String?  @db.VarChar(20) // e.g., "1920x1080"
+  fps             Int?
+  codec           String?  @db.VarChar(50)
+  status          String   @default("uploading") @db.VarChar(50) // uploading, processing, ready, error, archived
+  
+  // R2 Storage
+  r2Key           String   @db.VarChar(500)
+  r2Bucket        String   @db.VarChar(255)
+  
+  // Cloudflare Stream
+  streamId        String?  @unique @db.VarChar(255)
+  playbackUrl     String?  @db.Text
+  thumbnailUrl    String?  @db.Text
+  
+  // Metadata
+  tags            String[] @default([])
+  metadata        Json     @default("{}")
+  
+  // Relations - Using Campaign as Project
+  campaignId      String   // <-- Links to Campaign (your "project")
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  uploadSession   UploadSession?
+  streamQueue     StreamQueue?
+  compressionJobs CompressionJob[]
+
+  uploadedBy      String
+  uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  
+  // Versions
+  currentVersion  Int      @default(1)
+  versions        VideoVersion[]
+  
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([campaignId])  // <-- Index on campaignId
+  @@index([uploadedBy])
+  @@index([status])
+  @@index([campaignId, status])
+  @@index([streamId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ✅ NEW: Add VideoVersion model
+model VideoVersion {
+  id              String   @id @default(cuid())
+  videoId         String
+  version         Int
+  
+  // File info
+  r2Key           String   @db.VarChar(500)
+  fileSize        BigInt
+  status          String   @db.VarChar(50) // uploading, ready, archived, deleted
+  
+  // Version metadata
+  versionNote     String?  @db.Text
+  isActive        Boolean  @default(false)
+  
+  // Cloudflare Stream (optional, for this version)
+  streamId        String?  @db.VarChar(255)
+  playbackUrl     String?  @db.Text
+  
+  // Who created this version
+  uploadedBy      String
+  uploader        Employee @relation("VersionUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  
+  video           Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([videoId])
+  @@index([videoId, version])
+  @@index([videoId, isActive])
+  @@unique([videoId, version])
+}
+
+
+
+
+// ===================== PERMISSION COMBO MODELS =====================
 
 model PermissionCombo {
-  id          String             @id @default(cuid())
-  name        String
-  description String?
-  company     Company            @relation(fields: [companyId], references: [id])
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
   companyId   String
-  permissions ComboPermission[]  // 👈 join table
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  
+  // Relations
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permissions ComboPermission[]
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@unique([name, companyId])    // 👈 Each combo name unique per company
+  // Indexes
+  @@index([companyId])
+  @@index([companyId, name])
+  @@unique([name, companyId])
 }
 
 model ComboPermission {
   comboId      String
   permissionId String
-  combo        PermissionCombo  @relation(fields: [comboId], references: [id])
-  permission   Permission       @relation(fields: [permissionId], references: [id])
+  
+  // Relations
+  combo      PermissionCombo @relation(fields: [comboId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permission Permission      @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([comboId, permissionId])
+  @@index([comboId])
+  @@index([permissionId])
 }
 
-// Which employees/roles are part of a campaign; used for aggregation
-model CampaignAssignment {
-  id         String   @id @default(cuid())
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
-  campaignId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
-  employeeId String
-  role       Role     @relation(fields: [roleId], references: [id])
-  roleId     String
 
-  // optional metadata
-  joinedAt   DateTime @default(now())
-  note       String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// ===================== UPLOAD SESSION MODEL =====================
 
-  @@unique([campaignId, employeeId]) // one assignment per employee per campaign
-  @@index([campaignId, roleId])
-}
-
-// Tag a flow (FlowChain) to a campaign or create a new flow specific to campaign
-model CampaignFlow {
-  id         String    @id @default(cuid())
-  campaign   Campaign  @relation(fields: [campaignId], references: [id])
-  campaignId String
-  flowChain  FlowChain @relation(fields: [flowChainId], references: [id])
-  flowChainId String
-  isDefault  Boolean   @default(false) // indicates if this flow is the active one
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  @@index([campaignId, flowChainId])
-}
-
-// Calendar entries — which role owns which date range; color is stored for UI
-model CampaignSchedule {
-  id         String   @id @default(cuid())
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
-  campaignId String
-  role       Role     @relation(fields: [roleId], references: [id])
-  roleId     String
-  title      String?           // optional text label
-  startDate  DateTime
-  endDate    DateTime
-  color      String?           // e.g. "yellow" or hex "#FACC15"
-  createdBy  String?           // employeeId of the user who created it
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model UploadSession {
+  id          String   @id @default(cuid())
   
-  @@index([campaignId, startDate, endDate])
+  // R2 Multipart Upload Info
+  uploadId    String   @unique @db.Text  // R2's multipart upload ID
+  key         String   @db.VarChar(500)          // R2 object key path
+  
+  // File Information
+  fileName    String   @db.Text
+  fileSize    BigInt                             // Total file size in bytes
+  fileType    String   @db.Text          // MIME type (e.g., "video/mp4")
+  
+  // Upload Progress
+  totalParts     Int                             // Number of parts for multipart upload
+  uploadedParts  Json     @default("[]")         // Array of completed part numbers [1, 2, 3]
+  metadata    String      @default("")
+  // Status Tracking
+  status      String   @default("IN_PROGRESS") @db.Text
+  // Possible values: IN_PROGRESS, COMPLETED, FAILED, ABORTED, EXPIRED
+  
+  // Relations
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  uploadedBy  String
+  uploader    Employee @relation("UploadSessions", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  
+  // Video Link (after completion)
+  videoId     String?   @unique
+  video       Video?    @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  expiresAt   DateTime  @db.Timestamptz(3)  // Auto-cleanup after 24 hours
+  
+  // Indexes for Performance
+  @@index([campaignId])
+  @@index([uploadedBy])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([uploadId])
+  @@index([status, createdAt])
+  @@map("upload_sessions")
 }
+
+// ===================== STREAMQUEUE MODEL =====================
+
+model StreamQueue {
+  id          String   @id @default(cuid())
+  videoId     String   @unique
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  r2Key       String   @db.VarChar(500)
+  status      String   @default("PENDING") @db.VarChar(50) // PENDING, PROCESSING, COMPLETED, FAILED
+  streamId    String?  @db.VarChar(255) // Cloudflare Stream ID when ready
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  lastError   String?  @db.Text
+  priority    String   @default("NORMAL") @db.VarChar(50) // LOW, NORMAL, HIGH
+  
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  startedAt   DateTime? @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  
+  @@index([status])
+  @@index([videoId])
+  @@index([status, priority, createdAt])
+}
+
+model CompressionJob {
+  id                   String   @id @default(cuid())
+  videoId              String
+  video                Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  metadata             Json     @default("{}") 
+  // Job settings
+  quality              String   @db.VarChar(50) // low, medium, high, source
+  codec                String   @db.VarChar(50) // h264, h265, vp9, av1
+  targetBitrate        Int?     // kbps
+  targetResolution     String?  @db.VarChar(20) // e.g., "1920x1080"
+  priority             String   @default("NORMAL") @db.VarChar(50) // LOW, NORMAL, HIGH
+  
+  // Job status
+  status               String   @default("PENDING") @db.VarChar(50) // PENDING, PROCESSING, COMPLETED, FAILED, ABORTED
+  progress             Int      @default(0) // 0-100
+  
+  // Output info
+  outputR2Key          String?  @db.VarChar(500)
+  outputSize           BigInt?
+  estimatedOutputSize  BigInt?
+  
+  // Error tracking
+  attempts             Int      @default(0)
+  maxAttempts          Int      @default(3)
+  lastError            String?  @db.Text
+  errorMessage         String?  @db.Text
+  
+  // Timing
+  estimatedDuration    Int?     // seconds
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+  startedAt            DateTime? @db.Timestamptz(3)
+  completedAt          DateTime? @db.Timestamptz(3)
+  
+  // Who requested
+  requestedBy          String
+  requester            Employee @relation("CompressionRequests", fields: [requestedBy], references: [id], onDelete: Restrict)
+  
+  @@index([videoId])
+  @@index([status])
+  @@index([requestedBy])
+  @@index([status, priority, createdAt])
+}
+

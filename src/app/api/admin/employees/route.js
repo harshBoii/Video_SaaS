@@ -1,13 +1,11 @@
+// src/app/api/admin/employees/route.js
+
 import prisma from "@/app/lib/prisma";
 import { verifyJWT, requireAdmin } from "@/app/lib/auth";
 import bcrypt from "bcryptjs";
 
 export async function GET(req) {
   try {
-    // Verify admin authentication
-    // console.log(req.json())
-    console.log("req.json()")
-
     const { employee: currentUser, error, status } = await verifyJWT(req);
     if (error) {
       return new Response(JSON.stringify({ success: false, message: error }), {
@@ -31,14 +29,12 @@ export async function GET(req) {
     const sortBy = searchParams.get("sortBy") || "updatedAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
     const search = searchParams.get("search")?.trim() || "";
-    const isAdminParam = searchParams.get("is_admin");
+    const isAdminParam = searchParams.get("isAdmin");
 
-    // ✅ FIX: If no companyId provided, use current user's company
     if (!companyId) {
       companyId = currentUser.companyId;
     }
 
-    // Verify user has access to this company
     if (companyId !== currentUser.companyId) {
       return new Response(
         JSON.stringify({ 
@@ -49,12 +45,10 @@ export async function GET(req) {
       );
     }
 
-    // Build where clause
     const whereClause = {
       companyId: companyId,
     };
 
-    // Search filter
     if (search) {
       whereClause.OR = [
         { firstName: { contains: search, mode: "insensitive" } },
@@ -63,9 +57,9 @@ export async function GET(req) {
       ];
     }
 
-    // Admin filter - only apply if explicitly set
+    // ✅ FIXED: Changed from is_admin to isAdmin
     if (isAdminParam === "true" || isAdminParam === "false") {
-      whereClause.is_admin = isAdminParam === "true";
+      whereClause.isAdmin = isAdminParam === "true";
     }
 
     console.log("🔍 Admin Employee Query:", {
@@ -76,7 +70,6 @@ export async function GET(req) {
       whereClause: JSON.stringify(whereClause, null, 2),
     });
 
-    // Fetch employees
     const employees = await prisma.employee.findMany({
       where: whereClause,
       take,
@@ -89,7 +82,7 @@ export async function GET(req) {
         lastName: true,
         email: true,
         status: true,
-        is_admin: true,
+        isAdmin: true,  // ✅ FIXED
         lastLogin: true,
         role: { 
           select: { 
@@ -103,7 +96,6 @@ export async function GET(req) {
             name: true 
           } 
         },
-        // Campaigns through assignments
         campaignAssignments: {
           select: {
             campaign: {
@@ -115,7 +107,6 @@ export async function GET(req) {
           },
           take: 5,
         },
-        // Teams
         teams: {
           select: {
             id: true,
@@ -130,7 +121,6 @@ export async function GET(req) {
 
     console.log(`✅ Found ${employees.length} employees for company ${companyId}`);
 
-    // Transform campaigns from assignments
     const transformedEmployees = employees.map(emp => ({
       ...emp,
       campaigns: emp.campaignAssignments?.map(ca => ca.campaign) || [],
@@ -181,7 +171,8 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { firstName, lastName, email, password, roleId, companyId, departmentId, is_admin } = body;
+    // ✅ FIXED: Changed from is_admin to isAdmin
+    const { firstName, lastName, email, password, roleId, companyId, departmentId, isAdmin } = body;
 
     if (!firstName || !lastName || !email || !password || !roleId || !companyId) {
       return new Response(
@@ -228,7 +219,7 @@ export async function POST(req) {
         company: { connect: { id: companyId } },
         role: { connect: { id: roleId } },
         ...(departmentId && { department: { connect: { id: departmentId } } }),
-        is_admin: is_admin || false,
+        isAdmin: isAdmin || false,  // ✅ FIXED
         status: "ACTIVE",
       },
       select: {
@@ -236,7 +227,7 @@ export async function POST(req) {
         firstName: true,
         lastName: true,
         email: true,
-        is_admin: true,
+        isAdmin: true,  // ✅ FIXED
         role: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
         company: { select: { id: true, name: true } },
