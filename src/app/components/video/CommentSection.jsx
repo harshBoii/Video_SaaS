@@ -111,7 +111,9 @@ function CommentItem({ comment, onReply, onResolve, onDelete, depth = 0 }) {
       {/* Avatar */}
       <div className="flex-shrink-0">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-          {comment.employee.firstName[0]}{comment.employee.lastName[0]}
+      {comment.employee 
+        ? `${comment.employee.firstName[0]}${comment.employee.lastName[0]}` 
+        : (comment.guestName ? comment.guestName[0].toUpperCase() : 'G')}
         </div>
       </div>
 
@@ -120,7 +122,9 @@ function CommentItem({ comment, onReply, onResolve, onDelete, depth = 0 }) {
         {/* Header */}
         <div className="flex items-center gap-2 mb-1">
           <span className="font-semibold text-sm text-gray-900">
-            {comment.employee.firstName} {comment.employee.lastName}
+          {comment.employee 
+            ? `${comment.employee.firstName[0]}${comment.employee.lastName[0]}` 
+            : (comment.guestName ? comment.guestName[0].toUpperCase() : 'G')}
           </span>
           <span className="text-xs text-gray-500">
             {formatTimeAgo(comment.createdAt)}
@@ -368,6 +372,7 @@ export default function CommentSection({ videoId, currentTime = null , isPublic 
   const [sortBy, setSortBy] = useState('newest');
   const [priority, setPriority] = useState('NONE');
   const [showInput, setShowInput] = useState(false);
+  const [guestName, setGuestName] = useState('');
 
   useEffect(() => {
     loadComments();
@@ -394,17 +399,24 @@ export default function CommentSection({ videoId, currentTime = null , isPublic 
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
+    if (isPublic && !guestName.trim()) {
+      showError('Required', 'Please enter a name to comment');
+      return;
+    }
 
     setSubmitting(true);
     try {
       const response = await fetch(`/api/videos/${videoId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        credentials: isPublic ? 'omit':'include',
         body: JSON.stringify({
           content: newComment,
           timestamp: currentTime,
           priority,
+          isGuest: isPublic,
+          guestName: isPublic ? guestName : undefined, 
+
         }),
       });
 
@@ -465,19 +477,37 @@ export default function CommentSection({ videoId, currentTime = null , isPublic 
   const CommentInputUI = (
     <div className="p-4 border-b border-black">
       <div className="flex gap-3">
+        {/* Avatar */}
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-          {isPublic ? 'G' : 'U'} {/* 'G' for Guest, 'U' for User */}
+          {/* Show first letter of guest name if typed, else G */}
+          {isPublic ? (guestName ? guestName[0].toUpperCase() : 'G') : 'U'} 
         </div>
+
         <div className="flex-1">
+          {/* NEW: Guest Name Input (Only visible if Public) */}
+          {isPublic && showInput && (
+            <div className="mb-2">
+              <input
+                type="text"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                placeholder="Enter your name (Required)"
+                className="w-full md:w-1/2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+              />
+            </div>
+          )}
+
+          {/* Comment Input */}
           <input
             type="text"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onFocus={() => setShowInput(true)}
             placeholder={isPublic ? "Add a public comment..." : "Add a comment..."}
-            className="w-full px-0 py-2 border-0 border-b-2 border-gray-200 focus:border-blue-500 focus:ring-0 text-sm"
+            className="w-full px-0 py-2 border-0 border-b-2 border-gray-200 focus:border-blue-500 focus:ring-0 text-sm bg-transparent"
           />
           
+          {/* Action Buttons & Priority */}
           <AnimatePresence>
             {showInput && (
               <motion.div
@@ -486,12 +516,13 @@ export default function CommentSection({ videoId, currentTime = null , isPublic 
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-3"
               >
-                <div className="flex items-center justify-between ">
-                  {/* Only show Priority dropdown for internal users, unlikely guests need priority */}
+                <div className="flex items-center justify-between">
                   {!isPublic ? (
                     <PriorityDropdown selected={priority} onSelect={setPriority} />
                   ) : (
-                    <div></div> // Spacer for flexbox alignment
+                    <div className="text-xs text-gray-400">
+                      Posting as {guestName || 'Guest'}
+                    </div>
                   )}
                   
                   <div className="flex gap-2">
@@ -507,7 +538,8 @@ export default function CommentSection({ videoId, currentTime = null , isPublic 
                     </button>
                     <button
                       onClick={handleAddComment}
-                      disabled={submitting || !newComment.trim()}
+                      // Disable if no comment OR (if public) no guest name
+                      disabled={submitting || !newComment.trim() || (isPublic && !guestName.trim())}
                       className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <Send className="w-4 h-4" />

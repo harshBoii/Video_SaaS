@@ -640,7 +640,7 @@ model CompressionJob {
 model Comment {
   id          String        @id @default(cuid())
   videoId     String
-  employeeId  String
+  employeeId  String?
   content     String        @db.Text
   timestamp   Int?          // Video timestamp in seconds (null for general comments)
   status      CommentStatus @default(OPEN)
@@ -648,11 +648,11 @@ model Comment {
   
   // Relations
   video       Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  employee    Employee      @relation("VideoComments", fields: [employeeId], references: [id], onDelete: Restrict)
+  employee    Employee?      @relation("VideoComments", fields: [employeeId], references: [id], onDelete: Restrict)
   parent      Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies     Comment[]     @relation("CommentReplies")
   priority    CommentPriority @default(NONE)
-
+  guestName   String?   
   createdAt   DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
   resolvedAt  DateTime?     @db.Timestamptz(3)
