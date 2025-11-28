@@ -236,7 +236,7 @@ export default function PublicVideoPage({ params }) {
                    <a 
                      href={videoData.url} 
                      download 
-                     className="p-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all flex items-center gap-2 group"
+                     className="p-2.5 bg-emerald-600 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all flex items-center gap-2 group"
                      title="Download Video"
                    >
                      <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
