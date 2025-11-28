@@ -1,60 +1,48 @@
-// app/api/videos/[videoId]/raw/route.js
 import prisma from "@/app/lib/prisma";
 import { r2 } from "@/app/lib/r2";
 import { NextResponse } from "next/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { authenticateRequest, canAccessCampaign } from "@/app/lib/auth";
-import { videoIdParamSchema, rawDownloadSchema, formatZodError } from "@/app/lib/validation";
+import { z } from "zod";
+
+// ✅ Robust Schema: Handles string-to-number conversion and optional fields
+const downloadQuerySchema = z.object({
+  expiresIn: z.coerce.number().int().min(60).max(604800).default(3600), // Coerce "3600" string to number
+  responseContentType: z.string().optional(),
+  responseContentDisposition: z.string().default('attachment'),
+  filename: z.string().optional(),
+});
 
 export async function GET(request, { params }) {
   try {
-    // ✅ 1. AUTHENTICATE USER
-    const authResult = await authenticateRequest(request);
-    if (!authResult.authenticated) {
-      return authResult.error;
-    }
-    const { user } = authResult;
+    // 1. AWAIT PARAMS (Next.js 15 Requirement)
+    const { videoId } = await params;
 
-    // ✅ 2. VALIDATE VIDEO ID
-    const paramValidation = videoIdParamSchema.safeParse(params);
-    if (!paramValidation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid video ID",
-          details: formatZodError(paramValidation.error),
-        },
-        { status: 400 }
-      );
+    if (!videoId) {
+      return NextResponse.json({ success: false, error: "Missing video ID" }, { status: 400 });
     }
 
-    const { videoId } = paramValidation.data;
-
-    // ✅ 3. PARSE DOWNLOAD OPTIONS
+    // 2. VALIDATE QUERY PARAMS
     const { searchParams } = new URL(request.url);
     const queryObject = Object.fromEntries(searchParams.entries());
-    const optionsValidation = rawDownloadSchema.safeParse(queryObject);
+    
+    const validation = downloadQuerySchema.safeParse(queryObject);
 
-    if (!optionsValidation.success) {
+    if (!validation.success) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid download options",
-          details: formatZodError(optionsValidation.error),
+        { 
+          success: false, 
+          error: "Invalid query parameters", 
+          details: validation.error.format() 
         },
         { status: 400 }
       );
     }
 
-    const {
-      expiresIn,
-      responseContentType,
-      responseContentDisposition,
-      filename,
-    } = optionsValidation.data;
+    const { expiresIn, responseContentType, responseContentDisposition, filename } = validation.data;
 
-    // ✅ 4. FETCH VIDEO
+    // 3. FETCH VIDEO METADATA
     const video = await prisma.video.findUnique({
       where: { id: videoId },
       select: {
@@ -62,10 +50,14 @@ export async function GET(request, { params }) {
         title: true,
         filename: true,
         r2Key: true,
-        r2Bucket: true,
         originalSize: true,
-        status: true,
         campaignId: true,
+        shareSettings: {
+          select: {
+            accessType: true,
+            allowDownload: true,
+          }
+        },
         campaign: {
           select: {
             companyId: true,
@@ -76,117 +68,99 @@ export async function GET(request, { params }) {
     });
 
     if (!video) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Video not found",
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "Video not found" }, { status: 404 });
     }
 
-    // ✅ 5. AUTHORIZATION
-    const hasAccess = await canAccessCampaign(
-      user.id,
-      video.campaign.companyId,
-      video.campaignId
-    );
+    // 4. AUTHENTICATION & AUTHORIZATION (Dual Logic: User vs Guest)
+    let isAuthorized = false;
+    let userLogInfo = "guest-public-access";
 
-    if (!hasAccess) {
+    // Check A: Authenticated User
+    const authResult = await authenticateRequest(request);
+    if (authResult.authenticated) {
+      const hasAccess = await canAccessCampaign(
+        authResult.user.id,
+        video.campaign.companyId,
+        video.campaignId
+      );
+      if (hasAccess) {
+        isAuthorized = true;
+        userLogInfo = `user:${authResult.user.email}`;
+      }
+    }
+
+    // Check B: Public Guest Access (Fallback if not user)
+    if (!isAuthorized) {
+      const publicShare = video.shareSettings;
+      const isPublic = publicShare && 
+                       (publicShare.accessType === 'PUBLIC' || publicShare.accessType === 'PASSWORD');
+      
+      if (isPublic && publicShare.allowDownload) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-          message: "You don't have access to download this video",
-        },
+        { success: false, error: "Unauthorized", message: "You do not have permission to download this file." },
         { status: 403 }
       );
     }
 
-    // ✅ 6. GENERATE PRESIGNED DOWNLOAD URL
-    const downloadFilename = filename || video.filename;
+    // 5. GENERATE PRESIGNED URL
+    // Use provided filename, or database filename, or fallback to ID
+    const finalFilename = filename || video.filename || `video-${video.id}.mp4`;
     
+    // Sanitize filename to prevent header injection or encoding issues
+    const sanitizedFilename = finalFilename.replace(/["\\]/g, '');
+
     const getObjectCommand = new GetObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: video.r2Key,
-      ResponseContentType: responseContentType,
-      ResponseContentDisposition: `${responseContentDisposition}; filename="${downloadFilename}"`,
+      ResponseContentType: responseContentType || "video/mp4",
+      // Force download with correct filename
+      ResponseContentDisposition: `${responseContentDisposition}; filename="${sanitizedFilename}"`,
     });
 
     const presignedUrl = await getSignedUrl(r2, getObjectCommand, {
-      expiresIn, // seconds
+      expiresIn,
     });
 
-    // ✅ 7. LOG DOWNLOAD REQUEST
-    console.log(
-      `[VIDEO DOWNLOAD] Video: ${video.id} | User: ${user.email} | Filename: ${downloadFilename}`
-    );
+    console.log(`[DOWNLOAD_GENERATED] ${userLogInfo} -> ${video.id} (${finalFilename})`);
 
-    // ✅ 8. RETURN PRESIGNED URL
     return NextResponse.json({
       success: true,
       video: {
         id: video.id,
         title: video.title,
-        filename: video.filename,
-        size: video.originalSize,
-        sizeFormatted: formatBytes(video.originalSize),
-        campaign: {
-          id: video.campaignId,
-          name: video.campaign.name,
-        },
+        size:video.originalSize.toString(),
+        formattedSize: formatBytes(video.originalSize),
       },
       download: {
         url: presignedUrl,
         expiresIn,
-        expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
-        filename: downloadFilename,
-        contentDisposition: responseContentDisposition,
-      },
-      instructions: {
-        method: "GET",
-        note: "Use this URL to download the raw video file",
-        expiryWarning: `URL expires in ${formatDuration(expiresIn)}`,
-      },
+        filename: finalFilename,
+      }
     });
+
   } catch (error) {
-    console.error("[VIDEO RAW DOWNLOAD ERROR]", error);
-
-    // ✅ HANDLE R2 ERRORS
-    if (error.name === "NoSuchKey") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Video file not found in storage",
-          message: "The video file may have been deleted or moved",
-        },
-        { status: 404 }
-      );
-    }
-
+    console.error("[DOWNLOAD_API_ERROR]", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to generate download URL",
-        message: process.env.NODE_ENV === "development" ? error.message : "An unexpected error occurred",
-      },
+      { success: false, error: "Server error", message: error.message },
       { status: 500 }
     );
   }
 }
 
 function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return "0 Bytes";
+  if (!bytes || bytes === 0) return "0 B";
+  
+  // ✅ FIX: Convert BigInt to Number safely
+  const value = Number(bytes); 
+  
   const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-}
-
-function formatDuration(seconds) {
-  if (seconds < 60) return `${seconds} seconds`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} minutes`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours} hours`;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(value) / Math.log(k));
+  
+  return parseFloat((value / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
