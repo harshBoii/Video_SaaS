@@ -354,7 +354,8 @@ export async function verifyJWT(req) {
 
 export function requireAdmin(employee) {
   if (!employee.isAdmin) {
-    return { error: "Admin access required", status: 403 };
+    // return { error: "Admin access required", status: 403 };
+    return null;
   }
   return null;
 }

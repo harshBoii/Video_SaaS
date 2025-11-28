@@ -300,7 +300,7 @@ export default function CampaignDetailPage({ params }) {
               <CampaignSettings campaign={campaign} onUpdate={loadCampaignData} />
             )}
             {activeTab === 'videos' && (
-              <CampaignVideo campaign={campaign} onUpdate={loadCampaignData} />
+              <CampaignVideo campaign={campaign} onUpdate={loadCampaignData} campaignId={campaignId} />
             )}
           </motion.div>
         </AnimatePresence>

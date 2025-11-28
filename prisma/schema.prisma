@@ -33,6 +33,21 @@ enum UploadStatus {
   EXPIRED
   ABORTED
 }
+enum CommentStatus {
+  OPEN
+  RESOLVED
+}
+enum CommentPriority {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AccessType {
+  PUBLIC       // Anyone with link
+  PASSWORD     // Requires password
+}
 
 // ===================== CORE MODELS =====================
 
@@ -172,6 +187,11 @@ model Employee {
   videoVersions       VideoVersion[]       @relation("VersionUploader")
   uploadSessions      UploadSession[]      @relation("UploadSessions")
   compressionJobs     CompressionJob[]     @relation("CompressionRequests")
+  videoComments    Comment[]  @relation("VideoComments")
+  resolvedComments Comment[]  @relation("CommentResolver")
+  managerId    String?
+  manager      Employee?    @relation("EmployeeHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates Employee[]   @relation("EmployeeHierarchy")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -405,6 +425,9 @@ model Video {
   uploadSession   UploadSession?
   streamQueue     StreamQueue?
   compressionJobs CompressionJob[]
+  comments        Comment[]
+  shareSettings   VideoShare?
+
 
   uploadedBy      String
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
@@ -612,5 +635,50 @@ model CompressionJob {
   @@index([status])
   @@index([requestedBy])
   @@index([status, priority, createdAt])
+}
+
+model Comment {
+  id          String        @id @default(cuid())
+  videoId     String
+  employeeId  String
+  content     String        @db.Text
+  timestamp   Int?          // Video timestamp in seconds (null for general comments)
+  status      CommentStatus @default(OPEN)
+  parentId    String?       // For replies
+  
+  // Relations
+  video       Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  employee    Employee      @relation("VideoComments", fields: [employeeId], references: [id], onDelete: Restrict)
+  parent      Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[]     @relation("CommentReplies")
+  priority    CommentPriority @default(NONE)
+
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+  resolvedAt  DateTime?     @db.Timestamptz(3)
+  resolvedBy  String?
+  resolver    Employee?     @relation("CommentResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  
+  @@index([videoId])
+  @@index([employeeId])
+  @@index([parentId])
+  @@index([videoId, status])
+  @@index([videoId, createdAt(sort: Desc)])
+}
+
+
+model VideoShare {
+  id            String     @id @default(uuid()) // This UUID is the unique link token
+  videoId       String     @unique
+  video         Video      @relation(fields: [videoId], references: [id])
+  
+  accessType    AccessType @default(PUBLIC)
+  passwordHash  String?    
+  
+  allowComments Boolean    @default(true)
+  allowDownload Boolean    @default(false)
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 

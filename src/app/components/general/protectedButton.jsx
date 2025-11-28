@@ -4,11 +4,11 @@ import { motion } from 'framer-motion';
 import { useCampaignPermissions } from '@/app/context/permissionContext';
 
 const glassButton =
-  "relative overflow-hidden bg-blue-200/30 hover:bg-blue-300/50 text-blue-700 font-semibold backdrop-blur-lg border border-blue-200/40 " +
+  "relative overflow-hidden  text-blue-700 font-semibold  border " +
   "shadow-xl rounded-xl px-6 py-3 transition-all duration-200 group flex items-center justify-center";
 
 const highlight =
-  "absolute inset-0 pointer-events-none rounded-xl bg-gradient-to-br from-white/40 to-blue-100/10 blur-lg opacity-60 group-hover:opacity-80 transition";
+  "absolute inset-0 pointer-events-none rounded-xl transition";
 
 function toTitleCase(str = '') {
   return str

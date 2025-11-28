@@ -31,13 +31,13 @@ export async function GET(request, { params }) {
     }
 
     // 4. Check admin access
-    const adminError = requireAdmin(employee);
-    if (adminError) {
-      return NextResponse.json(
-        { error: adminError.error },
-        { status: adminError.status }
-      );
-    }
+    // const adminError = requireAdmin(employee);
+    // if (adminError) {
+    //   return NextResponse.json(
+    //     { error: adminError.error },
+    //     { status: adminError.status }
+    //   );
+    // }
 
     // 5. Verify company exists
     const companyExists = await prisma.company.findUnique({

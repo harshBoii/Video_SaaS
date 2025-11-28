@@ -17,6 +17,40 @@ export const roleApi = {
       throw error;
     }
   },
+  async updateRoleParent(roleId, newParentId) {
+    const response = await fetch(`/api/roles/${roleId}/parent`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ parentId: newParentId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update parent');
+    }
+
+    return response.json();
+  },
+
+  async removeRoleParent(roleId) {
+    return this.updateRoleParent(roleId, null);
+  },
+  async updateEmployeeManager(employeeId, newManagerId) {
+    const response = await fetch(`/api/employees/${employeeId}/manager`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ managerId: newManagerId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update manager');
+    }
+
+    return response.json();
+  },
 
   async getRoleDetails(roleId) {
     try {

@@ -102,7 +102,7 @@ const EmployeeSide = () => {
       </div>
       <nav className={styles.nav}>
         {/* Dashboard - Always visible to authenticated users */}
-        <NavItem icon={<FiGrid />} href="/admin" label="Dashboard" />
+        <NavItem icon={<FiGrid />} href="/employee/campaign" label="Campaigns" />
 
         {/* Campaigns - Project permissions */}
         {/* {hasAnyPermission(
