@@ -9,7 +9,27 @@ function toTitleCase(str = '') {
     .replace(/[-_]+(.)/g, (_, c) => ' ' + c.toUpperCase());
 }
 
-export default function ProtectedCommentSection({ videoId, currentTime }) {
+export default function ProtectedCommentSection({ 
+  videoId, 
+  currentTime   ,
+  isPublicView = false,  
+  allowPublicComments = false 
+ }) {
+    if (isPublicView) 
+      {
+    if (!allowPublicComments) return null; 
+    
+    return (
+      <div className="flex-[3] bg-white border-l border-gray-200 flex flex-col max-h-screen">
+        <CommentSection 
+          videoId={videoId} 
+          currentTime={currentTime} 
+          isPublic={true} 
+        />
+      </div>
+    );
+      }
+
   const { permissionsData, loading } = useCampaignPermissions();
 
   // Don't render anything while loading

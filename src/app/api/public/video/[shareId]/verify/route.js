@@ -3,7 +3,7 @@ import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request, { params }) {
-  const { shareId } = params;
+  const { shareId } = await params;
   const { password } = await request.json();
 
   try {
@@ -26,6 +26,7 @@ export async function POST(request, { params }) {
     return NextResponse.json({
       title: share.video.title,
       url: share.video.playbackUrl,
+      id:share.video.id,
       allowComments: share.allowComments,
       allowDownload: share.allowDownload
     });

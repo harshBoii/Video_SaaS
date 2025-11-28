@@ -359,7 +359,7 @@ function PriorityDropdown({ selected, onSelect }) {
   );
 }
 
-export default function CommentSection({ videoId, currentTime = null }) {
+export default function CommentSection({ videoId, currentTime = null , isPublic = false }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
@@ -462,6 +462,66 @@ export default function CommentSection({ videoId, currentTime = null }) {
   });
 
   const commentCount = comments.filter(c => !c.parentId).length;
+  const CommentInputUI = (
+    <div className="p-4 border-b border-black">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+          {isPublic ? 'G' : 'U'} {/* 'G' for Guest, 'U' for User */}
+        </div>
+        <div className="flex-1">
+          <input
+            type="text"
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            onFocus={() => setShowInput(true)}
+            placeholder={isPublic ? "Add a public comment..." : "Add a comment..."}
+            className="w-full px-0 py-2 border-0 border-b-2 border-gray-200 focus:border-blue-500 focus:ring-0 text-sm"
+          />
+          
+          <AnimatePresence>
+            {showInput && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-3"
+              >
+                <div className="flex items-center justify-between ">
+                  {/* Only show Priority dropdown for internal users, unlikely guests need priority */}
+                  {!isPublic ? (
+                    <PriorityDropdown selected={priority} onSelect={setPriority} />
+                  ) : (
+                    <div></div> // Spacer for flexbox alignment
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowInput(false);
+                        setNewComment('');
+                        setPriority('NONE');
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddComment}
+                      disabled={submitting || !newComment.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      Comment
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-white h-full flex flex-col">
@@ -502,7 +562,7 @@ export default function CommentSection({ videoId, currentTime = null }) {
       </div>
 
       {/* Comment Input */}
-      <ProtectedButton
+      {/* <ProtectedButton
         requiredPermissions={['Comment Video', 'Team Only Comments']}
         className="w-140 bg-transparent border-0 shadow-none p-0 block"
       >
@@ -559,7 +619,19 @@ export default function CommentSection({ videoId, currentTime = null }) {
             </div>
           </div>
         </div>
-      </ProtectedButton>
+      </ProtectedButton> */}
+       {isPublic ? (
+       <div className="bg-transparent border-0 shadow-none p-0 block">
+          {CommentInputUI}
+        </div>
+      ):(
+        <ProtectedButton
+          requiredPermissions={['Comment Video', 'Team Only Comments']}
+          className="w-140 bg-transparent border-0 shadow-none p-0 block"
+        >
+          {CommentInputUI}
+        </ProtectedButton>
+      )}
 
       {/* Comments List */}
       <div className="flex-1 overflow-y-auto">

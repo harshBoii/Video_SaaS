@@ -21,6 +21,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       title: share.video.title,
       url: share.video.playbackUrl,
+      id:share.video.id,
       allowComments: share.allowComments,
       allowDownload: share.allowDownload
     });

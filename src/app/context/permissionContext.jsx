@@ -58,7 +58,11 @@ export function CampaignPermissionsProvider({ campaignId, children }) {
 export function useCampaignPermissions() {
   const context = useContext(CampaignPermissionsContext);
   if (!context) {
-    throw new Error('useCampaignPermissions must be used within CampaignPermissionsProvider');
+    return { 
+      permissionsData: { permissions: [], isAdmin: false, role: 'guest' }, 
+      loading: false 
+    };
+
   }
   return context;
 }
