@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProtectedButton from "../general/protectedButton";
 import DescriptionEditor from './DescriptionEditor';
 
-// --- CTA Display Component ---
+
 const CTAOverlay = ({ cta, onDismiss }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
@@ -124,6 +124,10 @@ const CTACreator = ({ currentTime, onSave, onCancel }) => {
 };
 
 export default function VideoPlayer({ video, onClose }) {
+  console.log('🎬 VideoPlayer received video:', video);
+  console.log('🆔 Video ID:', video?.id);
+  console.log('🎥 Stream ID:', video?.streamId);
+
   const [currentTime, setCurrentTime] = useState(0);
   const [ctas, setCtas] = useState([]);
   const [activeCta, setActiveCta] = useState(null);
@@ -251,11 +255,11 @@ export default function VideoPlayer({ video, onClose }) {
           </div>
         </div>
 
-        {/* ✅ RIGHT SIDEBAR: Comments + Fixed Description at Bottom */}
         <div className="flex-[3] bg-white border-l border-gray-200 flex flex-col h-full overflow-hidden">
           
           {/* ✅ Top Section: Scrollable Comments (takes remaining space) */}
           <div className="flex-1 overflow-y-auto">
+            {console.log('📝 Rendering comment section for video:', video?.id)}
             <ProtectedCommentSection 
               videoId={video.id} 
               currentTime={currentTime} 
@@ -263,7 +267,6 @@ export default function VideoPlayer({ video, onClose }) {
             />
           </div>
           
-          {/* ✅ Bottom Section: Fixed Height Description (sticky at bottom) */}
           <ProtectedButton 
             requiredPermissions={['Edit Video']} 
             className="w-full bg-transparent border-0 shadow-none p-0 block"

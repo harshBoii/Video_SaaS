@@ -16,6 +16,7 @@ import {
   FiCodesandbox, 
   FiGitBranch,
   FiMessageSquare,
+  FiBell
 } from 'react-icons/fi';
 import Spinner from '../general/spinner';
 
@@ -103,6 +104,7 @@ const EmployeeSide = () => {
       <nav className={styles.nav}>
         {/* Dashboard - Always visible to authenticated users */}
         <NavItem icon={<FiGrid />} href="/employee/campaign" label="Campaigns" />
+        <NavItem icon={<FiBell />} href="/employee/notification" label="Notification" />
 
         {/* Campaigns - Project permissions */}
         {/* {hasAnyPermission(

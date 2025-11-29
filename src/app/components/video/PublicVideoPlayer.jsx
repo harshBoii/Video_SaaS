@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import CommentSection from './CommentSection';
 import { motion, AnimatePresence } from "framer-motion";
 import DescriptionViewer from './DescriptionViewer';
+import useVideoTracking from "./VideoTrackingRoute";
 
 // --- CTA Display Component ---
 const CTAOverlay = ({ cta, onDismiss }) => (
@@ -46,7 +47,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
   const [showMobileComments, setShowMobileComments] = useState(false);
   const iframeRef = useRef(null);
   const playerRef = useRef(null);
-
+  // useVideoTracking(video.id, playerRef)
   // Fetch CTAs FIRST
   useEffect(() => {
     if (video?.id) {
