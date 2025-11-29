@@ -360,9 +360,9 @@ function CommentInput({ currentUser, currentTime, isPublic, onPost, isSubmitting
                   </button>
                   
                   {/* ✅ Custom Priority Dropdown with Colors */}
-                  {!isPublic && (
+                  
                     <PriorityDropdown selected={priority} onSelect={setPriority} />
-                  )}
+
                 </div>
 
                 <div className="flex gap-2">
