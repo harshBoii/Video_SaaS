@@ -4,17 +4,29 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const CampaignPermissionsContext = createContext(null);
 
+// ✅ Simple cache with 1-minute expiry
+const permissionsCache = new Map();
+
 export function CampaignPermissionsProvider({ campaignId, children }) {
   const [permissionsData, setPermissionsData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     let isMounted = true;
 
     async function fetchPermissions() {
       if (!campaignId) return;
       
+      // ✅ Check cache first
+      const cached = permissionsCache.get(campaignId);
+      if (cached && Date.now() - cached.timestamp < 60000) { // 1 minute = 60000ms
+        setPermissionsData(cached.data);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
+      
       try {
         const res = await fetch(`/api/auth/campaign?campaignId=${encodeURIComponent(campaignId)}`, {
           credentials: 'include',
@@ -26,8 +38,14 @@ export function CampaignPermissionsProvider({ campaignId, children }) {
         }
 
         const data = await res.json();
+        
         if (isMounted) {
           setPermissionsData(data);
+          // ✅ Cache with timestamp
+          permissionsCache.set(campaignId, {
+            data,
+            timestamp: Date.now()
+          });
         }
       } catch (error) {
         console.error('Failed to fetch permissions:', error);
