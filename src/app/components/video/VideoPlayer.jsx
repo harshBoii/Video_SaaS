@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import ProtectedCommentSection from "./ProtectedCommentSection";
 import { motion, AnimatePresence } from "framer-motion";
 import ProtectedButton from "../general/protectedButton";
+import DescriptionEditor from './DescriptionEditor';
 
 // --- CTA Display Component ---
 const CTAOverlay = ({ cta, onDismiss }) => (
@@ -128,7 +129,7 @@ export default function VideoPlayer({ video, onClose }) {
   const [activeCta, setActiveCta] = useState(null);
   const [isCreatingCta, setIsCreatingCta] = useState(false);
   const iframeRef = useRef(null);
-  const playerRef = useRef(null); // Reference for the Stream Player instance
+  const playerRef = useRef(null);
 
   // Fetch CTAs
   useEffect(() => {
@@ -154,30 +155,19 @@ export default function VideoPlayer({ video, onClose }) {
         const player = window.Stream(iframeRef.current);
         playerRef.current = player;
 
-        // Listen for time updates (RELIABLE)
         player.addEventListener('timeupdate', () => {
           const time = player.currentTime;
           setCurrentTime(time);
 
-          // Check for CTAs
           const matchingCta = ctas.find(c => Math.floor(c.time) === Math.floor(time));
           if (matchingCta && activeCta?.id !== matchingCta.id) {
             setActiveCta(matchingCta);
           }
         });
-
-        // Optional: Listen for other events
-        player.addEventListener('play', () => console.log('Video playing'));
       }
     };
 
     loadSDK();
-
-    // Cleanup
-    return () => {
-      // Cloudflare SDK doesn't have a strict destroy method for the wrapper, 
-      // but removing the iframe cleans up listeners attached to it.
-    };
   }, [video?.streamId, ctas, activeCta]);
 
   // Create CTA Handler
@@ -198,18 +188,15 @@ export default function VideoPlayer({ video, onClose }) {
     }
   };
 
-  // ✅ RELIABLE SEEKING USING SDK
   const handleSeek = (time) => {
     if (playerRef.current) {
-      playerRef.current.currentTime = time; // SDK setter
-      playerRef.current.play(); // Optional: auto-play after seek
+      playerRef.current.currentTime = time;
+      playerRef.current.play();
     }
   };
 
   if (!video?.streamId) return null;
   
-  // URL doesn't strictly need ?api=true when using the SDK wrapper, 
-  // but keeping it is good practice.
   const iframeUrl = `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${video.streamId}/iframe?api=true`;
 
   return (
@@ -222,7 +209,6 @@ export default function VideoPlayer({ video, onClose }) {
             <h3 className="text-xl font-bold text-white">{video.title}</h3>
             
             <div className="flex items-center gap-4">
-              {/* Add CTA Button */}
               <ProtectedButton requiredPermissions={['Edit Video']}>
                 <button 
                   onClick={() => setIsCreatingCta(true)}
@@ -265,8 +251,34 @@ export default function VideoPlayer({ video, onClose }) {
           </div>
         </div>
 
-        {/* Comments */}
-        <ProtectedCommentSection videoId={video.id} currentTime={currentTime} onSeek={handleSeek} />
+        {/* ✅ RIGHT SIDEBAR: Comments + Fixed Description at Bottom */}
+        <div className="flex-[3] bg-white border-l border-gray-200 flex flex-col h-full overflow-hidden">
+          
+          {/* ✅ Top Section: Scrollable Comments (takes remaining space) */}
+          <div className="flex-1 overflow-y-auto">
+            <ProtectedCommentSection 
+              videoId={video.id} 
+              currentTime={currentTime} 
+              onSeek={handleSeek}   
+            />
+          </div>
+          
+          {/* ✅ Bottom Section: Fixed Height Description (sticky at bottom) */}
+          <ProtectedButton 
+            requiredPermissions={['Edit Video']} 
+            className="w-full bg-transparent border-0 shadow-none p-0 block"
+          >
+            <div className="h-[400px] border-t-2 border-gray-200 overflow-y-auto bg-gray-50 shadow-lg">
+              <DescriptionEditor 
+                videoId={video.id} 
+                currentTime={currentTime}
+                onSeek={handleSeek}
+              />
+            </div>
+          </ProtectedButton>
+          
+        </div>
+
       </div>
     </div>
   );

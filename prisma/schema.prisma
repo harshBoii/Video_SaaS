@@ -397,7 +397,6 @@ model CampaignSchedule {
 model Video {
   id              String   @id @default(cuid())
   title           String   @db.VarChar(500)
-  description     String?  @db.Text
   filename        String   @db.VarChar(255)
   originalSize    BigInt
   duration        Int?     // seconds
@@ -430,7 +429,7 @@ model Video {
   views           VideoView[]
   heatmaps        VideoHeatmap[] // Direct relation for aggregate queries
   videoCTA        VideoCTA[]
-
+  description VideoDescription?
   uploadedBy      String
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
   
@@ -758,6 +757,17 @@ model VideoCTA {
   
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([videoId])
+}
+model VideoDescription {
+  id          String   @id @default(cuid())
+  videoId     String   @unique
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  content     String   @db.Text
+  chapters    Json?    // Store parsed chapters: [{ time: 0, title: "Intro" }]
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
   @@index([videoId])
 }

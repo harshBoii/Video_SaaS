@@ -3,6 +3,7 @@ import { X, Download, MessageSquare, Command, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import CommentSection from './CommentSection';
 import { motion, AnimatePresence } from "framer-motion";
+import DescriptionViewer from './DescriptionViewer';
 
 // --- CTA Display Component ---
 const CTAOverlay = ({ cta, onDismiss }) => (
@@ -40,13 +41,13 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
 
   const [currentTime, setCurrentTime] = useState(0);
   const [ctas, setCtas] = useState([]);
-  const [ctasLoaded, setCtasLoaded] = useState(false); // ✅ NEW: Track if CTAs are loaded
+  const [ctasLoaded, setCtasLoaded] = useState(false);
   const [activeCta, setActiveCta] = useState(null);
   const [showMobileComments, setShowMobileComments] = useState(false);
   const iframeRef = useRef(null);
   const playerRef = useRef(null);
 
-  // ✅ Fetch CTAs FIRST (before initializing player)
+  // Fetch CTAs FIRST
   useEffect(() => {
     if (video?.id) {
       console.log('📥 Fetching CTAs for video:', video.id);
@@ -55,18 +56,18 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
         .then(data => {
           console.log('✅ CTAs loaded:', data);
           setCtas(data.ctas || []);
-          setCtasLoaded(true); // ✅ Mark as loaded
+          setCtasLoaded(true);
         })
         .catch(err => {
           console.error('❌ Failed to load CTAs:', err);
-          setCtasLoaded(true); // ✅ Still mark as loaded even if error (so video can play)
+          setCtasLoaded(true);
         });
     } else {
-      setCtasLoaded(true); // ✅ No video ID, skip CTA loading
+      setCtasLoaded(true);
     }
   }, [video?.id]);
 
-  // ✅ Initialize Cloudflare Stream SDK ONLY AFTER CTAs are loaded
+  // Initialize SDK after CTAs loaded
   useEffect(() => {
     if (!video?.streamId || !ctasLoaded) {
       console.log('⏳ Waiting for CTAs to load before initializing player...');
@@ -95,7 +96,6 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
           const time = player.currentTime;
           setCurrentTime(time);
 
-          // Check for CTAs to display
           const matchingCta = ctas.find(c => Math.floor(c.time) === Math.floor(time));
           if (matchingCta && activeCta?.id !== matchingCta.id) {
             console.log('🎯 Showing CTA:', matchingCta);
@@ -108,7 +108,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
     };
 
     loadSDK();
-  }, [ctasLoaded, video?.streamId, ctas]); // ✅ Depend on ctasLoaded
+  }, [ctasLoaded, video?.streamId, ctas]);
 
   const handleSeek = (time) => {
     if (playerRef.current) {
@@ -120,7 +120,6 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
   // Helper to get iframe URL
   const getIframeUrl = () => {
     if (video?.streamId) {
-      // ✅ Remove autoplay - let SDK control it after loading
       return `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${video.streamId}/iframe?api=true&preload=true`;
     }
     if (video?.url) {
@@ -155,7 +154,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
     );
   }
 
-  // ✅ Show loading screen while CTAs are being fetched
+  // Show loading screen while CTAs are being fetched
   if (!ctasLoaded) {
     return (
       <div className="h-screen bg-black flex items-center justify-center">
@@ -242,24 +241,34 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
         </div>
       </div>
 
-      {/* Right Side: Comments Section */}
+      {/* ✅ Right Side: Comments + Description Section */}
       {allowComments && (
         <>
           {/* Desktop Sidebar */}
-          <div className="hidden lg:flex w-[400px] bg-white border-l border-gray-200 flex-col h-full shadow-2xl z-30">
-            <div className="p-4 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50">
+          <div className="hidden lg:flex w-[400px] bg-white border-l border-gray-200 flex-col h-full shadow-2xl z-30 overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50 flex-shrink-0">
               <MessageSquare className="w-5 h-5 text-indigo-600" />
               <h3 className="font-semibold text-gray-900">Discussion</h3>
               <span className="ml-auto text-xs font-medium bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
                 Public
               </span>
             </div>
-            <div className="flex-1 overflow-hidden">
+            
+            {/* ✅ Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="h-120">
               <CommentSection 
                 videoId={video.id || shareId}
                 currentTime={currentTime}
                 onSeek={handleSeek}
                 isPublic={true}
+              />
+              </div>
+              {/* ✅ Description Viewer below comments */}
+              <DescriptionViewer 
+                videoId={video.id || shareId}
+                onSeek={handleSeek}
               />
             </div>
           </div>
@@ -274,7 +283,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
                 exit={{ y: "100%" }}
                 className="bg-white h-[75vh] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
               >
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-indigo-600" />
                     <h3 className="font-semibold text-gray-900">Discussion</h3>
@@ -286,12 +295,19 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
                     <X className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-hidden">
+                
+                {/* ✅ Mobile Scrollable Content */}
+                <div className="flex-1 overflow-y-auto">
                   <CommentSection 
                     videoId={video.id || shareId}
                     currentTime={currentTime}
                     onSeek={handleSeek}
                     isPublic={true}
+                  />
+                  
+                  <DescriptionViewer 
+                    videoId={video.id || shareId}
+                    onSeek={handleSeek}
                   />
                 </div>
               </motion.div>
