@@ -427,7 +427,9 @@ model Video {
   compressionJobs CompressionJob[]
   comments        Comment[]
   shareSettings   VideoShare?
-
+  views           VideoView[]
+  heatmaps        VideoHeatmap[] // Direct relation for aggregate queries
+  videoCTA        VideoCTA[]
 
   uploadedBy      String
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
@@ -682,3 +684,80 @@ model VideoShare {
   updatedAt     DateTime   @updatedAt
 }
 
+// ===================== ANALYTICS MODELS =====================
+
+model VideoView {
+  id          String   @id @default(cuid())
+  videoId     String
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  // Viewer Identity
+  viewerId    String?  // If logged in (Employee ID)
+  viewerEmail String?  // If identified via unique link (?email=...)
+  anonymousId String?  // Fingerprint/Cookie ID for anonymous users
+  
+  // Session Data
+  ipAddress   String?  @db.VarChar(45)
+  userAgent   String?  @db.Text
+  referer     String?  @db.Text
+  deviceType  String?  @db.VarChar(50) // mobile, desktop, tablet
+  browser     String?  @db.VarChar(50)
+  os          String?  @db.VarChar(50)
+  location    String?  @db.VarChar(100) // City, Country (via IP lookup)
+  
+  // Engagement Metrics
+  watchDuration Int      @default(0) // Total seconds watched
+  percentage    Float    @default(0) // 0.0 to 100.0
+  completed     Boolean  @default(false)
+  
+  // Heatmap Relation (1-to-many because one view generates many heatmap points)
+  heatmaps    VideoHeatmap[]
+
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([videoId])
+  @@index([viewerEmail])
+  @@index([createdAt])
+}
+
+model VideoHeatmap {
+  id          String    @id @default(cuid())
+  viewId      String
+  view        VideoView @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  
+  videoId     String
+  video       Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Segment Watched
+  startTime   Int       // Seconds
+  endTime     Int       // Seconds
+  
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([viewId])
+  @@index([videoId])
+}
+
+model VideoCTA {
+  id          String   @id @default(cuid())
+  videoId     String
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  type        String   // 'BUTTON', 'FORM', 'LINK'
+  text        String   @db.VarChar(100)
+  url         String?  @db.Text
+  time        Int      // Seconds to appear (or -1 for post-roll)
+  
+  // Styling
+  color       String?  @default("#3b82f6")
+  position    String?  @default("center") // 'top-right', 'center', etc.
+  
+  // Tracking
+  clicks      Int      @default(0)
+  
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([videoId])
+}

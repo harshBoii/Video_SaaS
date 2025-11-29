@@ -198,7 +198,23 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
 
     try {
       console.log('[UPLOAD] Starting upload for:', file.name);
-      
+      const getVideoDuration = (file) => {
+          return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+              window.URL.revokeObjectURL(video.src);
+              resolve(video.duration);
+            };
+            video.onerror = () => {
+              resolve(null); // Fail silently if not a video
+            };
+            video.src = URL.createObjectURL(file);
+          });
+        };
+
+      const duration = await getVideoDuration(file)
+
       // Step 1: Start upload
       const startRes = await fetch('/api/upload/start', {
         method: 'POST',
@@ -306,6 +322,7 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
           uploadId: upload.uploadId,
           key: upload.key,
           parts: uploadedParts,
+          duration:duration,
         })
       });
 

@@ -13,7 +13,8 @@ export default function ProtectedCommentSection({
   videoId, 
   currentTime   ,
   isPublicView = false,  
-  allowPublicComments = false 
+  allowPublicComments = false ,
+  onSeek
  }) {
     if (isPublicView) 
       {
@@ -25,6 +26,8 @@ export default function ProtectedCommentSection({
           videoId={videoId} 
           currentTime={currentTime} 
           isPublic={true} 
+          onSeek={onSeek}
+
         />
       </div>
     );
@@ -61,7 +64,7 @@ export default function ProtectedCommentSection({
   // Render the comment section
   return (
     <div className="flex-[3] bg-white border-l border-gray-200 flex flex-col max-h-screen">
-      <CommentSection videoId={videoId} currentTime={currentTime} />
+      <CommentSection videoId={videoId} currentTime={currentTime}  onSeek={onSeek} />
     </div>
   );
 }

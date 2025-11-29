@@ -157,7 +157,7 @@ export async function processNextQueueItem() {
 
     // Upload to Cloudflare Stream
     const result = await uploadToCloudflareStream(queueItem);
-
+    console.log("result is",result)
     // Update queue status on success
     await prisma.streamQueue.update({
       where: { id: queueItem.id },
@@ -175,6 +175,7 @@ export async function processNextQueueItem() {
         streamId: result.streamId,
         playbackUrl: result.playbackUrl,
         thumbnailUrl: result.thumbnailUrl,
+        // duration:result.duration,
         status: "ready",
       },
     });

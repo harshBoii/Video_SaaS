@@ -33,7 +33,7 @@ export async function POST(request) {
       );
     }
 
-    const { uploadId, key, parts } = validation.data;
+    const { uploadId, key, parts,duration } = validation.data;
 
     // ✅ 3. VERIFY UPLOAD SESSION EXISTS AND BELONGS TO USER
     const uploadSession = await prisma.uploadSession.findUnique({
@@ -147,6 +147,7 @@ export async function POST(request) {
         originalSize: uploadSession.fileSize,
         status: "ready",
         r2Key: key,
+        duration: duration ? Math.round(duration) : null,
         r2Bucket: process.env.R2_BUCKET_NAME,
         campaignId: uploadSession.campaignId,
         uploadedBy: user.id,

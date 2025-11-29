@@ -128,6 +128,7 @@ export const completeUploadSchema = z.object({
     .min(1, 'At least one part is required')
     .max(10000, 'Too many parts'),
   videoId: cuidSchema.optional(),
+  duration: z.number().optional(), 
 });
 
 /**
