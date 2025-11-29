@@ -7,7 +7,7 @@ const CampaignPermissionsContext = createContext(null);
 export function CampaignPermissionsProvider({ campaignId, children }) {
   const [permissionsData, setPermissionsData] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     let isMounted = true;
 
