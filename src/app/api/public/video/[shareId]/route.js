@@ -22,6 +22,7 @@ export async function GET(request, { params }) {
       title: share.video.title,
       url: share.video.playbackUrl,
       id:share.video.id,
+      streamId:share.video.streamId,
       allowComments: share.allowComments,
       allowDownload: share.allowDownload
     });
