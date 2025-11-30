@@ -72,8 +72,34 @@ export default function DescriptionViewer({ videoId, onSeek }) {
     );
   }
 
+  // ✅ Show empty state instead of returning null
   if (!content && chapters.length === 0) {
-    return null;
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white border-t border-gray-200"
+      >
+        <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-gray-500" />
+            Description & Chapters
+          </h3>
+        </div>
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-8 text-center"
+        >
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <FileText className="w-8 h-8 text-gray-400" />
+          </div>
+          <p className="text-sm text-gray-500 font-medium mb-1">No description available</p>
+          <p className="text-xs text-gray-400">Description and chapters will appear here</p>
+        </motion.div>
+      </motion.div>
+    );
   }
 
   return (
@@ -174,37 +200,18 @@ export default function DescriptionViewer({ videoId, onSeek }) {
         )}
 
         {/* Full Description */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="p-4"
-            >
-              {content ? (
-                <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {renderContent(content)}
-                </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-8"
-                >
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-400 mb-3">No description yet</p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsEditing(true)}
-                    className="text-sm text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors font-medium"
-                  >
-                    Add description and chapters
-                  </motion.button>
-                </motion.div>
-              )}
-            </motion.div>
+        {content && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="p-4"
+          >
+            <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {renderContent(content)}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );
