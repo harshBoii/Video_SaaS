@@ -174,26 +174,37 @@ export default function DescriptionViewer({ videoId, onSeek }) {
         )}
 
         {/* Full Description */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="p-4"
-        >
-          {content ? (
-            <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {renderContent(content)}
-            </div>
-          ) : chapters.length > 0 ? (
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="p-4"
             >
-              <p className="text-sm text-gray-400 italic">No additional description</p>
+              {content ? (
+                <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {renderContent(content)}
+                </div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center py-8"
+                >
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-400 mb-3">No description yet</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsEditing(true)}
+                    className="text-sm text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors font-medium"
+                  >
+                    Add description and chapters
+                  </motion.button>
+                </motion.div>
+              )}
             </motion.div>
-          ) : null}
-        </motion.div>
       </motion.div>
     </motion.div>
   );
