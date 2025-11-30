@@ -429,7 +429,7 @@ model Video {
   views           VideoView[]
   heatmaps        VideoHeatmap[] // Direct relation for aggregate queries
   videoCTA        VideoCTA[]
-  description VideoDescription?
+  description     VideoDescription?
   uploadedBy      String
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
   
@@ -448,7 +448,7 @@ model Video {
   @@index([createdAt(sort: Desc)])
 }
 
-// ✅ NEW: Add VideoVersion model
+
 model VideoVersion {
   id              String   @id @default(cuid())
   videoId         String
@@ -652,6 +652,7 @@ model Comment {
   employee    Employee?      @relation("VideoComments", fields: [employeeId], references: [id], onDelete: Restrict)
   parent      Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies     Comment[]     @relation("CommentReplies")
+  versionNumber Int?
   priority    CommentPriority @default(NONE)
   guestName   String?   
   createdAt   DateTime      @default(now()) @db.Timestamptz(3)
@@ -671,7 +672,7 @@ model Comment {
 model VideoShare {
   id            String     @id @default(uuid()) // This UUID is the unique link token
   videoId       String     @unique
-  video         Video      @relation(fields: [videoId], references: [id])
+  video         Video      @relation(fields: [videoId], references: [id],onDelete: Cascade) 
   
   accessType    AccessType @default(PUBLIC)
   passwordHash  String?    

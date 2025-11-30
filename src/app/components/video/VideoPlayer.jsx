@@ -5,7 +5,8 @@ import ProtectedCommentSection from "./ProtectedCommentSection";
 import { motion, AnimatePresence } from "framer-motion";
 import ProtectedButton from "../general/protectedButton";
 import DescriptionEditor from './DescriptionEditor';
-
+import VersionSelector from './VersionSelector';
+import VersionComparison from './VersionComparison';
 
 const CTAOverlay = ({ cta, onDismiss }) => (
   <motion.div
@@ -37,7 +38,6 @@ const CTAOverlay = ({ cta, onDismiss }) => (
   </motion.div>
 );
 
-// --- CTA Creator Form ---
 const CTACreator = ({ currentTime, onSave, onCancel }) => {
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -124,14 +124,18 @@ const CTACreator = ({ currentTime, onSave, onCancel }) => {
 };
 
 export default function VideoPlayer({ video, onClose }) {
-  console.log('🎬 VideoPlayer received video:', video);
-  console.log('🆔 Video ID:', video?.id);
-  console.log('🎥 Stream ID:', video?.streamId);
-
   const [currentTime, setCurrentTime] = useState(0);
   const [ctas, setCtas] = useState([]);
   const [activeCta, setActiveCta] = useState(null);
   const [isCreatingCta, setIsCreatingCta] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(video.currentVersion);
+  const [activeStreamId, setActiveStreamId] = useState(video.streamId);
+  const [loadingVersion, setLoadingVersion] = useState(false);
+  
+  // ✅ Comparison states
+  const [showComparison, setShowComparison] = useState(false);
+  const [compareVersionIds, setCompareVersionIds] = useState([]);
+  
   const iframeRef = useRef(null);
   const playerRef = useRef(null);
 
@@ -143,6 +147,42 @@ export default function VideoPlayer({ video, onClose }) {
         .then(data => setCtas(data.ctas || []));
     }
   }, [video?.id]);
+  
+  // ✅ Handle version change using ?version= query parameter
+  const handleVersionChange = async (versionNumber) => {
+    setLoadingVersion(true);
+    try {
+      // ✅ Fetch video with specific version using query parameter
+      const res = await fetch(`/api/videos/${video.id}?version=${versionNumber}`, {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      
+      if (data.success && data.video.streamId) {
+        setCurrentVersion(versionNumber);
+        setActiveStreamId(data.video.streamId);
+        
+        // ✅ Reload iframe with new stream
+        if (iframeRef.current) {
+          iframeRef.current.src = `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${data.video.streamId}/iframe?api=true`;
+        }
+        
+        console.log(`[VERSION SWITCH] Switched to version ${versionNumber}, StreamID: ${data.video.streamId}`);
+      } else {
+        console.error('Failed to load version:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to switch version:', error);
+    } finally {
+      setLoadingVersion(false);
+    }
+  };
+
+  // ✅ Handle comparison request
+  const handleCompare = (versionIds) => {
+    setCompareVersionIds(versionIds);
+    setShowComparison(true);
+  };
 
   // Initialize Cloudflare Stream SDK
   useEffect(() => {
@@ -172,7 +212,7 @@ export default function VideoPlayer({ video, onClose }) {
     };
 
     loadSDK();
-  }, [video?.streamId, ctas, activeCta]);
+  }, [activeStreamId, ctas, activeCta]);
 
   // Create CTA Handler
   const handleCreateCta = async (ctaData) => {
@@ -199,90 +239,124 @@ export default function VideoPlayer({ video, onClose }) {
     }
   };
 
-  if (!video?.streamId) return null;
+  if (!activeStreamId) return null;
   
-  const iframeUrl = `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${video.streamId}/iframe?api=true`;
+  const iframeUrl = `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${activeStreamId}/iframe?api=true`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center" onClick={onClose}>
-      <div className="w-full h-full flex" onClick={(e) => e.stopPropagation()}>
-        {/* Video Area */}
-        <div className="flex-[7] flex flex-col bg-black relative group">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-            <h3 className="text-xl font-bold text-white">{video.title}</h3>
-            
-            <div className="flex items-center gap-4">
-              <ProtectedButton requiredPermissions={['Edit Video']}>
-                <button 
-                  onClick={() => setIsCreatingCta(true)}
-                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                >
-                  <LinkIcon className="w-4 h-4" /> Add Button
-                </button>
-              </ProtectedButton>
+    <>
+      {/* ✅ Conditionally render normal player or comparison */}
+      {!showComparison ? (
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center" onClick={onClose}>
+          <div className="w-full h-full flex" onClick={(e) => e.stopPropagation()}>
+            {/* Video Area */}
+            <div className="flex-[7] flex flex-col bg-black relative group">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-bold text-white">{video.title}</h3>
+                  
+                  {/* ✅ VersionSelector with compare functionality */}
+                  <VersionSelector 
+                    videoId={video.id}
+                    currentVersion={currentVersion}
+                    onVersionChange={handleVersionChange}
+                    onCompare={handleCompare}
+                    loading={loadingVersion}
+                  />
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <ProtectedButton requiredPermissions={['Edit Video']}>
+                    <button 
+                      onClick={() => setIsCreatingCta(true)}
+                      className="flex items-center gap-2 bg-white/20 backdrop-blur-md hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <LinkIcon className="w-4 h-4" /> Add Button
+                    </button>
+                  </ProtectedButton>
 
-              <button onClick={onClose} className="text-white hover:text-gray-300">
-                <X className="w-8 h-8" />
-              </button>
+                  <button onClick={onClose} className="text-white hover:text-gray-300">
+                    <X className="w-8 h-8" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 flex items-center justify-center p-6 relative">
+                {/* ✅ Loading overlay while switching versions */}
+                {loadingVersion && (
+                  <div className="absolute inset-0 z-40 bg-black/80 flex items-center justify-center rounded-lg">
+                    <div className="text-center">
+                      <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-white text-lg font-medium">Loading version {currentVersion}...</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="w-full max-w-6xl relative aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+                  <iframe
+                    ref={iframeRef}
+                    src={iframeUrl}
+                    className="absolute inset-0 w-full h-full border-0"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                    allowFullScreen
+                  />
+                  
+                  {/* Display Active CTA */}
+                  <AnimatePresence>
+                    {activeCta && <CTAOverlay cta={activeCta} onDismiss={() => setActiveCta(null)} />}
+                  </AnimatePresence>
+
+                  {/* Display CTA Creator Modal */}
+                  {isCreatingCta && (
+                    <CTACreator 
+                      currentTime={currentTime} 
+                      onSave={handleCreateCta} 
+                      onCancel={() => setIsCreatingCta(false)} 
+                    />
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="flex-1 flex items-center justify-center p-6 relative">
-            <div className="w-full max-w-6xl relative aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
-              <iframe
-                ref={iframeRef}
-                src={iframeUrl}
-                className="absolute inset-0 w-full h-full border-0"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-              />
+            {/* Sidebar */}
+            <div className="flex-[3] bg-white border-l border-gray-200 flex flex-col h-full overflow-hidden">
               
-              {/* Display Active CTA */}
-              <AnimatePresence>
-                {activeCta && <CTAOverlay cta={activeCta} onDismiss={() => setActiveCta(null)} />}
-              </AnimatePresence>
-
-              {/* Display CTA Creator Modal */}
-              {isCreatingCta && (
-                <CTACreator 
-                  currentTime={currentTime} 
-                  onSave={handleCreateCta} 
-                  onCancel={() => setIsCreatingCta(false)} 
+              {/* Comments Section */}
+              <div className="flex-1 overflow-y-auto">
+                <ProtectedCommentSection 
+                  videoId={video.id} 
+                  currentTime={currentTime}
+                  currentVersion={currentVersion}
+                  onSeek={handleSeek}   
                 />
-              )}
+              </div>
+              
+              {/* Description Editor */}
+              <ProtectedButton 
+                requiredPermissions={['Edit Video']} 
+                className="w-full bg-transparent border-0 shadow-none p-0 block"
+              >
+                <div className="h-[400px] border-t-2 border-gray-200 overflow-y-auto bg-gray-50 shadow-lg">
+                  <DescriptionEditor 
+                    videoId={video.id} 
+                    currentTime={currentTime}
+                    onSeek={handleSeek}
+                  />
+                </div>
+              </ProtectedButton>
+              
             </div>
           </div>
         </div>
-
-        <div className="flex-[3] bg-white border-l border-gray-200 flex flex-col h-full overflow-hidden">
-          
-          {/* ✅ Top Section: Scrollable Comments (takes remaining space) */}
-          <div className="flex-1 overflow-y-auto">
-            {console.log('📝 Rendering comment section for video:', video?.id)}
-            <ProtectedCommentSection 
-              videoId={video.id} 
-              currentTime={currentTime} 
-              onSeek={handleSeek}   
-            />
-          </div>
-          
-          <ProtectedButton 
-            requiredPermissions={['Edit Video']} 
-            className="w-full bg-transparent border-0 shadow-none p-0 block"
-          >
-            <div className="h-[400px] border-t-2 border-gray-200 overflow-y-auto bg-gray-50 shadow-lg">
-              <DescriptionEditor 
-                videoId={video.id} 
-                currentTime={currentTime}
-                onSeek={handleSeek}
-              />
-            </div>
-          </ProtectedButton>
-          
-        </div>
-
-      </div>
-    </div>
+      ) : (
+        /* ✅ Version Comparison View */
+        <VersionComparison
+          videoId={video.id}
+          versionIds={compareVersionIds}
+          onClose={() => setShowComparison(false)}
+        />
+      )}
+    </>
   );
 }

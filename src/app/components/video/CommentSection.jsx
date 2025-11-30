@@ -228,6 +228,15 @@ function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
             </button>
           )}
 
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            {/* <span>{timeAgo(comment.createdAt)}</span> */}
+            {comment.versionNumber && (
+              <span className="px-2 py-0.5 bg-gray-100 rounded-full">
+                v{comment.versionNumber}
+              </span>
+            )}
+          </div>
+
           {/* Reply Input */}
           <AnimatePresence>
             {isReplying && (
@@ -439,7 +448,7 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
           timestamp: currentTime,
           priority: data.priority,
           isGuest: isPublic,
-          guestName: data.guestName
+          guestName: data.guestName,
         }),
       });
       await loadComments();

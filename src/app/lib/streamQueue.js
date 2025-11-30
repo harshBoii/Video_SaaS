@@ -119,12 +119,8 @@ export async function processNextQueueItem() {
         },
       },
       orderBy: [
-        {
-          priority: "desc", // HIGH > NORMAL > LOW
-        },
-        {
-          createdAt: "asc", // Oldest first
-        },
+        { priority: "desc" },
+        { createdAt: "asc" },
       ],
       include: {
         video: {
@@ -133,6 +129,7 @@ export async function processNextQueueItem() {
             title: true,
             filename: true,
             campaignId: true,
+            currentVersion: true, // ✅ ADD THIS
           },
         },
       },
@@ -157,7 +154,57 @@ export async function processNextQueueItem() {
 
     // Upload to Cloudflare Stream
     const result = await uploadToCloudflareStream(queueItem);
-    console.log("result is",result)
+    console.log("result is", result);
+
+    // ✅ NEW: Check if this is a version upload by matching r2Key
+    const activeVersion = await prisma.videoVersion.findFirst({
+      where: {
+        videoId: queueItem.videoId,
+        r2Key: queueItem.r2Key, // Match the r2Key being processed
+      },
+    });
+
+    if (activeVersion) {
+      console.log(`[STREAM QUEUE] Updating VideoVersion ${activeVersion.id}`);
+      
+      // ✅ Update the VideoVersion table
+      await prisma.videoVersion.update({
+        where: { id: activeVersion.id },
+        data: {
+          streamId: result.streamId,
+          playbackUrl: result.playbackUrl,
+          // thumbnailUrl: result.thumbnailUrl,
+          status: 'ready',
+        },
+      });
+
+      // ✅ If this version is active, also update main Video table
+      if (activeVersion.isActive) {
+        console.log(`[STREAM QUEUE] Active version - updating main Video table`);
+        await prisma.video.update({
+          where: { id: queueItem.videoId },
+          data: {
+            streamId: result.streamId,
+            playbackUrl: result.playbackUrl,
+            thumbnailUrl: result.thumbnailUrl,
+            status: "ready",
+          },
+        });
+      }
+    } else {
+      console.log(`[STREAM QUEUE] No version match - updating main Video table only`);
+      // ✅ Not a version upload, just update main Video table
+      await prisma.video.update({
+        where: { id: queueItem.videoId },
+        data: {
+          streamId: result.streamId,
+          playbackUrl: result.playbackUrl,
+          thumbnailUrl: result.thumbnailUrl,
+          status: "ready",
+        },
+      });
+    }
+
     // Update queue status on success
     await prisma.streamQueue.update({
       where: { id: queueItem.id },
@@ -165,18 +212,6 @@ export async function processNextQueueItem() {
         status: "COMPLETED",
         streamId: result.streamId,
         completedAt: new Date(),
-      },
-    });
-
-    // Update video record with stream info
-    await prisma.video.update({
-      where: { id: queueItem.videoId },
-      data: {
-        streamId: result.streamId,
-        playbackUrl: result.playbackUrl,
-        thumbnailUrl: result.thumbnailUrl,
-        // duration:result.duration,
-        status: "ready",
       },
     });
 

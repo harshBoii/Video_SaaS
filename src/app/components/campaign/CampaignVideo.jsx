@@ -150,11 +150,178 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
   const [playingVideo, setPlayingVideo] = useState(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [videoToShare, setVideoToShare] = useState(null);
+  const [versionUploadModal, setVersionUploadModal] = useState(null); // Stores selected video
+  const [versionNote, setVersionNote] = useState('');
+  const [showVersionModal, setShowVersionModal] = useState(false);
+
 
   useEffect(() => {
     fetchVideos();
     fetchStats();
   }, [campaign.id]);
+
+const openVersionUploadModal = (video) => {
+  setVersionUploadModal(video);
+  setShowVersionModal(true);
+};
+
+const handleVersionUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!versionUploadModal) {
+    showError('Error', 'No video selected');
+    return;
+  }
+
+  const videoId = versionUploadModal.id;
+
+  if (!versionNote.trim()) {
+    showError('Error', 'Please provide a version note');
+    return;
+  }
+
+  setUploadingFile(file);
+  setLoading(true);
+  setUploadProgress(0);
+
+  try {
+    console.log('[VERSION UPLOAD] Starting upload for:', file.name);
+    
+    const getVideoDuration = (file) => {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          resolve(video.duration);
+        };
+        video.onerror = () => resolve(null);
+        video.src = URL.createObjectURL(file);
+      });
+    };
+
+    const duration = await getVideoDuration(file);
+
+    // ✅ Step 1: Create version and get upload URLs
+    const startRes = await fetch(`/api/videos/${videoId}/versions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        versionNote: versionNote,
+        fileSize: file.size,
+        fileName: file.name,
+        fileType: file.type,
+      })
+    });
+
+    if (!startRes.ok) {
+      const errorData = await startRes.json();
+      throw new Error(errorData.error || 'Failed to start version upload');
+    }
+
+    const startData = await startRes.json();
+    
+    if (!startData.success || !startData.upload || !startData.urls) {
+      throw new Error('Invalid response from server');
+    }
+
+    const { upload, urls, version } = startData;
+    
+    console.log('[VERSION UPLOAD] Upload initialized:', {
+      versionId: version.id,
+      versionNumber: version.version,
+      uploadId: upload.uploadId,
+      totalParts: upload.totalParts,
+    });
+
+    // ✅ Step 2: Upload parts to R2 (same as before)
+    const partSize = upload.partSize;
+    const uploadedParts = [];
+
+    for (let i = 0; i < urls.length; i++) {
+      const start = i * partSize;
+      const end = Math.min(start + partSize, file.size);
+      const chunk = file.slice(start, end);
+
+      console.log(`[VERSION UPLOAD] Uploading part ${i + 1}/${urls.length}`);
+
+      let retries = 3;
+      let uploadRes;
+      
+      while (retries > 0) {
+        try {
+          uploadRes = await fetch(urls[i].url, {
+            method: 'PUT',
+            body: chunk,
+            headers: { 'Content-Type': file.type },
+          });
+
+          if (uploadRes.ok) break;
+          retries--;
+          if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      const etag = uploadRes.headers.get('ETag');
+      if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
+
+      uploadedParts.push({
+        PartNumber: urls[i].partNumber,
+        ETag: etag.replace(/"/g, ''),
+      });
+
+      setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+    }
+
+    console.log('[VERSION UPLOAD] All parts uploaded, completing...');
+
+    // ✅ Step 3: Complete upload
+    const completeRes = await fetch('/api/upload/complete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uploadId: upload.uploadId,
+        key: upload.key,
+        parts: uploadedParts,
+        duration: duration,
+        versionId: version.id, // ✅ Link to version
+      })
+    });
+
+    if (!completeRes.ok) {
+      const errorData = await completeRes.json();
+      throw new Error(errorData.error || 'Failed to complete upload');
+    }
+
+    const result = await completeRes.json();
+    
+    if (result.success) {
+      console.log('[VERSION UPLOAD] Upload completed:', result);
+      await showSuccess('Version Uploaded', `Version ${version.version} uploaded successfully`);
+      setShowVersionModal(false);
+      setVersionNote('');
+      setVersionUploadModal(null);
+      fetchVideos();
+      fetchStats();
+      if (onUpdate) onUpdate();
+    }
+  } catch (error) {
+    console.error('[VERSION UPLOAD ERROR]', error);
+    await showError('Upload Failed', error.message);
+  } finally {
+    setLoading(false);
+    setUploadingFile(null);
+    setUploadProgress(0);
+  }
+};
 
   const fetchVideos = async () => {
     try {
@@ -702,14 +869,22 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
                           >
                             <Trash2 className="w-4 h-4" />
                           </ProtectedButton>
-                              <ProtectedButton
-                                onClick={() => openShareModal(video)}
-                                className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
-                                title="Share Video"
-                                requiredPermissions={['Share Video']} // Optional: if you want to restrict sharing
-                              >
-                                <Share2 className="w-4 h-4" />
-                              </ProtectedButton>
+                          <ProtectedButton
+                            onClick={() => openShareModal(video)}
+                            className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                            title="Share Video"
+                            requiredPermissions={['Share Video']} // Optional: if you want to restrict sharing
+                          >
+                            <Share2 className="w-4 h-4" />
+                          </ProtectedButton>
+                          <ProtectedButton
+                            onClick={() => openVersionUploadModal(video)}
+                            className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                            title="Upload New Version"
+                            requiredPermissions={['Upload Video','Version Control']}
+                          >
+                            <Upload className="w-4 h-4" />
+                          </ProtectedButton>
                         </div>
                       </td>
                     </motion.tr>
@@ -827,6 +1002,97 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
             </>
           )}
         </AnimatePresence>
+
+        <AnimatePresence>
+            {showVersionModal && versionUploadModal && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/50 z-40"
+                  onClick={() => {
+                    setShowVersionModal(false);
+                    setVersionNote('');
+                  }}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                >
+                  <div className="bg-white rounded-2xl max-w-md w-full p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-900">
+                        Upload New Version
+                      </h3>
+                      <button
+                        onClick={() => {
+                          setShowVersionModal(false);
+                          setVersionNote('');
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-lg"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Uploading new version for: <span className="font-semibold">{versionUploadModal.title}</span>
+                      </p>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Version Note *
+                      </label>
+                      <textarea
+                        value={versionNote}
+                        onChange={(e) => setVersionNote(e.target.value)}
+                        placeholder="What changed in this version?"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                        rows={3}
+                      />
+                    </div>
+
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={handleVersionUpload}
+                        disabled={!versionNote.trim() || loading}
+                        className="hidden"
+                      />
+                      <div className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                        versionNote.trim() && !loading
+                          ? 'border-blue-400 bg-blue-50 hover:bg-blue-100'
+                          : 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                      }`}>
+                        <Upload className="w-10 h-10 mx-auto mb-2 text-blue-500" />
+                        <p className="text-sm font-medium text-gray-900">
+                          {loading ? 'Uploading...' : 'Click to select video file'}
+                        </p>
+                        {loading && (
+                          <div className="mt-3">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all"
+                                style={{ width: `${uploadProgress}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">{uploadProgress}%</p>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </motion.div>
+              </>
+            )}
+        </AnimatePresence>
+
 
         {/* Video Player Modal */}
         {playingVideo && (

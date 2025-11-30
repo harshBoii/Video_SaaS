@@ -1,13 +1,13 @@
-// app/api/upload/complete/route.js
 import { r2 } from "@/app/lib/r2";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { verifyJWT } from "@/app/lib/auth";
 import { completeUploadSchema, formatZodError, COMPRESSION_THRESHOLD } from "@/app/lib/validation";
-import { queueStreamUpload } from "@/app/lib/streamQueue";
 
 export async function POST(request) {
+  let uploadSession = null;
+  
   try {
     // ✅ 1. AUTHENTICATE USER
     const { employee: user, error: authError } = await verifyJWT(request);
@@ -33,10 +33,10 @@ export async function POST(request) {
       );
     }
 
-    const { uploadId, key, parts,duration } = validation.data;
+    const { uploadId, key, parts, duration, versionId } = body;
 
-    // ✅ 3. VERIFY UPLOAD SESSION EXISTS AND BELONGS TO USER
-    const uploadSession = await prisma.uploadSession.findUnique({
+    // ✅ 3. VERIFY UPLOAD SESSION EXISTS
+    uploadSession = await prisma.uploadSession.findUnique({
       where: { uploadId },
       include: {
         campaign: {
@@ -78,19 +78,7 @@ export async function POST(request) {
         {
           success: false,
           error: "Upload already completed",
-          message: "This upload has already been completed",
           videoId: uploadSession.videoId,
-        },
-        { status: 400 }
-      );
-    }
-
-    if (uploadSession.status === "ABORTED") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Upload was aborted",
-          message: "This upload session was cancelled",
         },
         { status: 400 }
       );
@@ -102,30 +90,93 @@ export async function POST(request) {
         {
           success: false,
           error: "Key mismatch",
-          message: "Provided key does not match upload session",
+          message: "Upload key does not match session",
         },
         { status: 400 }
       );
     }
 
-    // ✅ 7. VERIFY ALL PARTS ARE UPLOADED
+    // ✅ 7. COMPREHENSIVE PARTS VALIDATION
+    if (!Array.isArray(parts) || parts.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid parts array",
+          message: "Parts must be a non-empty array",
+        },
+        { status: 400 }
+      );
+    }
+
     if (parts.length !== uploadSession.totalParts) {
       return NextResponse.json(
         {
           success: false,
           error: "Incomplete upload",
-          message: `Expected ${uploadSession.totalParts} parts, but received ${parts.length} parts`,
-          expectedParts: uploadSession.totalParts,
-          receivedParts: parts.length,
+          message: `Expected ${uploadSession.totalParts} parts, received ${parts.length}`,
         },
         { status: 400 }
       );
     }
 
-    // ✅ 8. SORT PARTS BY PART NUMBER (required by S3/R2)
-    const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber);
+    // ✅ 7.1 VALIDATE EACH PART HAS REQUIRED FIELDS
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part.ETag || typeof part.ETag !== 'string') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Invalid part data",
+            message: `Part at index ${i} is missing valid ETag`,
+          },
+          { status: 400 }
+        );
+      }
+      if (!part.PartNumber || typeof part.PartNumber !== 'number') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Invalid part data",
+            message: `Part at index ${i} is missing valid PartNumber`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
-    // ✅ 9. COMPLETE MULTIPART UPLOAD ON R2
+    // ✅ 7.2 SORT AND VALIDATE PARTS ARE SEQUENTIAL
+    const sortedParts = [...parts].sort((a, b) => a.PartNumber - b.PartNumber);
+    const partNumbers = new Set(sortedParts.map(p => p.PartNumber));
+
+    // Check for duplicates
+    if (partNumbers.size !== parts.length) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Duplicate part numbers detected",
+          message: "Each part number must be unique",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check all part numbers from 1 to totalParts exist
+    for (let i = 1; i <= uploadSession.totalParts; i++) {
+      if (!partNumbers.has(i)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Missing part numbers",
+            message: `Part ${i} is missing from upload`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    console.log(`[UPLOAD VALIDATE] ✅ All ${parts.length} parts validated | Upload: ${uploadId}`);
+
+    // ✅ 8. COMPLETE MULTIPART UPLOAD ON R2
     const command = new CompleteMultipartUploadCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
@@ -135,165 +186,415 @@ export async function POST(request) {
       },
     });
 
-    const r2Response = await r2.send(command);
+    let r2Response;
+    try {
+      r2Response = await r2.send(command);
+      
+      // ✅ 8.1 VALIDATE R2 COMPLETION RESPONSE
+      if (!r2Response.ETag) {
+        throw new Error("R2 did not return ETag - upload may have failed");
+      }
+      
+      if (!r2Response.Key || r2Response.Key !== key) {
+        throw new Error("R2 returned mismatched key");
+      }
 
-    console.log(`[UPLOAD COMPLETE] R2 upload completed: ${key}`);
+      console.log(`[R2 COMPLETE] ✅ ${key} | ETag: ${r2Response.ETag}`);
+      
+    } catch (r2Error) {
+      console.error("❌ [R2 COMPLETION FAILED]", r2Error);
+      
+      // Mark upload session as failed
+      await prisma.uploadSession.update({
+        where: { id: uploadSession.id },
+        data: { 
+          status: "FAILED",
+          metadata: JSON.stringify({ 
+            error: r2Error.message,
+            failedAt: new Date().toISOString(),
+            uploadId: uploadId,
+          })
+        },
+      });
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to complete R2 upload",
+          message: process.env.NODE_ENV === "development" 
+            ? r2Error.message 
+            : "Upload completion failed on storage service",
+        },
+        { status: 500 }
+      );
+    }
 
-    // ✅ 10. CREATE VIDEO RECORD IN DATABASE
-    const video = await prisma.video.create({
+    // ✅ 9. PROCESS UPLOAD BASED ON TYPE (VERSION vs NEW VIDEO)
+    const fileSize = uploadSession.fileSize;
+    const needsCompression = Number(fileSize) > COMPRESSION_THRESHOLD;
+    let responseData = {};
+
+    if (versionId) {
+      // ==========================================
+      // ✅ VERSION UPLOAD PATH
+      // ==========================================
+      console.log(`[VERSION UPLOAD] Processing: ${versionId}`);
+
+      const result = await processVersionUpload({
+        versionId,
+        uploadSession,
+        key,
+        fileSize,
+        needsCompression,
+        user,
+        r2Response,
+      });
+
+      responseData = result;
+
+    } else {
+      // ==========================================
+      // ✅ NEW VIDEO UPLOAD PATH
+      // ==========================================
+      console.log(`[NEW VIDEO UPLOAD] Processing`);
+
+      const result = await processNewVideoUpload({
+        uploadSession,
+        key,
+        fileSize,
+        needsCompression,
+        duration,
+        user,
+        r2Response,
+      });
+
+      responseData = result;
+    }
+
+    return NextResponse.json(responseData);
+
+  } catch (error) {
+    console.error("❌ [UPLOAD COMPLETE ERROR]", error);
+
+    // Try to mark upload as failed if we have the session
+    if (uploadSession) {
+      try {
+        await prisma.uploadSession.update({
+          where: { id: uploadSession.id },
+          data: { 
+            status: "FAILED",
+            metadata: JSON.stringify({
+              error: error.message,
+              stack: error.stack,
+              failedAt: new Date().toISOString(),
+            })
+          },
+        });
+      } catch (dbError) {
+        console.error("Failed to update upload session status:", dbError);
+      }
+    }
+
+    // Handle specific errors
+    if (error.name === "NoSuchUpload") {
+      return NextResponse.json(
+        { success: false, error: "Upload not found on storage" },
+        { status: 404 }
+      );
+    }
+
+    if (error.name === "InvalidPart") {
+      return NextResponse.json(
+        { success: false, error: "One or more parts are invalid" },
+        { status: 400 }
+      );
+    }
+
+    if (error.code === "P2002") {
+      const target = error.meta?.target?.[0] || "unknown field";
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Duplicate entry",
+          message: `A record with this ${target} already exists`
+        },
+        { status: 409 }
+      );
+    }
+
+    // Generic error
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to complete upload",
+        message: process.env.NODE_ENV === "development" 
+          ? error.message 
+          : "An unexpected error occurred",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// ==========================================
+// HELPER: PROCESS VERSION UPLOAD
+// ==========================================
+async function processVersionUpload({
+  versionId,
+  uploadSession,
+  key,
+  fileSize,
+  needsCompression,
+  user,
+  r2Response,
+}) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Get version and verify it exists
+    const version = await tx.videoVersion.findUnique({
+      where: { id: versionId },
+      include: {
+        video: {
+          select: {
+            id: true,
+            title: true,
+            campaignId: true,
+            currentVersion: true,
+          }
+        }
+      }
+    });
+
+    if (!version) {
+      throw new Error(`Version ${versionId} not found`);
+    }
+
+    // 2. Update version status
+    await tx.videoVersion.update({
+      where: { id: versionId },
       data: {
-        title: uploadSession.fileName.replace(/\.[^/.]+$/, ""), // Remove extension
+        status: needsCompression ? 'processing' : 'ready',
+        r2Key: key, // Ensure R2 key is saved
+      }
+    });
+
+    let processingInfo = {};
+
+    if (needsCompression) {
+      // 3a. Queue for compression
+      const compressionJob = await tx.compressionJob.create({
+        data: {
+          videoId: version.videoId,
+          quality: "high",
+          codec: "h264",
+          targetBitrate: 8000,
+          priority: "HIGH",
+          status: "PENDING",
+          requestedBy: user.id,
+          attempts: 0,
+          maxAttempts: 3,
+          metadata: {
+            reason: "auto_compression_threshold",
+            originalSize: Number(fileSize),
+            threshold: COMPRESSION_THRESHOLD,
+            autoQueued: true,
+            versionId: versionId,
+            isVersion: true,
+            r2ETag: r2Response.ETag,
+          },
+        },
+      });
+
+      processingInfo = {
+        requiresCompression: true,
+        compressionJobId: compressionJob.id,
+        reason: "File size exceeds threshold",
+        estimatedTime: estimateCompressionTime(fileSize),
+      };
+
+      console.log(`[COMPRESSION QUEUED] Version: ${versionId} | Job: ${compressionJob.id}`);
+    } else {
+      // 3b. Queue for Cloudflare Stream
+      await tx.streamQueue.upsert({
+        where: { videoId: version.videoId },
+        update: {
+          r2Key: key,
+          status: 'PENDING',
+          priority: 'NORMAL',
+          attempts: 0,
+          lastError: null,
+        },
+        create: {
+          videoId: version.videoId,
+          r2Key: key,
+          status: 'PENDING',
+          priority: 'NORMAL',
+        }
+      });
+
+      processingInfo = {
+        requiresCompression: false,
+        queuedForStream: true,
+      };
+
+      console.log(`[STREAM QUEUED] Version: ${versionId} | Video: ${version.videoId}`);
+    }
+
+    // 4. Update upload session (NO videoId for versions)
+    await tx.uploadSession.update({
+      where: { id: uploadSession.id },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        metadata: JSON.stringify({
+          versionId: versionId,
+          r2ETag: r2Response.ETag,
+          completedAt: new Date().toISOString(),
+        })
+      },
+    });
+
+    console.log(`✅ [VERSION COMPLETE] Version: ${versionId} | Video: ${version.videoId}`);
+
+    return {
+      success: true,
+      message: "Version upload completed successfully",
+      version: {
+        id: versionId,
+        videoId: version.videoId,
+        videoTitle: version.video.title,
+        versionNumber: version.version,
+        size: Number(fileSize),
+        sizeFormatted: formatBytes(fileSize),
+        status: needsCompression ? "processing" : "ready",
+        r2Key: key,
+        r2ETag: r2Response.ETag,
+      },
+      processing: processingInfo,
+    };
+  }, {
+    maxWait: 5000, // 5 seconds
+    timeout: 10000, // 10 seconds
+  });
+}
+
+// ==========================================
+// HELPER: PROCESS NEW VIDEO UPLOAD
+// ==========================================
+async function processNewVideoUpload({
+  uploadSession,
+  key,
+  fileSize,
+  needsCompression,
+  duration,
+  user,
+  r2Response,
+}) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Create video record
+    const video = await tx.video.create({
+      data: {
+        title: uploadSession.fileName.replace(/\.[^/.]+$/, ""),
         filename: uploadSession.fileName,
-        originalSize: uploadSession.fileSize,
-        status: "ready",
+        originalSize: fileSize,
+        status: needsCompression ? "processing" : "ready",
         r2Key: key,
         duration: duration ? Math.round(duration) : null,
         r2Bucket: process.env.R2_BUCKET_NAME,
         campaignId: uploadSession.campaignId,
         uploadedBy: user.id,
         currentVersion: 1,
-        metadata: {},
+        metadata: {
+          r2ETag: r2Response.ETag,
+          uploadedAt: new Date().toISOString(),
+        },
         tags: [],
       },
     });
 
-    console.log(`[UPLOAD COMPLETE] Video record created: ${video.id}`);
+    console.log(`[VIDEO CREATED] ID: ${video.id} | Title: ${video.title}`);
 
-    // ✅ 11. CREATE INITIAL VIDEO VERSION
-    await prisma.videoVersion.create({
+    // 2. Create initial version
+    await tx.videoVersion.create({
       data: {
         videoId: video.id,
         version: 1,
         r2Key: key,
-        fileSize: uploadSession.fileSize,
-        status: "ready",
+        fileSize: fileSize,
+        status: needsCompression ? "processing" : "ready",
         isActive: true,
         versionNote: "Initial upload",
         uploadedBy: user.id,
       },
     });
 
-    // ✅ 12. UPDATE UPLOAD SESSION TO COMPLETED
-    await prisma.uploadSession.update({
+    let processingInfo = {};
+
+    if (needsCompression) {
+      // 3a. Queue for compression
+      const compressionJob = await tx.compressionJob.create({
+        data: {
+          videoId: video.id,
+          quality: "high",
+          codec: "h264",
+          targetBitrate: 8000,
+          priority: "HIGH",
+          status: "PENDING",
+          requestedBy: user.id,
+          attempts: 0,
+          maxAttempts: 3,
+          metadata: {
+            reason: "auto_compression_threshold",
+            originalSize: Number(fileSize),
+            threshold: COMPRESSION_THRESHOLD,
+            autoQueued: true,
+            r2ETag: r2Response.ETag,
+          },
+        },
+      });
+
+      processingInfo = {
+        requiresCompression: true,
+        compressionJobId: compressionJob.id,
+        estimatedTime: estimateCompressionTime(fileSize),
+      };
+
+      console.log(`[COMPRESSION QUEUED] Video: ${video.id} | Job: ${compressionJob.id}`);
+    } else {
+      // 3b. Queue for Stream
+      await tx.streamQueue.create({
+        data: {
+          videoId: video.id,
+          r2Key: key,
+          status: 'PENDING',
+          priority: 'NORMAL',
+        }
+      });
+
+      processingInfo = {
+        requiresCompression: false,
+        queuedForStream: true,
+      };
+
+      console.log(`[STREAM QUEUED] Video: ${video.id}`);
+    }
+
+    // 4. Update upload session with videoId
+    await tx.uploadSession.update({
       where: { id: uploadSession.id },
       data: {
         status: "COMPLETED",
         completedAt: new Date(),
         videoId: video.id,
+        metadata: JSON.stringify({
+          r2ETag: r2Response.ETag,
+          completedAt: new Date().toISOString(),
+        })
       },
     });
 
-    // ✅ 13. SMART COMPRESSION & STREAM QUEUE LOGIC 🎯
-    const fileSize = uploadSession.fileSize;
-    const needsCompression = Number(fileSize) > COMPRESSION_THRESHOLD;
+    console.log(`✅ [UPLOAD COMPLETE] Video: ${video.id} | User: ${user.email}`);
 
-    let processingInfo = {};
-
-    if (needsCompression) {
-      // ✅ FILE > 25GB: Queue for compression FIRST, then Stream
-      console.log(
-        `[UPLOAD COMPLETE] Video ${video.id} is ${formatBytes(fileSize)} (> 25GB). Queuing for compression before Stream upload.`
-      );
-
-      try {
-        // Create compression job with HIGH priority
-        const compressionJob = await prisma.compressionJob.create({
-          data: {
-            videoId: video.id,
-            quality: "high",
-            codec: "h264",
-            targetBitrate: 8000, // 8 Mbps
-            priority: "HIGH",
-            status: "PENDING",
-            requestedBy: user.id,
-            attempts: 0,
-            maxAttempts: 3,
-            metadata: {
-              reason: "auto_compression_threshold",
-              originalSize: Number(fileSize),
-              threshold: COMPRESSION_THRESHOLD,
-              autoQueued: true,
-            },
-          },
-        });
-
-        // Update video status to processing
-        await prisma.video.update({
-          where: { id: video.id },
-          data: {
-            status: "processing",
-            metadata: {
-              compressionRequired: true,
-              compressionJobId: compressionJob.id,
-              compressionReason: "File size exceeds 25GB threshold",
-            },
-          },
-        });
-
-        processingInfo = {
-          requiresCompression: true,
-          compressionJobId: compressionJob.id,
-          reason: "File size exceeds 25GB threshold",
-          threshold: formatBytes(COMPRESSION_THRESHOLD),
-          estimatedCompressionTime: estimateCompressionTime(fileSize),
-          workflow: [
-            "1. Video compressed to reduce size",
-            "2. Compressed video uploaded to Cloudflare Stream",
-            "3. Original video kept in R2 storage",
-            "4. You'll be notified when ready for playback",
-          ],
-        };
-
-        console.log(`[UPLOAD COMPLETE] Compression job ${compressionJob.id} created for video ${video.id}`);
-      } catch (compressionError) {
-        console.error(`[UPLOAD COMPLETE] Failed to create compression job:`, compressionError);
-        
-        // Fallback: queue for Stream anyway (will fail if too large)
-        processingInfo = {
-          requiresCompression: true,
-          compressionError: "Failed to queue compression",
-          fallback: "Attempting direct Stream upload",
-        };
-      }
-    } else {
-      // ✅ FILE ≤ 25GB: Queue directly for Stream (no compression)
-      console.log(
-        `[UPLOAD COMPLETE] Video ${video.id} is ${formatBytes(fileSize)} (≤ 25GB). Queuing directly for Stream upload.`
-      );
-
-      try {
-        await queueStreamUpload(video.id, key, "NORMAL");
-        
-        processingInfo = {
-          requiresCompression: false,
-          reason: "File size within 25GB threshold",
-          threshold: formatBytes(COMPRESSION_THRESHOLD),
-          workflow: [
-            "1. Video queued for Cloudflare Stream upload",
-            "2. Stream will process and optimize video",
-            "3. You'll be notified when ready for playback",
-          ],
-        };
-
-        console.log(`[UPLOAD COMPLETE] Video ${video.id} queued for Cloudflare Stream`);
-      } catch (streamError) {
-        console.error(`[UPLOAD COMPLETE] Failed to queue for Stream:`, streamError);
-        
-        processingInfo = {
-          requiresCompression: false,
-          streamError: "Failed to queue for Stream",
-          note: "Video saved in R2, manual Stream upload may be required",
-        };
-      }
-    }
-
-    // ✅ 14. LOG COMPLETION
-    console.log(
-      `✅ [UPLOAD COMPLETE] Video: ${video.id} | User: ${user.email} | Campaign: ${uploadSession.campaign.name} | File: ${uploadSession.fileName} (${formatBytes(fileSize)}) | NeedsCompression: ${needsCompression}`
-    );
-
-    // ✅ 15. RETURN SUCCESS RESPONSE
-    return NextResponse.json({
+    return {
       success: true,
       message: "Upload completed successfully",
       video: {
@@ -302,142 +603,41 @@ export async function POST(request) {
         filename: video.filename,
         size: Number(video.originalSize),
         sizeFormatted: formatBytes(video.originalSize),
-        status: needsCompression ? "processing" : "ready",
+        status: video.status,
         r2Key: video.r2Key,
+        r2ETag: r2Response.ETag,
         campaign: {
           id: uploadSession.campaign.id,
           name: uploadSession.campaign.name,
         },
-        uploadedAt: video.createdAt,
       },
       processing: processingInfo,
-      r2: {
-        location: r2Response.Location,
-        etag: r2Response.ETag,
-        bucket: r2Response.Bucket,
-        key: r2Response.Key,
-      },
-      next: {
-        checkStatus: `/api/videos/${video.id}/details`,
-        downloadRaw: `/api/videos/${video.id}/raw`,
-      },
-    });
-  } catch (error) {
-    console.error("❌ [UPLOAD COMPLETE ERROR]", error);
-
-    // ✅ HANDLE R2/AWS SPECIFIC ERRORS
-    if (error.name === "NoSuchUpload") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Upload not found",
-          message: "The multipart upload does not exist or has expired",
-        },
-        { status: 404 }
-      );
-    }
-
-    if (error.name === "InvalidPart") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid part",
-          message: "One or more parts are invalid. Please re-upload the failed parts.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (error.name === "EntityTooSmall") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Parts too small",
-          message: "One or more parts (except the last part) are smaller than 5MB",
-        },
-        { status: 400 }
-      );
-    }
-
-    // ✅ HANDLE DATABASE ERRORS
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Duplicate upload",
-          message: "This upload has already been completed",
-        },
-        { status: 409 }
-      );
-    }
-
-    if (error.code === "P2003") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid reference",
-          message: "Campaign or user not found",
-        },
-        { status: 400 }
-      );
-    }
-
-    // ✅ GENERIC ERROR HANDLER
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to complete upload",
-        message: process.env.NODE_ENV === "development" ? error.message : "An unexpected error occurred",
-        ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
-      },
-      { status: 500 }
-    );
-  }
+    };
+  }, {
+    maxWait: 5000, // 5 seconds
+    timeout: 10000, // 10 seconds
+  });
 }
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
-/**
- * Format bytes to human-readable string
- * ✅ Handles both Number and BigInt
- */
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
 function formatBytes(bytes) {
-  // Handle zero
   if (bytes === 0 || bytes === 0n) return "0 Bytes";
-  
-  // ✅ Convert BigInt to Number for Math operations
   const numBytes = typeof bytes === 'bigint' ? Number(bytes) : bytes;
-  
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(numBytes) / Math.log(k));
-  
   return Math.round((numBytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
-/**
- * Estimate compression time based on file size
- * Rough estimate: 1GB = 4 minutes
- * ✅ Handles BigInt
- */
 function estimateCompressionTime(fileSize) {
-  // ✅ Convert BigInt to Number for calculation
   const numSize = typeof fileSize === 'bigint' ? Number(fileSize) : fileSize;
   const sizeInGB = numSize / (1024 * 1024 * 1024);
   const minutes = Math.ceil(sizeInGB * 4);
   
-  if (minutes < 60) {
-    return `${minutes} minutes`;
-  }
-  
+  if (minutes < 60) return `${minutes} minutes`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  
-  if (hours === 1) {
-    return mins > 0 ? `1 hour ${mins} minutes` : "1 hour";
-  }
-  
-  return mins > 0 ? `${hours} hours ${mins} minutes` : `${hours} hours`;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
