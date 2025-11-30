@@ -464,7 +464,7 @@ export default function CommentSection({ videoId, currentTime = 0, currentVersio
           priority: data.priority,
           isGuest: isPublic,
           guestName: data.guestName,
-          versionNumber: currentVersion, // ✅ Send current version
+          versionNumber: currentVersion, 
         }),
       });
       await loadComments();

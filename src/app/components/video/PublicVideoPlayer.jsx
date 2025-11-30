@@ -328,6 +328,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
                       currentTime={currentTime}
                       onSeek={handleSeek}
                       isPublic={true}
+                      currentVersion={currentVersion}
                     />
                   </div>
                   {/* ✅ Description Viewer below comments */}
@@ -368,6 +369,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
                         currentTime={currentTime}
                         onSeek={handleSeek}
                         isPublic={true}
+                        currentVersion={currentVersion}
                       />
                       
                       <DescriptionViewer 
