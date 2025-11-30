@@ -1,7 +1,7 @@
 // app/api/videos/list/route.js
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
-import { verifyJWT } from "@/app/lib/auth"; // ✅ Use consistent auth
+import { verifyJWT } from "@/app/lib/auth";
 import { listVideosSchema, formatZodError } from "@/app/lib/validation";
 
 export async function GET(request) {
@@ -18,7 +18,6 @@ export async function GET(request) {
     // ✅ 2. PARSE AND VALIDATE QUERY PARAMS
     const { searchParams } = new URL(request.url);
     
-    // Convert searchParams to plain object
     const queryObject = {
       page: searchParams.get('page'),
       limit: searchParams.get('limit'),
@@ -145,6 +144,21 @@ export async function GET(request) {
               email: true,
             },
           },
+          versions: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              version: true,
+              status: true,
+              streamId: true,
+              playbackUrl: true,
+              thumbnailUrl: true,
+              fileSize: true,
+            },
+            take: 1,
+          },
           _count: {
             select: {
               versions: true,
@@ -176,31 +190,41 @@ export async function GET(request) {
       stats.statusBreakdown[stat.status] = stat._count;
     });
 
-    // ✅ 8. FORMAT RESPONSE - CONVERT ALL BIGINTS
-    const formattedVideos = videos.map((video) => ({
-      id: video.id,
-      title: video.title,
-      description: video.description,
-      filename: video.filename,
-      status: video.status,
-      duration: video.duration,
-      durationFormatted: formatDuration(video.duration),
-      resolution: video.resolution,
-      fps: video.fps,
-      codec: video.codec,
-      originalSize: Number(video.originalSize), // ✅ Convert BigInt to Number
-      originalSizeFormatted: formatBytes(video.originalSize),
-      tags: video.tags,
-      streamId: video.streamId,
-      playbackUrl: video.playbackUrl,
-      thumbnailUrl: video.thumbnailUrl,
-      currentVersion: video.currentVersion,
-      totalVersions: video._count.versions,
-      campaign: video.campaign,
-      uploader: video.uploader,
-      createdAt: video.createdAt,
-      updatedAt: video.updatedAt,
-    }));
+    // ✅ 8. FORMAT RESPONSE - USE ACTIVE VERSION DATA
+    const formattedVideos = videos.map((video) => {
+      const activeVersion = video.versions[0]; // Get active version
+      
+      // Use active version's data if available, fallback to main video data
+      const thumbnailUrl = activeVersion?.thumbnailUrl || video.thumbnailUrl;
+      const playbackUrl = activeVersion?.playbackUrl || video.playbackUrl;
+      const streamId = activeVersion?.streamId || video.streamId;
+      const versionStatus = activeVersion?.status || video.status;
+
+      return {
+        id: video.id,
+        title: video.title,
+        description: video.description,
+        filename: video.filename,
+        status: versionStatus, // Use active version status
+        duration: video.duration,
+        durationFormatted: formatDuration(video.duration),
+        resolution: video.resolution,
+        fps: video.fps,
+        codec: video.codec,
+        originalSize: Number(video.originalSize),
+        originalSizeFormatted: formatBytes(video.originalSize),
+        tags: video.tags,
+        streamId: streamId, // ✅ From active version
+        playbackUrl: playbackUrl, // ✅ From active version
+        thumbnailUrl: thumbnailUrl, // ✅ From active version
+        currentVersion: video.currentVersion, // ✅ Active version number
+        versionCount: video._count.versions, // ✅ Total version count
+        campaign: video.campaign,
+        uploader: video.uploader,
+        createdAt: video.createdAt,
+        updatedAt: video.updatedAt,
+      };
+    });
 
     const totalPages = Math.ceil(totalCount / limit);
 

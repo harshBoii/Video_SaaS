@@ -173,7 +173,7 @@ export async function processNextQueueItem() {
         data: {
           streamId: result.streamId,
           playbackUrl: result.playbackUrl,
-          // thumbnailUrl: result.thumbnailUrl,
+          thumbnailUrl: result.thumbnailUrl,
           status: 'ready',
         },
       });

@@ -466,7 +466,8 @@ model VideoVersion {
   // Cloudflare Stream (optional, for this version)
   streamId        String?  @db.VarChar(255)
   playbackUrl     String?  @db.Text
-  
+  thumbnailUrl    String?  @db.Text
+
   // Who created this version
   uploadedBy      String
   uploader        Employee @relation("VersionUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)

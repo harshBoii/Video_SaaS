@@ -1,4 +1,3 @@
-// app/components/campaign/CampaignVideo.jsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,20 +16,65 @@ import {
   HardDrive,
   Search,
   X,
-  Lock
+  Lock,
+  Layers,
+  Star
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 import VideoPlayer from '../video/VideoPlayer';
 import ProtectedButton from '../general/protectedButton';
 import { CampaignPermissionsProvider, useCampaignPermissions } from '@/app/context/permissionContext';
 import ProtectedShareModal from '../video/ProtectedShareModal';
-import { Share2 } from 'lucide-react'; // Import Share icon
+import { Share2 } from 'lucide-react';
 
 // Helper function
 function toTitleCase(str = '') {
   return str
     .replace(/^[-_]*(.)/, (_, c) => c.toUpperCase())
     .replace(/[-_]+(.)/g, (_, c) => ' ' + c.toUpperCase());
+}
+
+// Loading Skeleton Component
+function VideoTableSkeleton() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <tr key={i} className="border-b border-gray-200">
+          <td className="px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-24 h-14 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse" />
+              </div>
+            </div>
+          </td>
+          <td className="px-6 py-4">
+            <div className="h-6 bg-gray-200 rounded-full w-20 animate-pulse" />
+          </td>
+          <td className="px-6 py-4">
+            <div className="h-4 bg-gray-200 rounded w-16 animate-pulse" />
+          </td>
+          <td className="px-6 py-4">
+            <div className="h-4 bg-gray-200 rounded w-12 animate-pulse" />
+          </td>
+          <td className="px-6 py-4">
+            <div className="h-4 bg-gray-200 rounded w-20 animate-pulse" />
+          </td>
+          <td className="px-6 py-4">
+            <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+          </td>
+          <td className="px-6 py-4">
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5, 6].map((j) => (
+                <div key={j} className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  );
 }
 
 // Protected Upload Section Component
@@ -140,6 +184,7 @@ function ProtectedUploadSection({ campaign, loading, uploadingFile, uploadProgre
 export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingVideos, setFetchingVideos] = useState(true); // ✅ NEW: Separate loading state for fetching
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingFile, setUploadingFile] = useState(null);
   const [stats, setStats] = useState(null);
@@ -150,180 +195,177 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
   const [playingVideo, setPlayingVideo] = useState(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [videoToShare, setVideoToShare] = useState(null);
-  const [versionUploadModal, setVersionUploadModal] = useState(null); // Stores selected video
+  const [versionUploadModal, setVersionUploadModal] = useState(null);
   const [versionNote, setVersionNote] = useState('');
   const [showVersionModal, setShowVersionModal] = useState(false);
-
 
   useEffect(() => {
     fetchVideos();
     fetchStats();
   }, [campaign.id]);
 
-const openVersionUploadModal = (video) => {
-  setVersionUploadModal(video);
-  setShowVersionModal(true);
-};
+  const openVersionUploadModal = (video) => {
+    setVersionUploadModal(video);
+    setShowVersionModal(true);
+  };
 
-const handleVersionUpload = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+  const handleVersionUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
 
-  if (!versionUploadModal) {
-    showError('Error', 'No video selected');
-    return;
-  }
-
-  const videoId = versionUploadModal.id;
-
-  if (!versionNote.trim()) {
-    showError('Error', 'Please provide a version note');
-    return;
-  }
-
-  setUploadingFile(file);
-  setLoading(true);
-  setUploadProgress(0);
-
-  try {
-    console.log('[VERSION UPLOAD] Starting upload for:', file.name);
-    
-    const getVideoDuration = (file) => {
-      return new Promise((resolve) => {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.onloadedmetadata = () => {
-          window.URL.revokeObjectURL(video.src);
-          resolve(video.duration);
-        };
-        video.onerror = () => resolve(null);
-        video.src = URL.createObjectURL(file);
-      });
-    };
-
-    const duration = await getVideoDuration(file);
-
-    // ✅ Step 1: Create version and get upload URLs
-    const startRes = await fetch(`/api/videos/${videoId}/versions`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        versionNote: versionNote,
-        fileSize: file.size,
-        fileName: file.name,
-        fileType: file.type,
-      })
-    });
-
-    if (!startRes.ok) {
-      const errorData = await startRes.json();
-      throw new Error(errorData.error || 'Failed to start version upload');
+    if (!versionUploadModal) {
+      showError('Error', 'No video selected');
+      return;
     }
 
-    const startData = await startRes.json();
-    
-    if (!startData.success || !startData.upload || !startData.urls) {
-      throw new Error('Invalid response from server');
+    const videoId = versionUploadModal.id;
+
+    if (!versionNote.trim()) {
+      showError('Error', 'Please provide a version note');
+      return;
     }
 
-    const { upload, urls, version } = startData;
-    
-    console.log('[VERSION UPLOAD] Upload initialized:', {
-      versionId: version.id,
-      versionNumber: version.version,
-      uploadId: upload.uploadId,
-      totalParts: upload.totalParts,
-    });
+    setUploadingFile(file);
+    setLoading(true);
+    setUploadProgress(0);
 
-    // ✅ Step 2: Upload parts to R2 (same as before)
-    const partSize = upload.partSize;
-    const uploadedParts = [];
-
-    for (let i = 0; i < urls.length; i++) {
-      const start = i * partSize;
-      const end = Math.min(start + partSize, file.size);
-      const chunk = file.slice(start, end);
-
-      console.log(`[VERSION UPLOAD] Uploading part ${i + 1}/${urls.length}`);
-
-      let retries = 3;
-      let uploadRes;
+    try {
+      console.log('[VERSION UPLOAD] Starting upload for:', file.name);
       
-      while (retries > 0) {
-        try {
-          uploadRes = await fetch(urls[i].url, {
-            method: 'PUT',
-            body: chunk,
-            headers: { 'Content-Type': file.type },
-          });
+      const getVideoDuration = (file) => {
+        return new Promise((resolve) => {
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(video.src);
+            resolve(video.duration);
+          };
+          video.onerror = () => resolve(null);
+          video.src = URL.createObjectURL(file);
+        });
+      };
 
-          if (uploadRes.ok) break;
-          retries--;
-          if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (error) {
-          retries--;
-          if (retries === 0) throw error;
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+      const duration = await getVideoDuration(file);
+
+      const startRes = await fetch(`/api/videos/${videoId}/versions`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          versionNote: versionNote,
+          fileSize: file.size,
+          fileName: file.name,
+          fileType: file.type,
+        })
+      });
+
+      if (!startRes.ok) {
+        const errorData = await startRes.json();
+        throw new Error(errorData.error || 'Failed to start version upload');
       }
 
-      const etag = uploadRes.headers.get('ETag');
-      if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
+      const startData = await startRes.json();
+      
+      if (!startData.success || !startData.upload || !startData.urls) {
+        throw new Error('Invalid response from server');
+      }
 
-      uploadedParts.push({
-        PartNumber: urls[i].partNumber,
-        ETag: etag.replace(/"/g, ''),
+      const { upload, urls, version } = startData;
+      
+      console.log('[VERSION UPLOAD] Upload initialized:', {
+        versionId: version.id,
+        versionNumber: version.version,
+        uploadId: upload.uploadId,
+        totalParts: upload.totalParts,
       });
 
-      setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+      const partSize = upload.partSize;
+      const uploadedParts = [];
+
+      for (let i = 0; i < urls.length; i++) {
+        const start = i * partSize;
+        const end = Math.min(start + partSize, file.size);
+        const chunk = file.slice(start, end);
+
+        console.log(`[VERSION UPLOAD] Uploading part ${i + 1}/${urls.length}`);
+
+        let retries = 3;
+        let uploadRes;
+        
+        while (retries > 0) {
+          try {
+            uploadRes = await fetch(urls[i].url, {
+              method: 'PUT',
+              body: chunk,
+              headers: { 'Content-Type': file.type },
+            });
+
+            if (uploadRes.ok) break;
+            retries--;
+            if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (error) {
+            retries--;
+            if (retries === 0) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        const etag = uploadRes.headers.get('ETag');
+        if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
+
+        uploadedParts.push({
+          PartNumber: urls[i].partNumber,
+          ETag: etag.replace(/"/g, ''),
+        });
+
+        setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+      }
+
+      console.log('[VERSION UPLOAD] All parts uploaded, completing...');
+
+      const completeRes = await fetch('/api/upload/complete', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uploadId: upload.uploadId,
+          key: upload.key,
+          parts: uploadedParts,
+          duration: duration,
+          versionId: version.id,
+        })
+      });
+
+      if (!completeRes.ok) {
+        const errorData = await completeRes.json();
+        throw new Error(errorData.error || 'Failed to complete upload');
+      }
+
+      const result = await completeRes.json();
+      
+      if (result.success) {
+        console.log('[VERSION UPLOAD] Upload completed:', result);
+        await showSuccess('Version Uploaded', `Version ${version.version} uploaded successfully`);
+        setShowVersionModal(false);
+        setVersionNote('');
+        setVersionUploadModal(null);
+        fetchVideos();
+        fetchStats();
+        if (onUpdate) onUpdate();
+      }
+    } catch (error) {
+      console.error('[VERSION UPLOAD ERROR]', error);
+      await showError('Upload Failed', error.message);
+    } finally {
+      setLoading(false);
+      setUploadingFile(null);
+      setUploadProgress(0);
     }
-
-    console.log('[VERSION UPLOAD] All parts uploaded, completing...');
-
-    // ✅ Step 3: Complete upload
-    const completeRes = await fetch('/api/upload/complete', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uploadId: upload.uploadId,
-        key: upload.key,
-        parts: uploadedParts,
-        duration: duration,
-        versionId: version.id, // ✅ Link to version
-      })
-    });
-
-    if (!completeRes.ok) {
-      const errorData = await completeRes.json();
-      throw new Error(errorData.error || 'Failed to complete upload');
-    }
-
-    const result = await completeRes.json();
-    
-    if (result.success) {
-      console.log('[VERSION UPLOAD] Upload completed:', result);
-      await showSuccess('Version Uploaded', `Version ${version.version} uploaded successfully`);
-      setShowVersionModal(false);
-      setVersionNote('');
-      setVersionUploadModal(null);
-      fetchVideos();
-      fetchStats();
-      if (onUpdate) onUpdate();
-    }
-  } catch (error) {
-    console.error('[VERSION UPLOAD ERROR]', error);
-    await showError('Upload Failed', error.message);
-  } finally {
-    setLoading(false);
-    setUploadingFile(null);
-    setUploadProgress(0);
-  }
-};
+  };
 
   const fetchVideos = async () => {
+    setFetchingVideos(true); // ✅ NEW: Set fetching state
     try {
       const response = await fetch(
         `/api/videos/list?projectId=${campaign.id}&limit=50`,
@@ -336,6 +378,8 @@ const handleVersionUpload = async (event) => {
       }
     } catch (error) {
       console.error('Failed to fetch videos:', error);
+    } finally {
+      setFetchingVideos(false); // ✅ NEW: Clear fetching state
     }
   };
 
@@ -374,7 +418,7 @@ const handleVersionUpload = async (event) => {
               resolve(video.duration);
             };
             video.onerror = () => {
-              resolve(null); // Fail silently if not a video
+              resolve(null);
             };
             video.src = URL.createObjectURL(file);
           });
@@ -382,7 +426,6 @@ const handleVersionUpload = async (event) => {
 
       const duration = await getVideoDuration(file)
 
-      // Step 1: Start upload
       const startRes = await fetch('/api/upload/start', {
         method: 'POST',
         credentials: 'include',
@@ -417,7 +460,6 @@ const handleVersionUpload = async (event) => {
         totalParts: upload.totalParts,
       });
 
-      // Step 2: Upload parts to R2
       const partSize = upload.partSize;
       const uploadedParts = [];
 
@@ -480,7 +522,6 @@ const handleVersionUpload = async (event) => {
 
       console.log('[UPLOAD] All parts uploaded, completing...');
 
-      // Step 3: Complete upload
       const completeRes = await fetch('/api/upload/complete', {
         method: 'POST',
         credentials: 'include',
@@ -708,9 +749,6 @@ const handleVersionUpload = async (event) => {
           uploadProgress={uploadProgress}
           onFileUpload={handleFileUpload}
         />
-
-        {/* Rest of the component remains the same... */}
-        {/* Filters, Videos Table, Modals, etc. */}
         
         {/* Filters and Search */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -743,9 +781,10 @@ const handleVersionUpload = async (event) => {
                 fetchVideos();
                 fetchStats();
               }}
-              className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
+              disabled={fetchingVideos}
+              className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${fetchingVideos ? 'animate-spin' : ''}`} />
               Refresh
             </button>
           </div>
@@ -767,6 +806,9 @@ const handleVersionUpload = async (event) => {
                     Duration
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Versions
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Size
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
@@ -778,15 +820,21 @@ const handleVersionUpload = async (event) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredVideos.length === 0 ? (
+                {/* ✅ Loading Skeleton */}
+                {fetchingVideos ? (
+                  <VideoTableSkeleton />
+                ) : filteredVideos.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
+                    <td colSpan="7" className="px-6 py-12 text-center">
                       <Video className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600">
+                      <p className="text-gray-600 font-medium mb-1">
                         {searchQuery || statusFilter 
                           ? 'No videos match your filters'
-                          : 'No videos uploaded yet. Upload your first video to get started!'
+                          : 'No videos uploaded yet'
                         }
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {!(searchQuery || statusFilter) && 'Upload your first video to get started!'}
                       </p>
                     </td>
                   </tr>
@@ -800,20 +848,27 @@ const handleVersionUpload = async (event) => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
+                          {/* ✅ Show thumbnail from active version */}
                           {video.thumbnailUrl ? (
-                            <img
-                              src={video.thumbnailUrl}
-                              alt={video.title}
-                              className="w-24 h-14 object-cover rounded-lg border border-gray-200"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <div className="w-24 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border border-blue-200" style={{ display: video.thumbnailUrl ? 'none' : 'flex' }}>
-                            <Video className="w-8 h-8 text-blue-500" />
-                          </div>
+                            <div className="relative">
+                              <img
+                                src={video.thumbnailUrl}
+                                alt={video.title}
+                                className="w-24 h-14 object-cover rounded-lg border border-gray-200"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div className="w-24 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border border-blue-200 absolute inset-0" style={{ display: 'none' }}>
+                                <Video className="w-8 h-8 text-blue-500" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-24 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border border-blue-200">
+                              <Video className="w-8 h-8 text-blue-500" />
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium text-gray-900">{video.title}</p>
                             <p className="text-sm text-gray-500">{video.filename}</p>
@@ -827,7 +882,27 @@ const handleVersionUpload = async (event) => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
+                        {/* ✅ Show duration from active version */}
                         {video.durationFormatted || '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {/* ✅ Show version count and active version */}
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg border border-purple-200">
+                            <Layers className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">
+                              {video.versionCount || 1}
+                            </span>
+                          </div>
+                          {video.currentVersion && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg border border-green-200">
+                              <Star className="w-3 h-3 fill-current" />
+                              <span className="text-xs font-semibold">
+                                v{video.currentVersion}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {video.originalSizeFormatted}
@@ -873,7 +948,7 @@ const handleVersionUpload = async (event) => {
                             onClick={() => openShareModal(video)}
                             className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
                             title="Share Video"
-                            requiredPermissions={['Share Video']} // Optional: if you want to restrict sharing
+                            requiredPermissions={['Share Video']}
                           >
                             <Share2 className="w-4 h-4" />
                           </ProtectedButton>
@@ -1092,7 +1167,6 @@ const handleVersionUpload = async (event) => {
               </>
             )}
         </AnimatePresence>
-
 
         {/* Video Player Modal */}
         {playingVideo && (
