@@ -388,6 +388,7 @@ export default function PublicVideoPlayer({ video, allowDownload, allowComments,
           shareToken={shareId}
           versionIds={compareVersionIds}
           onClose={() => setShowComparison(false)}
+          currentVersion={currentVersion}
         />
       )}
     </>

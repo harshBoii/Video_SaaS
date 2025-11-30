@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   History, ChevronDown, CheckCircle, Clock, 
   User, Calendar, FileVideo, Loader2,
-  ArrowLeftRight, Sparkles, AlertCircle, Play
+  ArrowLeftRight, Sparkles, AlertCircle, Play, Eye
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 
-export default function VersionSelector({ videoId, currentVersion, onVersionChange, onCompare }) {
+export default function VersionSelector({ videoId, currentVersion, onVersionChange, onCompare, loading }) {
   const [versions, setVersions] = useState([]);
   const [videoData, setVideoData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingVersions, setLoadingVersions] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activating, setActivating] = useState(null);
   const [selectedForCompare, setSelectedForCompare] = useState([]);
@@ -23,7 +23,7 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
   }, [videoId]);
 
   const loadVersions = async () => {
-    setLoading(true);
+    setLoadingVersions(true);
     try {
       const res = await fetch(`/api/videos/${videoId}/versions`, {
         credentials: 'include'
@@ -38,11 +38,6 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
       if (data.success) {
         setVersions(data.versions || []);
         setVideoData(data.video || null);
-        
-        // Update current version from response if available
-        if (data.currentVersion && onVersionChange) {
-          onVersionChange(data.currentVersion);
-        }
       } else {
         throw new Error(data.error || 'Failed to load versions');
       }
@@ -51,7 +46,20 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
       showError('Error', 'Failed to load version history');
       setVersions([]);
     } finally {
-      setLoading(false);
+      setLoadingVersions(false);
+    }
+  };
+
+  // ✅ NEW: Preview version (view without activating)
+  const handlePreviewVersion = (version) => {
+    if (!version.streamId || version.status !== 'ready') {
+      showError('Error', 'This version is not ready for preview');
+      return;
+    }
+    
+    if (onVersionChange) {
+      onVersionChange(version.version, version.streamId, version.thumbnailUrl);
+      setShowDropdown(false);
     }
   };
 
@@ -87,9 +95,10 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
         // Reload versions to get updated active status
         await loadVersions();
         
-        // Notify parent component
-        if (onVersionChange) {
-          onVersionChange(versionNumber);
+        // Also preview the newly activated version
+        const activatedVersion = versions.find(v => v.id === versionId);
+        if (activatedVersion && onVersionChange) {
+          onVersionChange(activatedVersion.version, activatedVersion.streamId, activatedVersion.thumbnailUrl);
         }
       } else {
         throw new Error(data.error || 'Activation failed');
@@ -104,17 +113,12 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
 
   const handleSelectForCompare = (versionId) => {
     setSelectedForCompare(prev => {
-      // Deselect if already selected
       if (prev.includes(versionId)) {
         return prev.filter(id => id !== versionId);
       }
-      
-      // Replace oldest if already 2 selected
       if (prev.length >= 2) {
         return [prev[1], versionId];
       }
-      
-      // Add to selection
       return [...prev, versionId];
     });
   };
@@ -165,7 +169,7 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
     }
   };
 
-  if (loading) {
+  if (loadingVersions) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-md rounded-lg">
         <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -204,7 +208,6 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
       <AnimatePresence>
         {showDropdown && (
           <>
-            {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -216,7 +219,6 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
               }}
             />
             
-            {/* Dropdown Panel */}
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -271,6 +273,8 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
                     const isSelected = selectedForCompare.includes(version.id);
                     const isDisabled = !isSelected && selectedForCompare.length >= 2;
                     const canActivate = !version.isActive && version.status === 'ready';
+                    const canPreview = version.status === 'ready' && version.streamId;
+                    const isCurrentlyViewing = version.version === displayVersion;
                     
                     return (
                       <motion.div
@@ -280,11 +284,13 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
                         transition={{ delay: index * 0.05 }}
                         className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-all ${
                           version.isActive ? 'bg-green-50 border-l-4 border-l-green-500' : ''
-                        } ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                        } ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''} ${
+                          isCurrentlyViewing && !version.isActive ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
+                        }`}
                       >
                         {/* Version Header */}
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <FileVideo className="w-5 h-5 text-gray-600" />
                             <span className="font-bold text-gray-900">
                               Version {version.version}
@@ -296,30 +302,60 @@ export default function VersionSelector({ videoId, currentVersion, onVersionChan
                                 animate={{ scale: 1 }}
                                 className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold"
                               >
-                                <Play className="w-3 h-3 fill-current" />
+                                <CheckCircle className="w-3 h-3" />
                                 Active
+                              </motion.div>
+                            )}
+
+                            {isCurrentlyViewing && !version.isActive && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Viewing
                               </motion.div>
                             )}
                           </div>
                           
-                          {canActivate && (
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => handleActivateVersion(version.id, version.version)}
-                              disabled={activating === version.id}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 px-3 py-1 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors disabled:cursor-not-allowed"
-                            >
-                              {activating === version.id ? (
-                                <div className="flex items-center gap-1">
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                  <span>Activating...</span>
-                                </div>
-                              ) : (
-                                'Activate'
-                              )}
-                            </motion.button>
-                          )}
+                          {/* ✅ Action Buttons */}
+                          <div className="flex gap-2">
+                            {canPreview && !isCurrentlyViewing && (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handlePreviewVersion(version)}
+                                className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-700 px-3 py-1 bg-purple-50 rounded-md hover:bg-purple-100 transition-colors"
+                                title="Preview this version"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Preview
+                              </motion.button>
+                            )}
+
+                            {canActivate && (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleActivateVersion(version.id, version.version)}
+                                disabled={activating === version.id}
+                                className="text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 px-3 py-1 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors disabled:cursor-not-allowed flex items-center gap-1"
+                              >
+                                {activating === version.id ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <span>Activating...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-3 h-3" />
+                                    <span>Activate</span>
+                                  </>
+                                )}
+                              </motion.button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Version Note */}

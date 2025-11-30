@@ -149,10 +149,22 @@ export default function VideoPlayer({ video, onClose }) {
   }, [video?.id]);
   
   // ✅ Handle version change using ?version= query parameter
-  const handleVersionChange = async (versionNumber) => {
-    setLoadingVersion(true);
-    try {
-      // ✅ Fetch video with specific version using query parameter
+const handleVersionChange = async (versionNumber, versionStreamId, versionThumbnail) => {
+  setLoadingVersion(true);
+  try {
+    // ✅ Direct preview without fetching (data already passed from VersionSelector)
+    if (versionStreamId) {
+      setCurrentVersion(versionNumber);
+      setActiveStreamId(versionStreamId);
+      
+      // ✅ Reload iframe with new stream
+      if (iframeRef.current) {
+        iframeRef.current.src = `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${versionStreamId}/iframe?api=true`;
+      }
+      
+      console.log(`[VERSION SWITCH] Viewing version ${versionNumber}, StreamID: ${versionStreamId}`);
+    } else {
+      // ✅ Fallback: Fetch if streamId not provided (backward compatibility)
       const res = await fetch(`/api/videos/${video.id}?version=${versionNumber}`, {
         credentials: 'include'
       });
@@ -162,7 +174,6 @@ export default function VideoPlayer({ video, onClose }) {
         setCurrentVersion(versionNumber);
         setActiveStreamId(data.video.streamId);
         
-        // ✅ Reload iframe with new stream
         if (iframeRef.current) {
           iframeRef.current.src = `https://customer-5f6vfk6lgnhsk276.cloudflarestream.com/${data.video.streamId}/iframe?api=true`;
         }
@@ -171,12 +182,13 @@ export default function VideoPlayer({ video, onClose }) {
       } else {
         console.error('Failed to load version:', data.error);
       }
-    } catch (error) {
-      console.error('Failed to switch version:', error);
-    } finally {
-      setLoadingVersion(false);
     }
-  };
+  } catch (error) {
+    console.error('Failed to switch version:', error);
+  } finally {
+    setLoadingVersion(false);
+  }
+};
 
   // ✅ Handle comparison request
   const handleCompare = (versionIds) => {

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, Send, Check, Clock, User, 
-  MoreVertical, Trash2, ChevronDown, ChevronUp, Flag
+  MoreVertical, Trash2, ChevronDown, ChevronUp, Flag, Layers
 } from 'lucide-react';
 import ProtectedButton from '../general/protectedButton';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
@@ -85,7 +85,6 @@ function PriorityBadge({ priority }) {
   );
 }
 
-// ✅ NEW: Custom Priority Dropdown with Colors
 function PriorityDropdown({ selected, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = PRIORITY_OPTIONS.find(opt => opt.value === selected) || PRIORITY_OPTIONS[0];
@@ -134,7 +133,7 @@ function PriorityDropdown({ selected, onSelect }) {
   );
 }
 
-function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
+function CommentItem({ comment, onResolve, onDelete, onSeek, onReply, currentViewingVersion }) {
   const [showReplies, setShowReplies] = useState(true);
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -160,8 +159,11 @@ function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
     }
   };
 
+  // ✅ Check if comment is for a different version than currently viewing
+  const isDifferentVersion = comment.versionNumber && currentViewingVersion && comment.versionNumber !== currentViewingVersion;
+
   return (
-    <div className="group py-3 border-b border-gray-100 last:border-0">
+    <div className={`group py-3 border-b border-gray-100 last:border-0 ${isDifferentVersion ? 'opacity-60' : ''}`}>
       <div className="flex gap-3">
         <Avatar name={name} isEmployee={isEmployee} />
         
@@ -174,6 +176,22 @@ function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
                 <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 border rounded-full uppercase tracking-wide">Guest</span>
               )}
               <span className="text-xs text-gray-400">{formatTimeAgo(comment.createdAt)}</span>
+              
+              {/* ✅ Version Badge */}
+              {comment.versionNumber && (
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    isDifferentVersion 
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                      : 'bg-purple-50 text-purple-700 border border-purple-200'
+                  }`}
+                  title={isDifferentVersion ? `Comment from version ${comment.versionNumber}` : `Current version ${comment.versionNumber}`}
+                >
+                  <Layers className="w-3 h-3" />
+                  v{comment.versionNumber}
+                </motion.div>
+              )}
             </div>
             
             {/* Actions (visible on hover) */}
@@ -227,15 +245,6 @@ function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
               Reply
             </button>
           )}
-
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            {/* <span>{timeAgo(comment.createdAt)}</span> */}
-            {comment.versionNumber && (
-              <span className="px-2 py-0.5 bg-gray-100 rounded-full">
-                v{comment.versionNumber}
-              </span>
-            )}
-          </div>
 
           {/* Reply Input */}
           <AnimatePresence>
@@ -291,6 +300,7 @@ function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
                         onDelete={onDelete}
                         onSeek={onSeek}
                         onReply={onReply}
+                        currentViewingVersion={currentViewingVersion}
                       />
                     ))}
                   </motion.div>
@@ -306,7 +316,7 @@ function CommentItem({ comment, onResolve, onDelete, onSeek, onReply }) {
 
 // --- INPUT COMPONENT ---
 
-function CommentInput({ currentUser, currentTime, isPublic, onPost, isSubmitting }) {
+function CommentInput({ currentUser, currentTime, currentVersion, isPublic, onPost, isSubmitting }) {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [guestName, setGuestName] = useState('');
@@ -360,7 +370,7 @@ function CommentInput({ currentUser, currentTime, isPublic, onPost, isSubmitting
                 exit={{ height: 0, opacity: 0 }}
                 className="mt-2 flex items-center justify-between"
               >
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center flex-wrap">
                   <button 
                     onClick={insertTime}
                     className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -368,10 +378,15 @@ function CommentInput({ currentUser, currentTime, isPublic, onPost, isSubmitting
                     <Clock className="w-3 h-3" /> {formatTimestamp(currentTime)}
                   </button>
                   
-                  {/* ✅ Custom Priority Dropdown with Colors */}
+                  <PriorityDropdown selected={priority} onSelect={setPriority} />
                   
-                    <PriorityDropdown selected={priority} onSelect={setPriority} />
-
+                  {/* ✅ Version Badge */}
+                  {currentVersion && (
+                    <div className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-semibold border border-purple-200">
+                      <Layers className="w-3 h-3" />
+                      v{currentVersion}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -404,7 +419,7 @@ function CommentInput({ currentUser, currentTime, isPublic, onPost, isSubmitting
 
 // --- MAIN ---
 
-export default function CommentSection({ videoId, currentTime = 0, isPublic = false, onSeek }) {
+export default function CommentSection({ videoId, currentTime = 0, currentVersion, isPublic = false, onSeek }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -449,6 +464,7 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
           priority: data.priority,
           isGuest: isPublic,
           guestName: data.guestName,
+          versionNumber: currentVersion, // ✅ Send current version
         }),
       });
       await loadComments();
@@ -465,7 +481,11 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ content, parentId }),
+      body: JSON.stringify({ 
+        content, 
+        parentId,
+        versionNumber: currentVersion // ✅ Send current version for replies too
+      }),
     });
     await loadComments();
   };
@@ -495,10 +515,20 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
-        <h3 className="font-bold text-gray-800 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-500" />
-          {comments.length} {comments.length === 1 ? 'Comment' : 'Comments'}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-blue-500" />
+            {comments.length} {comments.length === 1 ? 'Comment' : 'Comments'}
+          </h3>
+          
+          {/* ✅ Current Version Indicator */}
+          {currentVersion && (
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-semibold border border-purple-200">
+              <Layers className="w-3.5 h-3.5" />
+              Viewing v{currentVersion}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Input */}
@@ -506,6 +536,7 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
         <CommentInput 
           currentUser={null}
           currentTime={currentTime}
+          currentVersion={currentVersion}
           isPublic={true}
           onPost={handlePost}
           isSubmitting={submitting}
@@ -515,6 +546,7 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
           <CommentInput 
             currentUser={currentUser}
             currentTime={currentTime}
+            currentVersion={currentVersion}
             isPublic={false}
             onPost={handlePost}
             isSubmitting={submitting}
@@ -540,6 +572,7 @@ export default function CommentSection({ videoId, currentTime = 0, isPublic = fa
               onDelete={handleDelete}
               onSeek={onSeek}
               onReply={handleReply}
+              currentViewingVersion={currentVersion}
             />
           ))
         )}
