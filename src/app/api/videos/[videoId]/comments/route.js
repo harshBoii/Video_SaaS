@@ -1,214 +1,141 @@
-// // app/api/videos/[videoId]/comments/route.js
-// import prisma from '@/app/lib/prisma';
-// import { verify } from 'jsonwebtoken';
-// import { NextResponse } from 'next/server';
-
-// // GET - Fetch all comments for a video
-// export async function GET(req, { params }) {
-//   try {
-//     const token = req.cookies.get('token')?.value;
-//     // if (!token) {
-//     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-//     // }
-
-//     const { videoId } = await params;
-
-//     const comments = await prisma.comment.findMany({
-//       where: { videoId },
-//       include: {
-//         employee: {
-//           select: {
-//             id: true,
-//             firstName: true,
-//             lastName: true,
-//           },
-//         },
-//         resolver: {
-//           select: {
-//             firstName: true,
-//             lastName: true,
-//           },
-//         },
-//         replies: {
-//           include: {
-//             employee: {
-//               select: {
-//                 id: true,
-//                 firstName: true,
-//                 lastName: true,
-//               },
-//             },
-//           },
-//           orderBy: { createdAt: 'asc' },
-//         },
-//       },
-//       orderBy: { createdAt: 'desc' },
-//     });
-
-//     return NextResponse.json({ success: true, comments });
-//   } catch (error) {
-//     console.error('Error fetching comments:', error);
-//     return NextResponse.json(
-//       { error: 'Failed to fetch comments' },
-//       { status: 500 }
-//     );
-//   }
-// }
-
-
-// export async function POST(req, { params }) {
-//   try {
-//     const { videoId } = await params;
-//     const body = await req.json();
-    
-//     // Destructure inputs
-//     const { content, timestamp, parentId, priority, isGuest, guestName } = body;
-
-//     let employeeId = null;
-//     let finalGuestName = null;
-
-//     // --- AUTH LOGIC ---
-//     if (isGuest) {
-//       // Guest Mode: No token check needed
-//       // Ensure your schema supports this! (employeeId needs to be optional)
-//       finalGuestName = guestName || "Guest User";
-//     } else {
-//       // Employee Mode: Verify Token
-//       const token = req.cookies.get('token')?.value;
-//       if (!token) {
-//         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-//       }
-//       try {
-//         const decoded = verify(token, process.env.JWT_SECRET);
-//         employeeId = decoded.id;
-//       } catch (err) {
-//         return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-//       }
-//     }
-
-//     // --- CREATE COMMENT ---
-//     const comment = await prisma.comment.create({
-//       data: {
-//         videoId,
-//         content,
-//         timestamp: timestamp || null,
-//         parentId: parentId || null,
-//         priority: priority || 'NONE',
-        
-//         // Handle Author Assignment
-//         ...(employeeId ? { employeeId } : {}), // Only add if exists
-//         ...(finalGuestName ? { guestName: finalGuestName } : {}), // Add guest name if guest
-//       },
-//       include: {
-//         employee: { // Only returns data if employeeId exists
-//           select: {
-//             firstName: true,
-//             lastName: true,
-//           },
-//         },
-//       },
-//     });
-
-//     return NextResponse.json({ success: true, comment });
-
-//   } catch (error) {
-//     console.error('Error creating comment:', error);
-//     return NextResponse.json(
-//       { error: 'Failed to create comment' },
-//       { status: 500 }
-//     );
-//   }
-// }
 import prisma from '@/app/lib/prisma';
 import { verify } from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
 // GET - Fetch comments
+// GET endpoint - make sure it returns versionNumber
 export async function GET(request, { params }) {
   try {
     const { videoId } = await params;
-    const { searchParams } = new URL(request.url);
-    const sort = searchParams.get('sort') || 'desc';
+    const { employee, error } = await verifyJWT(request);
+    
+    if (error) {
+      return NextResponse.json({ success: false, error }, { status: 401 });
+    }
 
     const comments = await prisma.comment.findMany({
-      where: { videoId, parentId: null },
+      where: { 
+        videoId,
+        parentId: null // Only root comments, replies are nested
+      },
       include: {
         employee: {
           select: {
-            id: true,
             firstName: true,
             lastName: true,
-          },
+          }
         },
         replies: {
           include: {
             employee: {
-              select: { id: true, firstName: true, lastName: true },
-            },
+              select: {
+                firstName: true,
+                lastName: true,
+              }
+            }
           },
-          orderBy: { createdAt: 'asc' },
-        },
+          orderBy: { createdAt: 'asc' }
+        }
       },
-      orderBy: [
-        { timestamp: 'asc' },
-        { createdAt: sort === 'desc' ? 'desc' : 'asc' }
-      ],
+      orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json({ success: true, comments });
+    // ✅ Format to include versionNumber
+    const formattedComments = comments.map(comment => ({
+      ...comment,
+      versionNumber: comment.versionNumber, // ✅ Ensure this is included
+      replies: comment.replies?.map(reply => ({
+        ...reply,
+        versionNumber: reply.versionNumber // ✅ Include in nested replies too
+      }))
+    }));
+
+    return NextResponse.json({
+      success: true,
+      comments: formattedComments
+    });
   } catch (error) {
-    console.error('Fetch Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
+    console.error('[GET COMMENTS ERROR]', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch comments' },
+      { status: 500 }
+    );
   }
 }
 
-// POST - Create comment
+// POST endpoint - ensure versionNumber is saved
 export async function POST(request, { params }) {
   try {
     const { videoId } = await params;
     const body = await request.json();
-    const { content, timestamp, parentId, priority, isGuest, guestName } = body;
+    const { 
+      content, 
+      timestamp, 
+      priority = 'NONE', 
+      isGuest = false, 
+      guestName,
+      parentId,
+      versionNumber // ✅ Accept versionNumber from frontend
+    } = body;
 
     let employeeId = null;
-    let finalGuestName = null;
-
-    // ✅ AUTHENTICATION LOGIC (Restored)
-    if (isGuest) {
-      finalGuestName = guestName || "Guest User";
-    } else {
-      const token = request.cookies.get('token')?.value;
-      if (!token) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    if (!isGuest) {
+      const { employee, error } = await verifyJWT(request);
+      if (error) {
+        return NextResponse.json({ success: false, error }, { status: 401 });
       }
-      try {
-        const decoded = verify(token, process.env.JWT_SECRET);
-        employeeId = decoded.id;
-      } catch (err) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      }
+      employeeId = employee.id;
     }
 
+    // Validate
+    if (!content?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Comment content is required' },
+        { status: 400 }
+      );
+    }
+
+    if (isGuest && !guestName?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Guest name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create comment
     const comment = await prisma.comment.create({
       data: {
         videoId,
-        content,
-        timestamp: typeof timestamp === 'number' ? timestamp : null,
-        parentId: parentId || null,
-        priority: priority || 'NONE',
+        employeeId,
+        content: content.trim(),
+        timestamp: timestamp || null,
+        priority,
         status: 'OPEN',
-        ...(employeeId ? { employeeId } : {}),
-        ...(finalGuestName ? { guestName: finalGuestName } : {}),
+        isGuest,
+        guestName: isGuest ? guestName.trim() : null,
+        parentId: parentId || null,
+        versionNumber: versionNumber || null, // ✅ Save versionNumber
       },
       include: {
         employee: {
-          select: { firstName: true, lastName: true },
-        },
-      },
+          select: {
+            firstName: true,
+            lastName: true,
+          }
+        }
+      }
     });
 
-    return NextResponse.json({ success: true, comment });
+    return NextResponse.json({
+      success: true,
+      comment
+    });
   } catch (error) {
-    console.error('Create Error:', error);
-    return NextResponse.json({ error: 'Failed to post comment' }, { status: 500 });
+    console.error('[CREATE COMMENT ERROR]', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to create comment' },
+      { status: 500 }
+    );
   }
 }
