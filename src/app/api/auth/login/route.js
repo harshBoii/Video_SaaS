@@ -13,10 +13,21 @@ export async function POST(req) {
     // 1. Find employee
     const user = await prisma.employee.findUnique({
       where: { email },
-      include: {
+      // include: {
+      //   role: true
+        // {
+        //   include: {
+        //     permissions: { include: { permission: true } }
+        //   }
+        // }
+      // },
+      select:{
+        isAdmin:true,
+        email:true,
+        passwordHash:true,
         role: {
-          include: {
-            permissions: { include: { permission: true } }
+          select:{
+            name:true
           }
         }
       }
@@ -43,7 +54,7 @@ export async function POST(req) {
         id: user.id,
         email: user.email,
         role: user.role?.name,
-        permissions,
+        // permissions,
         companyId: user.companyId
       },
       process.env.JWT_SECRET,  // add to .env
@@ -54,7 +65,7 @@ export async function POST(req) {
     let redirect = '/employee'
     if (user.role?.name === 'SuperAdmin') redirect = '/superadmin'
     if (user.role?.name === 'Solo_Creator') redirect = '/solo'
-    else if (user.role?.name === 'Admin') redirect = '/admin'
+    else if (user.role?.name === 'Admin' || user?.isAdmin == true ) redirect = '/admin'
 
     const res = NextResponse.json({
       message: 'Login successful',
