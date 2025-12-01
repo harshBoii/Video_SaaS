@@ -46,9 +46,9 @@ export async function POST(req) {
     }
 
     // 3. Collect permissions
-    const permissions = user.role
-      ? user.role.permissions.map(rp => rp.permission.name)
-      : []
+    // const permissions = user.role
+    //   ? user.role.permissions.map(rp => rp.permission.name)
+    //   : []
 
     // 4. Generate JWT
     const token = jwt.sign(
