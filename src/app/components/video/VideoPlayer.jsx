@@ -131,7 +131,15 @@ export default function VideoPlayer({ video, onClose }) {
   const [currentVersion, setCurrentVersion] = useState(video.currentVersion);
   const [activeStreamId, setActiveStreamId] = useState(video.streamId);
   const [loadingVersion, setLoadingVersion] = useState(false);
-  
+    useEffect(() => {
+    console.log('[VIDEO PLAYER] Video object:', {
+      id: video.id,
+      title: video.title,
+      currentVersion: video.currentVersion,
+      streamId: video.streamId
+    });
+  }, []);
+
   // ✅ Comparison states
   const [showComparison, setShowComparison] = useState(false);
   const [compareVersionIds, setCompareVersionIds] = useState([]);

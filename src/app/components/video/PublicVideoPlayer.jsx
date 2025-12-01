@@ -40,6 +40,14 @@ const CTAOverlay = ({ cta, onDismiss }) => (
 
 export default function PublicVideoPlayer({ video, allowDownload, allowComments, shareId }) {
   console.log('🎥 PublicVideoPlayer rendered with:', { video, allowDownload, allowComments, shareId });
+  useEffect(() => {
+    console.log('[PUBLIC VIDEO PLAYER] Video object:', {
+      id: video.id,
+      title: video.title,
+      currentVersion: video.currentVersion,
+      streamId: video.streamId
+    });
+  }, []);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [ctas, setCtas] = useState([]);
