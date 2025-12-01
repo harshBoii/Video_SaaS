@@ -25,6 +25,8 @@ export async function POST(req) {
         isAdmin:true,
         email:true,
         passwordHash:true,
+        companyId:true,
+        id:true,
         role: {
           select:{
             name:true
