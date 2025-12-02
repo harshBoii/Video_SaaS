@@ -269,7 +269,7 @@ const handleVersionUpload = async () => {
       });
     };
 
-    const duration = await getVideoDuration(selectedVersionFile); // ← FIXED
+    const duration = await getVideoDuration(selectedVersionFile); 
 
     const startRes = await fetch(`/api/videos/${videoId}/versions`, {
       method: 'POST',
@@ -277,9 +277,9 @@ const handleVersionUpload = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         versionNote: versionNote,
-        fileSize: selectedVersionFile.size, // ← FIXED
-        fileName: selectedVersionFile.name, // ← FIXED
-        fileType: selectedVersionFile.type, // ← FIXED
+        fileSize: selectedVersionFile.size, 
+        fileName: selectedVersionFile.name, 
+        fileType: selectedVersionFile.type, 
       })
     });
 
