@@ -28,6 +28,7 @@ export default function IndividualDashboard() {
   // Upload State
   const [uploadingFile, setUploadingFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingProjectId, setUploadingProjectId] = useState(null);
   
   // Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -67,7 +68,7 @@ export default function IndividualDashboard() {
     }
   };
 
-  const handleFileUpload = async (event) => {
+  const handleFileUpload = async (event, campaignId) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -76,25 +77,12 @@ export default function IndividualDashboard() {
       return;
     }
 
-    if (projects.length === 0) {
-      const result = await showConfirm(
-        'No Project Found',
-        'You need to create a project first. Would you like to create one now?',
-        'Create Project',
-        'Cancel'
-      );
-      if (result.isConfirmed) {
-        setShowCreateModal(true);
-      }
-      return;
-    }
-
-    const campaignId = projects[0].id;
     setUploadingFile(file);
     setUploadProgress(0);
+    setUploadingProjectId(campaignId);
 
     try {
-      console.log('[UPLOAD] Starting upload for:', file.name);
+      console.log('[UPLOAD] Starting upload for:', file.name, 'to campaign:', campaignId);
       
       const getVideoDuration = (file) => {
         return new Promise((resolve) => {
@@ -217,6 +205,7 @@ export default function IndividualDashboard() {
     } finally {
       setUploadingFile(null);
       setUploadProgress(0);
+      setUploadingProjectId(null);
     }
   };
 
@@ -256,8 +245,6 @@ export default function IndividualDashboard() {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
-
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -286,25 +273,11 @@ export default function IndividualDashboard() {
             >
               <Search className="w-4 h-4" />
             </button>
-            
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="video/*"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={uploadingFile !== null}
-              />
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-blue-500/30 transition-all">
-                <Upload className="w-4 h-4" />
-                Upload Video
-              </div>
-            </label>
           </div>
         </div>
       </div>
 
-      {/* Upload Progress */}
+      {/* Upload Progress Banner */}
       <AnimatePresence>
         {uploadingFile && (
           <motion.div 
@@ -338,37 +311,37 @@ export default function IndividualDashboard() {
         <div className="h-full grid grid-cols-12 gap-5">
           {/* Left Column */}
           <div className="col-span-8 flex flex-col gap-5 overflow-hidden">
-            {/* Stats Cards - 5 cards */}
+            {/* Stats Cards */}
             <div className="grid grid-cols-5 gap-4">
               <StatCard icon={Video} value={stats?.totalVideos ?? 0} label="Total Videos" color="blue" />
               <StatCard icon={Folder} value={stats?.totalProjects ?? 0} label="Total Projects" color="indigo" />
               <StatCard icon={AlertCircle} value={stats?.pendingReviews ?? 0} label="Pending Reviews" color="red" />
               <StatCard icon={CheckCircle} value={stats?.resolvedReviews ?? 0} label="Resolved Reviews" color="green" />
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ y: -2 }}
-                  className="bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-                      Quiet Progress
-                    </span>
-                    <span className="text-[11px] text-emerald-300">
-                      You’re on track
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    <p className="text-sm font-medium text-slate-800">
-                      Consistency beats hype.
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Ship small, refine often, let the work speak.
-                    </p>
-                  </div>
-                </motion.div>
-
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2 }}
+                className="bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                    Quiet Progress
+                  </span>
+                  <span className="text-[11px] text-emerald-500">
+                    You're on track
+                  </span>
+                </div>
+                <div className="mt-1">
+                  <p className="text-sm font-medium text-slate-800">
+                    Consistency beats hype.
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Ship small, refine often, let the work speak.
+                  </p>
+                </div>
+              </motion.div>
             </div>
+
             {/* Videos Section */}
             <div className="flex-1 bg-white/60 backdrop-blur-xl rounded-2xl border border-slate-200/60 overflow-hidden flex flex-col shadow-sm">
               <div className="px-5 py-4 border-b border-slate-200/60 flex items-center justify-between">
@@ -402,7 +375,7 @@ export default function IndividualDashboard() {
                         <Video className="w-8 h-8 text-slate-400" />
                       </div>
                       <p className="text-sm font-medium text-slate-600 mb-1">No videos yet</p>
-                      <p className="text-xs text-slate-500">Upload your first video to get started</p>
+                      <p className="text-xs text-slate-500">Upload your first video to a project</p>
                     </div>
                   )}
                 </div>
@@ -435,6 +408,9 @@ export default function IndividualDashboard() {
                       key={project.id}
                       project={project}
                       onClick={() => router.push(`/projects/${project.id}`)}
+                      onUpload={(e) => handleFileUpload(e, project.id)}
+                      isUploading={uploadingProjectId === project.id}
+                      uploadProgress={uploadingProjectId === project.id ? uploadProgress : 0}
                     />
                   ))
                 ) : (
@@ -511,7 +487,7 @@ export default function IndividualDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Video Player Modal with permissions */}
+      {/* Video Player Modal */}
       {playingVideo && playingVideo.campaign?.id && (
         <CampaignPermissionsProvider campaignId={playingVideo.campaign.id}>
           <VideoPlayer 
@@ -542,7 +518,6 @@ function LoadingSkeleton() {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-slate-200 rounded-xl animate-pulse" />
-            <div className="w-32 h-10 bg-slate-200 rounded-xl animate-pulse" />
           </div>
         </div>
       </div>
@@ -705,24 +680,69 @@ function VideoCard({ video, formatDuration, formatNumber, onPlay }) {
   );
 }
 
-function ProjectCard({ project, onClick }) {
+function ProjectCard({ project, onClick, onUpload, isUploading, uploadProgress }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      whileHover={{ x: 3 }}
-      onClick={onClick}
-      className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200/60 hover:border-blue-300 hover:shadow-md hover:shadow-blue-500/10 transition-all cursor-pointer group"
+      className="bg-white rounded-xl border border-slate-200/60 hover:border-blue-300 hover:shadow-md hover:shadow-blue-500/10 transition-all overflow-hidden"
     >
-      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg shadow-blue-500/25">
-        {(project.name && project.name.charAt(0).toUpperCase()) || 'P'}
+      <div className="flex items-center gap-3 p-3">
+        <div 
+          onClick={onClick}
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
+        >
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg shadow-blue-500/25">
+            {(project.name && project.name.charAt(0).toUpperCase()) || 'P'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+              {project.name}
+            </h4>
+            <p className="text-xs text-slate-500">{project.videoCount || 0} videos</p>
+          </div>
+        </div>
+
+        {/* Upload Button */}
+        <label className="cursor-pointer flex-shrink-0">
+          <input
+            type="file"
+            accept="video/*"
+            onChange={onUpload}
+            className="hidden"
+            disabled={isUploading}
+          />
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`p-2 rounded-lg transition-all ${
+              isUploading 
+                ? 'bg-blue-100 text-blue-600 cursor-not-allowed' 
+                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+            }`}
+            title="Upload to this project"
+          >
+            <Upload className={`w-4 h-4 ${isUploading ? 'animate-pulse' : ''}`} />
+          </motion.div>
+        </label>
       </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-          {project.name}
-        </h4>
-        <p className="text-xs text-slate-500">{project.videoCount || 0} videos • {project.role || 'Member'}</p>
-      </div>
+
+      {/* Upload Progress Bar */}
+      {isUploading && (
+        <div className="px-3 pb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-slate-600">Uploading...</span>
+            <span className="text-xs font-bold text-blue-600">{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${uploadProgress}%` }}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 h-1.5 rounded-full"
+            />
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
