@@ -310,7 +310,7 @@ model Campaign {
   flows       CampaignFlow[]
   schedules   CampaignSchedule[]
   videos      Video[]  // <-- ADD THIS
-
+  shareSettings      CampaignShare?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -772,4 +772,21 @@ model VideoDescription {
   createdAt   DateTime @default(now())
 
   @@index([videoId])
+}
+
+model CampaignShare {
+  id           String     @id @default(uuid()) // token in URL: /share/campaign/:id
+  campaignId   String
+  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  accessType   AccessType @default(PUBLIC)
+  passwordHash String?
+
+  allowComments Boolean @default(true)
+  allowDownload Boolean @default(false)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([campaignId]) // one share config per campaign
 }

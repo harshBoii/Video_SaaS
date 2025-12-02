@@ -5,7 +5,7 @@ import {
   Upload, Video, Eye, TrendingUp, MessageSquare, 
   Play, Share2, Folder, Plus, Search,
   Camera, Activity, Clock, FileVideo,
-  AlertCircle, CheckCircle
+  AlertCircle, CheckCircle,X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
@@ -35,6 +35,12 @@ export default function IndividualDashboard() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [playingVideo, setPlayingVideo] = useState(null);
+  
+  const [versionUploadModal, setVersionUploadModal] = useState(null);
+  const [versionNote, setVersionNote] = useState('');
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [versionUploading, setVersionUploading] = useState(false);
+  const [selectedVersionFile, setSelectedVersionFile] = useState(null); // ← ADD THIS
 
   useEffect(() => {
     loadDashboardData();
@@ -67,7 +73,12 @@ export default function IndividualDashboard() {
       setLoading(false);
     }
   };
-
+  const closeVersionModal = () => {
+    setShowVersionModal(false);
+    setVersionNote('');
+    setVersionUploadModal(null);
+    setSelectedVersionFile(null); // ← Important
+  };
   const handleFileUpload = async (event, campaignId) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -208,6 +219,171 @@ export default function IndividualDashboard() {
       setUploadingProjectId(null);
     }
   };
+  const handleVersionFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      showError('Invalid File', 'Please select a valid video file.');
+      return;
+    }
+
+    setSelectedVersionFile(file);
+  };
+
+const handleVersionUpload = async () => {
+  if (!selectedVersionFile) {
+    showError('Error', 'Please select a video file');
+    return;
+  }
+
+  if (!versionUploadModal) {
+    showError('Error', 'No video selected');
+    return;
+  }
+
+  const videoId = versionUploadModal.id;
+
+  if (!versionNote.trim()) {
+    showError('Error', 'Please provide a version note');
+    return;
+  }
+
+  setUploadingFile(selectedVersionFile);
+  setVersionUploading(true);
+  setUploadProgress(0);
+
+  try {
+    console.log('[VERSION UPLOAD] Starting upload for:', selectedVersionFile.name); // ← FIXED
+    
+    const getVideoDuration = (file) => {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          resolve(video.duration);
+        };
+        video.onerror = () => resolve(null);
+        video.src = URL.createObjectURL(file);
+      });
+    };
+
+    const duration = await getVideoDuration(selectedVersionFile); // ← FIXED
+
+    const startRes = await fetch(`/api/videos/${videoId}/versions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        versionNote: versionNote,
+        fileSize: selectedVersionFile.size, // ← FIXED
+        fileName: selectedVersionFile.name, // ← FIXED
+        fileType: selectedVersionFile.type, // ← FIXED
+      })
+    });
+
+    if (!startRes.ok) {
+      const errorData = await startRes.json();
+      throw new Error(errorData.error || 'Failed to start version upload');
+    }
+
+    const startData = await startRes.json();
+    
+    if (!startData.success || !startData.upload || !startData.urls) {
+      throw new Error('Invalid response from server');
+    }
+
+    const { upload, urls, version } = startData;
+    
+    console.log('[VERSION UPLOAD] Upload initialized:', {
+      versionId: version.id,
+      versionNumber: version.version,
+      uploadId: upload.uploadId,
+      totalParts: upload.totalParts,
+    });
+
+    const partSize = upload.partSize;
+    const uploadedParts = [];
+
+    for (let i = 0; i < urls.length; i++) {
+      const start = i * partSize;
+      const end = Math.min(start + partSize, selectedVersionFile.size); // ← FIXED
+      const chunk = selectedVersionFile.slice(start, end); // ← FIXED
+
+      console.log(`[VERSION UPLOAD] Uploading part ${i + 1}/${urls.length}`);
+
+      let retries = 3;
+      let uploadRes;
+      
+      while (retries > 0) {
+        try {
+          uploadRes = await fetch(urls[i].url, {
+            method: 'PUT',
+            body: chunk,
+            headers: { 'Content-Type': selectedVersionFile.type }, // ← FIXED
+          });
+
+          if (uploadRes.ok) break;
+          retries--;
+          if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      const etag = uploadRes.headers.get('ETag');
+      if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
+
+      uploadedParts.push({
+        PartNumber: urls[i].partNumber,
+        ETag: etag.replace(/"/g, ''),
+      });
+
+      setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+    }
+
+    console.log('[VERSION UPLOAD] All parts uploaded, completing...');
+
+    const completeRes = await fetch('/api/upload/complete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uploadId: upload.uploadId,
+        key: upload.key,
+        parts: uploadedParts,
+        duration: duration,
+        versionId: version.id,
+      })
+    });
+
+    if (!completeRes.ok) {
+      const errorData = await completeRes.json();
+      throw new Error(errorData.error || 'Failed to complete upload');
+    }
+
+    const result = await completeRes.json();
+    
+    if (result.success) {
+      console.log('[VERSION UPLOAD] Upload completed:', result);
+      await showSuccess('Version Uploaded', `Version ${version.version} uploaded successfully`);
+      closeVersionModal();
+      loadDashboardData();
+    }
+  } catch (error) {
+    console.error('[VERSION UPLOAD ERROR]', error);
+    await showError('Upload Failed', error.message);
+  } finally {
+    setVersionUploading(false);
+    setUploadingFile(null);
+    setUploadProgress(0);
+  }
+};
+  
 
   const playVideo = (video) => {
     console.log('[PLAY VIDEO] Clicked:', video.id, video.title);
@@ -244,6 +420,10 @@ export default function IndividualDashboard() {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  const openVersionUploadModal = (video) => {
+    setVersionUploadModal(video);
+    setShowVersionModal(true);
   };
 
   if (loading) {
@@ -367,6 +547,7 @@ export default function IndividualDashboard() {
                         formatDuration={formatDuration}
                         formatNumber={formatNumber}
                         onPlay={() => playVideo(video)}
+                        openVersionUploadModal={openVersionUploadModal}
                       />
                     ))
                   ) : (
@@ -496,6 +677,115 @@ export default function IndividualDashboard() {
           />
         </CampaignPermissionsProvider>
       )}
+      <AnimatePresence>
+  {showVersionModal && versionUploadModal && (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 z-40"
+        onClick={closeVersionModal}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div className="bg-white rounded-2xl max-w-md w-full p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-gray-900">
+              Upload New Version
+            </h3>
+            <button
+              onClick={closeVersionModal}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2">
+              Uploading new version for: <span className="font-semibold">{versionUploadModal.title}</span>
+            </p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Version Note *
+            </label>
+            <textarea
+              value={versionNote}
+              onChange={(e) => setVersionNote(e.target.value)}
+              placeholder="What changed in this version?"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              rows={3}
+              disabled={versionUploading}
+            />
+          </div>
+
+          {/* File Selection - FIXED */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Select Video File *
+            </label>
+            <label className="block">
+              <input
+                type="file"
+                accept="video/*"
+                onChange={handleVersionFileSelect}
+                disabled={versionUploading}
+                className="hidden"
+              />
+              <div className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                versionUploading
+                  ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                  : selectedVersionFile
+                  ? 'border-green-400 bg-green-50'
+                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+              }`}>
+                <FileVideo className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm font-medium text-gray-900">
+                  {selectedVersionFile ? selectedVersionFile.name : 'Click to select video file'}
+                </p>
+                {selectedVersionFile && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(selectedVersionFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                )}
+              </div>
+            </label>
+          </div>
+
+          {/* Upload Progress */}
+          {versionUploading && (
+            <div className="mb-4">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 mt-1 text-center">{uploadProgress}%</p>
+            </div>
+          )}
+
+          {/* Upload Button - NEW */}
+          <button
+            onClick={handleVersionUpload} 
+            disabled={!versionNote.trim() || !selectedVersionFile || versionUploading}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {versionUploading ? 'Uploading...' : 'Upload Version'}
+          </button>
+        </div>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
+
     </div>
   );
 }
@@ -629,7 +919,7 @@ function StatCard({ icon: Icon, value, label, color }) {
   );
 }
 
-function VideoCard({ video, formatDuration, formatNumber, onPlay }) {
+function VideoCard({ video, formatDuration, formatNumber, onPlay , openVersionUploadModal }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -673,6 +963,18 @@ function VideoCard({ video, formatDuration, formatNumber, onPlay }) {
           <span className="flex items-center gap-1 ml-auto text-slate-500">
             <Clock className="w-3.5 h-3.5" />
             {new Date(video.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+          <span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); 
+                openVersionUploadModal(video);
+              }}
+              className="p-1.5 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+              title="Upload New Version"
+            >
+              <Upload className="w-3.5 h-3.5" />
+            </button>
           </span>
         </div>
       </div>
