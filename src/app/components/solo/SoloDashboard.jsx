@@ -1093,7 +1093,6 @@ export default function IndividualDashboard() {
                 </motion.div>
 
             </div>
-
             {/* Videos Section */}
             <div className="flex-1 bg-white/60 backdrop-blur-xl rounded-2xl border border-slate-200/60 overflow-hidden flex flex-col shadow-sm">
               <div className="px-5 py-4 border-b border-slate-200/60 flex items-center justify-between">
