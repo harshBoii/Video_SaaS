@@ -67,7 +67,8 @@ model Company {
   campaigns        Campaign[]
   flowchains       FlowChain[]
   permissionCombos PermissionCombo[]
-  
+  videoCollections VideoCollection[]
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -192,6 +193,7 @@ model Employee {
   managerId    String?
   manager      Employee?    @relation("EmployeeHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
   subordinates Employee[]   @relation("EmployeeHierarchy")
+  createdCollections VideoCollection[] @relation("CollectionCreator")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -289,7 +291,7 @@ model FlowTransition {
   @@unique([fromStepId, toStepId, condition])
 }
 
-// ===================== CAMPAIGN MODELS =====================
+
 
 model Campaign {
   id        String  @id @default(cuid())
@@ -310,7 +312,8 @@ model Campaign {
   flows       CampaignFlow[]
   schedules   CampaignSchedule[]
   videos      Video[]  // <-- ADD THIS
-  shareSettings      CampaignShare?
+  videoCollections VideoCollection[]
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -432,7 +435,8 @@ model Video {
   description     VideoDescription?
   uploadedBy      String
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
-  
+  collections VideoCollectionItem[]
+
   // Versions
   currentVersion  Int      @default(1)
   versions        VideoVersion[]
@@ -774,19 +778,67 @@ model VideoDescription {
   @@index([videoId])
 }
 
-model CampaignShare {
-  id           String     @id @default(uuid()) // token in URL: /share/campaign/:id
-  campaignId   String
-  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  accessType   AccessType @default(PUBLIC)
-  passwordHash String?
+model VideoCollection {
+  id            String   @id @default(uuid()) // This UUID serves as the share token
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  
+  // Ownership
+  createdBy     String
+  creator       Employee @relation("CollectionCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Optional: Link to campaign if sharing entire campaign videos
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  videos        VideoCollectionItem[]
+  shareSettings CollectionShare?
+  
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  
+  @@index([companyId])
+  @@index([createdBy])
+  @@index([campaignId])
+}
 
-  allowComments Boolean @default(true)
-  allowDownload Boolean @default(false)
+model VideoCollectionItem {
+  id           String          @id @default(cuid())
+  collectionId String
+  collection   VideoCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  
+  videoId      String
+  video        Video           @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  order        Int             @default(0) // For custom ordering
+  
+  addedAt      DateTime        @default(now()) @db.Timestamptz(3)
+  
+  @@unique([collectionId, videoId]) // Prevent duplicate videos in same collection
+  @@index([collectionId])
+  @@index([videoId])
+  @@index([collectionId, order]) // For ordered retrieval
+}
 
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@unique([campaignId]) // one share config per campaign
+// Share settings for collections
+model CollectionShare {
+  id            String          @id @default(uuid()) // Additional token if needed
+  collectionId  String          @unique
+  collection    VideoCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  
+  accessType    AccessType      @default(PUBLIC)
+  passwordHash  String?
+  
+  allowComments Boolean         @default(true)
+  allowDownload Boolean         @default(false)
+  
+  expiresAt     DateTime?       @db.Timestamptz(3) // Optional expiration
+  
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime        @updatedAt @db.Timestamptz(3)
 }

@@ -14,6 +14,7 @@ import CreateProjectModal from './CreateProjectModal';
 import ShareVideoModal from './ShareVideoModal';
 import SearchModal from './SearchModal';
 import { CampaignPermissionsProvider } from '@/app/context/permissionContext';
+import ShareCollectionButton from '../video/collection/ShareCollectionButton';
 
 export default function IndividualDashboard() {
   const router = useRouter();
@@ -983,7 +984,11 @@ function VideoCard({ video, formatDuration, formatNumber, onPlay , openVersionUp
 }
 
 function ProjectCard({ project, onClick, onUpload, isUploading, uploadProgress }) {
+  console.log('🟢 ProjectCard rendering for:', project.name);
+  console.log('🟢 About to render ShareCollectionButton with campaignId:', project.id);
+
   return (
+
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
@@ -1004,29 +1009,33 @@ function ProjectCard({ project, onClick, onUpload, isUploading, uploadProgress }
             <p className="text-xs text-slate-500">{project.videoCount || 0} videos</p>
           </div>
         </div>
+        <ShareCollectionButton 
+          campaignId={project.id}
+          preSelectedVideos={[]}
+        />
 
-        {/* Upload Button */}
-        <label className="cursor-pointer flex-shrink-0">
-          <input
-            type="file"
-            accept="video/*"
-            onChange={onUpload}
-            className="hidden"
-            disabled={isUploading}
-          />
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`p-2 rounded-lg transition-all ${
-              isUploading 
-                ? 'bg-blue-100 text-blue-600 cursor-not-allowed' 
-                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-            }`}
-            title="Upload to this project"
-          >
-            <Upload className={`w-4 h-4 ${isUploading ? 'animate-pulse' : ''}`} />
-          </motion.div>
-        </label>
+          {/* Upload Button */}
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="video/*"
+              onChange={onUpload}
+              className="hidden"
+              disabled={isUploading}
+            />
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`p-2 rounded-lg transition-all ${
+                isUploading 
+                  ? 'bg-blue-100 text-blue-600 cursor-not-allowed' 
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+              }`}
+              title="Upload to this project"
+            >
+              <Upload className={`w-4 h-4 ${isUploading ? 'animate-pulse' : ''}`} />
+            </motion.div>
+          </label>
       </div>
 
       {/* Upload Progress Bar */}
