@@ -531,7 +531,7 @@ const handleVersionUpload = async () => {
                   <p className="text-xs text-slate-500 mt-0.5">Your latest uploads</p>
                 </div>
                 <button 
-                  onClick={() => router.push('/videos')}
+                  onClick={() => router.push('/solo/videos')}
                   className="text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors"
                 >
                   View All →

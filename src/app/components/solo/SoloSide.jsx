@@ -5,7 +5,7 @@ import Logo from '../general/logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { FiGrid, FiBarChart2, FiHelpCircle, FiSettings,FiUser,FiClipboard } from 'react-icons/fi';
+import { FiGrid, FiBarChart2, FiHelpCircle, FiSettings,FiUser,FiClipboard,FiPlayCircle,FiFolder } from 'react-icons/fi';
 
 // 2. Modify NavItem to handle links and dynamic active state
 const NavItem = ({ icon, label, href }) => {
@@ -42,8 +42,10 @@ const SoloSide = () => {
       <nav className={styles.nav}>
         {/* 3. Use the corrected NavItem with href props for each link */}
         <NavItem icon={<FiGrid />} href="/solo" label="Dashboard" />
+        <NavItem icon={<FiPlayCircle />} href="/solo/videos" label="Videos" />
+        <NavItem icon={<FiFolder />} href="/solo/projects" label="Projects" />
         <NavItem icon={<FiClipboard />} href="/solo/notification" label="Comments" />
-        <NavItem icon={<FiBarChart2 />} href="/admin/Analytics" label="Analytics" />
+        {/* <NavItem icon={<FiBarChart2 />} href="/admin/Analytics" label="Analytics" /> */}
         <NavItem icon={<FiUser />} href="/solo/profile" label="Profile" />
       </nav>
       <div className={styles.footer}>
