@@ -117,7 +117,7 @@ export async function POST(request) {
     });
 
     // Build share URL using collection ID (which is UUID)
-    const shareUrl = `${process.env.NEXT_PUBLIC_URL}/share/collection/${result.collection.id}`;
+    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/collection/${result.collection.id}`;
 
     return NextResponse.json({
       success: true,
