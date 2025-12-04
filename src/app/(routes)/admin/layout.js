@@ -1,6 +1,6 @@
 import AdminSide from "@/app/components/admin/AdminSide";
 
-export default function SoloLayout({ children }) {
+export default function AdminLayout({ children }) {
   return (
     <div style={{ display: "flex" }}>
       <AdminSide />

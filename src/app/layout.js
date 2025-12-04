@@ -32,7 +32,7 @@
 import { ThemeProvider } from './context/themeContext';
 import './globals.css';
 import MainNav from './components/general/navbar';
-
+import Providers from './provider';
 export const metadata = {
   title: 'Your App',
   description: 'Your app description',
@@ -42,7 +42,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Prevent flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -60,10 +59,10 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <ThemeProvider>
+        <Providers>
           <MainNav/>
           {children}
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
