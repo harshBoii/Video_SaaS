@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
-
+import { verify } from 'jsonwebtoken';
 /**
  * GET /api/permission/combo
  * POST /api/permission/combo
@@ -14,7 +14,16 @@ import prisma from '@/app/lib/prisma';
 export async function GET(req) {
   try {
     // Replace with real companyId from auth context
-    const companyId = req.user?.companyId 
+
+      const token = req.cookies.get('token')?.value;
+      if (!token) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+  
+      const decoded = verify(token, process.env.JWT_SECRET);
+      const companyId = decoded.companyId;
+    
+
     console.log("CompanyId is : " , companyId)
     const combos = await prisma.permissionCombo.findMany({
       where: { companyId },
@@ -46,7 +55,16 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, description, permissionIds,companyId } = body;
+    const { name, description, permissionIds, } = body;
+
+    const token = req.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const decoded = verify(token, process.env.JWT_SECRET);
+    const companyId = decoded.companyId;
+
 
     if (!name || !Array.isArray(permissionIds) || permissionIds.length === 0) {
       return NextResponse.json(

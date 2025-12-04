@@ -128,6 +128,38 @@ export async function POST(request) {
         },
       },
     });
+    const employees = await prisma.employee.findMany({
+      where: {
+        companyId: companyId,
+      },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: [
+        { isAdmin: 'desc' },
+        { firstName: 'asc' },
+      ],
+    });
 
     return NextResponse.json({
       success: true,
@@ -153,7 +185,7 @@ export async function GET(req) {
 
     const decoded = verify(token, process.env.JWT_SECRET);
     const employeeId = decoded.id;
-
+    const companyId = decoded.companyId
     // 2. Fetch Campaigns assigned to this employee
     const assignments = await prisma.campaignAssignment.findMany({
       where: {
@@ -197,7 +229,46 @@ export async function GET(req) {
       };
     });
 
-    return NextResponse.json({ success: true, campaigns });
+    const employees = await prisma.employee.findMany({
+      where: {
+        companyId: companyId,
+      },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: [
+        { isAdmin: 'desc' },
+        { firstName: 'asc' },
+      ],
+    });
+
+
+    return NextResponse.json
+      ({ success: true, 
+         campaigns,
+         employees,
+         count: employees.length,
+ });
 
   } catch (error) {
     console.error('Error fetching employee campaigns:', error);

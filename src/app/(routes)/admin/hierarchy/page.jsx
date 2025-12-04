@@ -2,7 +2,6 @@
 import CloudHierarchy from '@/app/components/hierarchy/cloudHierarchy';
 import EmployeeHierarchyManager from '@/app/components/hierarchy/employeeHierarchy';
 export default function HierarchyPage() {
-  return        
-        <EmployeeHierarchyManager/>
+  return <EmployeeHierarchyManager/>
 }
  {/* <CloudHierarchy />  */}
