@@ -27,6 +27,7 @@ import {
 import AddEmployeeModal from './AddEmployeeModal';
 import EditEmployeeModal from './EmployeeEdit';
 import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
+export const dynamic = 'force-dynamic';
 
 // ---------------- Loading Bar Component ----------------
 function LoadingBar({ isLoading }) {
