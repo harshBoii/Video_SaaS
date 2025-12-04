@@ -11,7 +11,7 @@
 //     </div>
 //   );
 // }
-import CommentNotifications from '@/app/components/solo/CommentNotifications';
+import CommentNotifications from "@/app/components/notifications/CommentNotifications";
 
 
 
