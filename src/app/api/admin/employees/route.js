@@ -1,5 +1,5 @@
 // src/app/api/admin/employees/route.js
-
+//cacaheble and invalidate on post
 import prisma from "@/app/lib/prisma";
 import { verifyJWT, requireAdmin } from "@/app/lib/auth";
 import bcrypt from "bcryptjs";

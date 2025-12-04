@@ -1,3 +1,4 @@
+//cacheable but too much invalidation
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import { verifyJWT, requireAdmin } from '@/app/lib/auth';

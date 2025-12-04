@@ -1,13 +1,20 @@
-import SoloSide from '@/app/components/solo/SoloSide';
-import CommentNotifications from '@/app/components/notifications/CommentNotifications';
+// import SoloSide from '@/app/components/solo/SoloSide';
+// import CommentNotifications from '@/app/components/notifications/CommentNotifications';
 
-export default function Companies() {
-  return (
-    <div style={{ display: 'flex' }}>
-      <SoloSide />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <CommentNotifications />
-      </div>
-    </div>
-  );
+// export default function Companies() {
+//   return (
+//     <div style={{ display: 'flex' }}>
+//       <SoloSide />
+//       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+//         <CommentNotifications />
+//       </div>
+//     </div>
+//   );
+// }
+import CommentNotifications from '@/app/components/solo/CommentNotifications';
+
+
+
+export default function CommentNotificationsPage() {
+  return <CommentNotifications />;
 }

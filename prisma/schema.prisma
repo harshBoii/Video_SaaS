@@ -58,7 +58,7 @@ model Company {
   description String?      @db.Text
   email       String?      @db.VarChar(255)
   mobile      String?      @db.VarChar(50)
-  
+  logoUrl     String?
   // Relations
   employees        Employee[]
   departments      Department[]

@@ -502,21 +502,21 @@ const handleVersionUpload = async () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ y: -2 }}
-                className="bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between"
+                className="bg-gradient-to-br from-slate-50 via-zinc-400 to-slate-400 rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                  <span className="text-[11px] font-semibold tracking-wide text-black uppercase">
                     Quiet Progress
                   </span>
-                  <span className="text-[11px] text-emerald-500">
+                  <span className="text-[11px] text-emerald-800">
                     You're on track
                   </span>
                 </div>
                 <div className="mt-1">
-                  <p className="text-sm font-medium text-slate-800">
+                  <p className="text-sm font-medium text-white">
                     Consistency beats hype.
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-[11px] text-white mt-1">
                     Ship small, refine often, let the work speak.
                   </p>
                 </div>

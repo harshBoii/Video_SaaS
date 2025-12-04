@@ -1,3 +1,5 @@
+//  invalidate here for flowchain get happening at companies route
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyJWT } from '@/app/lib/auth';

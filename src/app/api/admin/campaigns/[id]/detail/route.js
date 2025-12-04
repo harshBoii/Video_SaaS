@@ -1,3 +1,4 @@
+// Cacheable Content , Invalidate on ___
 // app/api/projects/[id]/details/route.js
 import prisma from "@/app/lib/prisma";
 import { z } from "zod";

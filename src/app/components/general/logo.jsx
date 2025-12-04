@@ -52,17 +52,18 @@ export default function Logo({ className = '' }) {
           C
         </span>
         <span style={letterStyle} className="-rotate-6">
-          r
+          l
         </span>
-        <span style={letterStyle}>e</span>
+        <span style={letterStyle}>i</span>
         <span style={letterStyle} className="rotate-3">
-          a
+          p
         </span>
-        <span style={letterStyle}>t</span>
+        <br />
+        <span style={letterStyle} className='rotate-6'>F</span>
         <span style={letterStyle} className="-rotate-2">
-          e
+          o
         </span>
-        <span style={{ ...letterStyle, marginLeft: '0.35rem' }}>OS</span>
+        <span style={{ ...letterStyle, marginLeft: '0.35rem' }}>x</span>
       </motion.h1>
     </>
   );

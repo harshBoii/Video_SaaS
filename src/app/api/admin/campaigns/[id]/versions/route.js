@@ -1,6 +1,9 @@
 // app/api/projects/[id]/versions/route.js
 // OR
 // app/api/campaigns/[id]/versions/route.js
+
+//cacheable , invalidate on handle version upload
+
 import prisma from "@/app/lib/prisma";
 import { z } from "zod";
 import { NextResponse } from "next/server";
@@ -74,7 +77,7 @@ export async function GET(request, { params }) {
 
     // ✅ Build where clause using campaignId
     const where = {
-      campaignId, // <-- Changed from projectId to campaignId
+      campaignId, 
     };
 
     if (videoId) {

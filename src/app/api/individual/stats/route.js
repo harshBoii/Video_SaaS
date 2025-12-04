@@ -1,3 +1,4 @@
+// Cacheable , invalidate On Video Upload and Project Creation
 // app/api/individual/stats/route.js
 import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
@@ -59,14 +60,13 @@ export async function GET() {
       },
       select: {
         id: true,
-        // if you have a shareCount or similar field, include it here
         // shareCount: true
       }
     });
 
     const totalVideos = videos.length;
 
-    // totalShares: sum shareCount if it exists, otherwise 0
+
     const totalShares = 0
 
     // comments in these campaigns
@@ -106,3 +106,4 @@ export async function GET() {
     );
   }
 }
+

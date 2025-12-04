@@ -1,4 +1,6 @@
 // app/api/campaigns/[id]/videos/route.js
+// Cacheable , invalidate on upload
+
 import { authenticateRequest } from '@/app/lib/auth';
 import { ApiResponse } from '@/app/lib/api-response';
 import prisma from '@/app/lib/prisma';

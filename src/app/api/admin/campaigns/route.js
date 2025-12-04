@@ -1,3 +1,4 @@
+//cacheable , invalidate on post
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 

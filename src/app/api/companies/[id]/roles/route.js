@@ -1,3 +1,4 @@
+// cacheable , invalidate at roles post 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyJWT, requireAdmin } from '@/app/lib/auth';

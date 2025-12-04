@@ -192,7 +192,7 @@ const EmployeeSide = () => {
       
       <div className={styles.copyright}>
         <p>Privacy Policy | Terms</p>
-        <p>© 2025 CreateOS Pvt. Ltd.</p>
+        <p>© 2025 ClipFox Pvt. Ltd.</p>
       </div>
     </aside>
   );

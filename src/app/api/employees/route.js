@@ -1,7 +1,9 @@
 // app/api/employees/route.js
+//invalidate here and cache at get
 import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { verify } from 'jsonwebtoken';
+
 // GET /api/employees?companyId=1
 // export async function GET(request) {
 //   try {

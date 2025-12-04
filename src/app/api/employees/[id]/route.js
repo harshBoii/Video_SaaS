@@ -1,4 +1,6 @@
 // app/api/employees/[id]/route.js
+// do not cache , invalidation needed at multiple places 
+
 import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 

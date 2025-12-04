@@ -1,4 +1,6 @@
 // app/api/companies/route.js
+
+//invalidate here for company get 
 import { PrismaClient } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
@@ -24,8 +26,8 @@ export async function POST(req) {
             status: 'ACTIVE',
             role: {
               connectOrCreate: {
-                where: { name_companyId: { name: 'Admin', companyId: '' } }, // ⚡ requires @@unique([name, companyId]) in schema
-                create: { name: 'Admin', companyId: '' } // 👈 we will patch with companyId after creation
+                where: { name_companyId: { name: 'Admin', companyId: '' } },
+                create: { name: 'Admin', companyId: '' } 
               }
             }
           }

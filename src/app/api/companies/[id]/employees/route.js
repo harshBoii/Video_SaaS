@@ -1,4 +1,5 @@
 // app/api/companies/[id]/employees/route.js
+// cacheable , invalidate employee post
 import { PrismaClient } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
