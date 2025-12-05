@@ -8,5 +8,7 @@
       "path": "/api/cron/poll-stream",
       "schedule": "0 0 * * *"
     }
-  ]
+  ],
+  "buildCommand": "npm install --legacy-peer-deps && npm run build"
+
 }
