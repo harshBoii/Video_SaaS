@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "postinstall": "npm install --legacy-peer-deps"
+    "start": "next start"
+
   },
   "dependencies": {
     "@aws-sdk/s3-request-presigner": "^3.930.0",
