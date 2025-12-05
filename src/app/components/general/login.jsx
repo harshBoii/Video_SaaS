@@ -185,7 +185,7 @@ export default function AuthPage() {
       </motion.div>
 
       {/* Right Auth Section */}
-      <div className=" w-full lg:w-1/2 flex flex-col items-center justify-center bg-white p-12 sm:p-8 md:p-12 shadow-lg overflow-y-auto  ">
+      <div className=" w-full lg:w-1/2 flex flex-col items-center justify-center bg-white p-12 sm:p-8 md:p-12 shadow-lg overflow-y-auto min-h-screen  ">
         <CurvedLoop 
           marqueeText="Create-OS ✦ Where Creativity Meets Control ✦"
           speed={3}
