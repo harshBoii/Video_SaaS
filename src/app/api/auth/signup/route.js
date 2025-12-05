@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { z } from 'zod';
 import { signupSchema } from '@/app/lib/validation';
 
 
@@ -69,8 +68,8 @@ export async function POST(request) {
     }
 
     // 4. Hash password
+    console.log("PassWord is :" , validatedData.password)
     const passwordHash = await bcrypt.hash(validatedData.password, 12);
-
     // 5. Parse name
     const nameParts = validatedData.name.trim().split(' ');
     const firstName = nameParts[0] || 'User';
