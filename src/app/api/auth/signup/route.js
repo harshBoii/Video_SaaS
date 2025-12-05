@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { signupSchema } from '@/app/lib/validation';
-const prisma = new PrismaClient();
 
 
-// Rate limiting
 const rateLimitMap = new Map();
 
 function checkRateLimit(identifier, maxRequests = 5, windowMs = 60000) {
@@ -40,24 +38,20 @@ export async function POST(request) {
       );
     }
 
-    // 2. Parse request body
+    // 2. Parse and validate
     let body;
     try {
       body = await request.json();
     } catch (e) {
       return NextResponse.json(
-        {
-          error: 'Invalid JSON in request body',
-          code: 'INVALID_JSON'
-        },
+        { error: 'Invalid JSON in request body', code: 'INVALID_JSON' },
         { status: 400 }
       );
     }
 
-    // 3. Validate data
     const validatedData = signupSchema.parse(body);
 
-    // 4. Check if email already exists
+    // 3. Check if email exists
     const existingUser = await prisma.employee.findUnique({
       where: { email: validatedData.email },
       select: { id: true }
@@ -74,35 +68,45 @@ export async function POST(request) {
       );
     }
 
-    // 5. Hash password OUTSIDE transaction to save time
+    // 4. Hash password
     const passwordHash = await bcrypt.hash(validatedData.password, 12);
 
-    // 6. Extract name from email OUTSIDE transaction
-    const emailUsername = validatedData.email.split('@')[0];
-    const nameParts = emailUsername.split(/[._-]/);
-    const firstName = nameParts[0] 
-      ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1)
-      : 'User';
-    const lastName = nameParts[1] 
-      ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)
-      : 'Creator';
+    // 5. Parse name
+    const nameParts = validatedData.name.trim().split(' ');
+    const firstName = nameParts[0] || 'User';
+    const lastName = nameParts.slice(1).join(' ') || '';
 
-    // 7. Create everything in a transaction with INCREASED TIMEOUT
+    // 6. Determine company name based on workspace type
+    const workspaceNames = {
+      SOLO: `${firstName}'s Workspace`,
+      TEAM: `${firstName}'s Team`,
+      ENTERPRISE: `${firstName}'s Organization`
+    };
+
+    // 7. Create everything in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create company for solo creator
+      // Create company
       const company = await tx.company.create({
         data: {
-          name: `${emailUsername}'s Workspace`,
+          name: workspaceNames[validatedData.workspaceType],
           email: validatedData.email,
-          description: 'Solo Creator Workspace'
+          description: `${validatedData.workspaceType} workspace`,
+          // Add workspace type to company metadata if you have this field
+          // workspaceType: validatedData.workspaceType
         }
       });
 
-      // Create Solo_Creator role (don't check if exists, just create)
-      const soloCreatorRole = await tx.role.create({
+      // Create role based on workspace type
+      const roleNames = {
+        SOLO: 'Solo_Creator',
+        TEAM: 'Team_Admin',
+        ENTERPRISE: 'Enterprise_Admin'
+      };
+
+      const role = await tx.role.create({
         data: {
-          name: 'Solo_Creator',
-          description: 'Solo creator with full access',
+          name: roleNames[validatedData.workspaceType],
+          description: `${validatedData.workspaceType} administrator with full access`,
           companyId: company.id
         }
       });
@@ -115,19 +119,19 @@ export async function POST(request) {
           email: validatedData.email,
           passwordHash: passwordHash,
           companyId: company.id,
-          roleId: soloCreatorRole.id,
+          roleId: role.id,
           status: 'ACTIVE',
           isAdmin: true
         }
       });
 
-      return { employee, company, role: soloCreatorRole };
+      return { employee, company, role };
     }, {
-      maxWait: 10000, // Wait max 10s to get a transaction slot
-      timeout: 15000  // Allow transaction to run for 15s (increased from 5s default)
+      maxWait: 10000,
+      timeout: 15000
     });
 
-    // 8. Fetch the complete user data AFTER transaction (outside transaction)
+    // 8. Fetch complete user data
     const completeUser = await prisma.employee.findUnique({
       where: { id: result.employee.id },
       select: {
@@ -155,7 +159,6 @@ export async function POST(request) {
       }
     });
 
-    // 9. Return success response
     return NextResponse.json(
       {
         success: true,
@@ -166,7 +169,7 @@ export async function POST(request) {
     );
 
   } catch (error) {
-    // Handle validation errors from Zod
+    // Handle validation errors
     if (error?.name === 'ZodError' || error?.issues) {
       return NextResponse.json(
         {
@@ -181,29 +184,21 @@ export async function POST(request) {
       );
     }
 
-    // Handle Prisma unique constraint errors
+    // Handle Prisma errors
     if (error?.code === 'P2002') {
       return NextResponse.json(
-        {
-          error: 'Email already exists',
-          code: 'UNIQUE_CONSTRAINT_VIOLATION'
-        },
+        { error: 'Email already exists', code: 'UNIQUE_CONSTRAINT_VIOLATION' },
         { status: 409 }
       );
     }
 
-    // Handle Prisma timeout errors
     if (error?.code === 'P2028') {
       return NextResponse.json(
-        {
-          error: 'Request took too long. Please try again.',
-          code: 'TRANSACTION_TIMEOUT'
-        },
+        { error: 'Request took too long. Please try again.', code: 'TRANSACTION_TIMEOUT' },
         { status: 408 }
       );
     }
 
-    // Log error for monitoring
     console.error('Signup error:', {
       name: error?.name,
       message: error?.message,
@@ -211,7 +206,6 @@ export async function POST(request) {
       stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
     });
 
-    // Return generic error
     return NextResponse.json(
       {
         error: error?.message || 'An error occurred during signup. Please try again.',
@@ -224,7 +218,6 @@ export async function POST(request) {
   }
 }
 
-// Block other HTTP methods
 export async function GET() {
   return NextResponse.json(
     { error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' },
