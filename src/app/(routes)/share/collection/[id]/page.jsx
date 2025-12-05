@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Play, Share2, Download, MessageSquare, Clock, Eye, Users 
+  Play, Share2, Download, MessageSquare, Clock, Eye, Users, Lock, X 
 } from 'lucide-react';
 
 export default function PublicCollectionPage({ params }) {
@@ -11,6 +11,10 @@ export default function PublicCollectionPage({ params }) {
   const [collectionData, setCollectionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     fetchCollection();
@@ -23,6 +27,11 @@ export default function PublicCollectionPage({ params }) {
       
       if (data.success) {
         setCollectionData(data);
+        setPasswordRequired(false);
+      } else if (data.reason === 'PASSWORD_REQUIRED') {
+        // Show password modal
+        setPasswordRequired(true);
+        setCollectionData({ collection: data.collection }); // Basic info for modal
       } else {
         setError(data.error);
       }
@@ -30,6 +39,34 @@ export default function PublicCollectionPage({ params }) {
       setError('Failed to load collection');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setVerifying(true);
+
+    try {
+      const res = await fetch(`/api/public/collection/${collectionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setCollectionData(data);
+        setPasswordRequired(false);
+        setPassword('');
+      } else {
+        setPasswordError(data.error || 'Invalid password');
+      }
+    } catch (err) {
+      setPasswordError('Verification failed. Please try again.');
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -107,178 +144,263 @@ export default function PublicCollectionPage({ params }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Glass Header */}
-      <motion.div
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-xl sticky top-0 z-50"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Password Modal */}
+      <AnimatePresence>
+        {passwordRequired && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           >
-            <div>
-              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-gray-900 via-gray-800 to-slate-900 bg-clip-text text-transparent mb-3 leading-tight">
-                {collectionData.collection.name}
-              </h1>
-              {collectionData.collection.description && (
-                <p className="text-xl text-slate-600 font-medium max-w-2xl">
-                  {collectionData.collection.description}
-                </p>
-              )}
-            </div>
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-6 text-sm font-semibold"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative"
             >
-              <div className="flex items-center gap-2 text-indigo-600 bg-indigo-100 px-4 py-2 rounded-2xl">
-                <Users className="w-4 h-4" />
-                <span>{collectionData.videoShares.length} videos</span>
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Lock className="w-8 h-8 text-white" />
               </div>
-              {collectionData.collection.allowComments && (
-                <div className="flex items-center gap-2 text-emerald-600 bg-emerald-100 px-4 py-2 rounded-2xl">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Comments enabled</span>
+
+              <h2 className="text-3xl font-black text-gray-900 text-center mb-2">
+                Password Protected
+              </h2>
+              <p className="text-slate-600 text-center mb-8">
+                {collectionData?.collection?.name || 'This collection'} requires a password to view
+              </p>
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Enter Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-lg"
+                    autoFocus
+                    disabled={verifying}
+                  />
+                  {passwordError && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-red-600 text-sm mt-2 font-medium"
+                    >
+                      {passwordError}
+                    </motion.p>
+                  )}
                 </div>
-              )}
+
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={verifying || !password}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {verifying ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                      <span>Verifying...</span>
+                    </div>
+                  ) : (
+                    'Unlock Collection'
+                  )}
+                </motion.button>
+              </form>
+
+              <div className="mt-6 text-center text-sm text-slate-500">
+                <p>{collectionData?.collection?.videoCount || 0} videos in this collection</p>
+              </div>
             </motion.div>
           </motion.div>
-        </div>
-      </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 pb-24">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid lg:grid-cols-2 xl:grid-cols-3 gap-8 pt-12"
-        >
-          {collectionData.videoShares.map((videoShare, index) => (
-            <motion.div
-              key={videoShare.videoId}
-              variants={itemVariants}
-              whileHover="hover"
-              className="group"
-            >
-              <motion.a
-                href={`/watch/${videoShare.shareId}`}
-                className="block bg-white/80 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl border border-slate-200/50 transition-all duration-500 group-hover:-translate-y-2"
+      {/* Glass Header - Only show if not password required or already unlocked */}
+      {!passwordRequired && collectionData?.videoShares && (
+        <>
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-xl sticky top-0 z-50"
+          >
+            <div className="max-w-7xl mx-auto px-6 py-8">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
               >
-                {/* Thumbnail */}
-                <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
-                  {videoShare.video.thumbnailUrl ? (
-                    <motion.img
-                      src={videoShare.video.thumbnailUrl}
-                      alt={videoShare.video.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      whileHover={{ scale: 1.1 }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-indigo-500/20">
-                      <Play className="w-20 h-20 text-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-4" />
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-gray-900 via-gray-800 to-slate-900 bg-clip-text text-transparent mb-3 leading-tight">
+                    {collectionData.collection.name}
+                  </h1>
+                  {collectionData.collection.description && (
+                    <p className="text-xl text-slate-600 font-medium max-w-2xl">
+                      {collectionData.collection.description}
+                    </p>
+                  )}
+                </div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-6 text-sm font-semibold"
+                >
+                  <div className="flex items-center gap-2 text-indigo-600 bg-indigo-100 px-4 py-2 rounded-2xl">
+                    <Users className="w-4 h-4" />
+                    <span>{collectionData.videoShares.length} videos</span>
+                  </div>
+                  {collectionData.collection.allowComments && (
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-100 px-4 py-2 rounded-2xl">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Comments enabled</span>
                     </div>
                   )}
-                  
-                  {/* Overlay */}
-                  <motion.div 
-                    className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6"
-                    initial={{ opacity: 0 }}
-                    whileHover={{ opacity: 1 }}
+                </motion.div>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto px-6 pb-24">
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid lg:grid-cols-2 xl:grid-cols-3 gap-8 pt-12"
+            >
+              {collectionData.videoShares.map((videoShare, index) => (
+                <motion.div
+                  key={videoShare.videoId}
+                  variants={itemVariants}
+                  whileHover="hover"
+                  className="group"
+                >
+                  <motion.a
+                    href={`/watch/${videoShare.shareId}`}
+                    className="block bg-white/80 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl border border-slate-200/50 transition-all duration-500 group-hover:-translate-y-2"
                   >
-                    <div className="bg-white/90 backdrop-blur-xl rounded-2xl px-6 py-3 shadow-2xl w-full">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Play className="w-6 h-6 text-indigo-600" />
-                          <span className="font-bold text-gray-900 text-lg">Watch Video</span>
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
+                      {videoShare.video.thumbnailUrl ? (
+                        <motion.img
+                          src={videoShare.video.thumbnailUrl}
+                          alt={videoShare.video.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          whileHover={{ scale: 1.1 }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-indigo-500/20">
+                          <Play className="w-20 h-20 text-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-4" />
                         </div>
-                        {collectionData.collection.allowDownload && (
-                          <Download className="w-6 h-6 text-emerald-600 group-hover:scale-110 transition-transform" />
+                      )}
+                      
+                      {/* Overlay */}
+                      <motion.div 
+                        className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6"
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                      >
+                        <div className="bg-white/90 backdrop-blur-xl rounded-2xl px-6 py-3 shadow-2xl w-full">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Play className="w-6 h-6 text-indigo-600" />
+                              <span className="font-bold text-gray-900 text-lg">Watch Video</span>
+                            </div>
+                            {collectionData.collection.allowDownload && (
+                              <Download className="w-6 h-6 text-emerald-600 group-hover:scale-110 transition-transform" />
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-8">
+                      <motion.h3 
+                        className="text-xl font-bold text-gray-900 line-clamp-2 mb-4 leading-tight group-hover:text-indigo-600 transition-colors"
+                        whileHover={{ color: '#4f46e5' }}
+                      >
+                        {videoShare.video.title}
+                      </motion.h3>
+                      
+                      <div className="flex items-center gap-6 text-sm text-slate-600 mb-4">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatDuration(videoShare.video.duration)}</span>
+                        </div>
+                        {collectionData.collection.allowComments && (
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Comments</span>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </motion.div>
-                </div>
 
-                {/* Content */}
-                <div className="p-8">
-                  <motion.h3 
-                    className="text-xl font-bold text-gray-900 line-clamp-2 mb-4 leading-tight group-hover:text-indigo-600 transition-colors"
-                    whileHover={{ color: '#4f46e5' }}
-                  >
-                    {videoShare.video.title}
-                  </motion.h3>
-                  
-                  <div className="flex items-center gap-6 text-sm text-slate-600 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{formatDuration(videoShare.video.duration)}</span>
-                    </div>
-                    {collectionData.collection.allowComments && (
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>Comments</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Views</span>
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                        <div className="flex items-center gap-4 text-xs text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Views</span>
+                          </div>
+                        </div>
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          className="text-indigo-600 font-semibold text-sm hover:text-indigo-700 transition-colors"
+                        >
+                          Watch Now →
+                        </motion.div>
                       </div>
                     </div>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      className="text-indigo-600 font-semibold text-sm hover:text-indigo-700 transition-colors"
-                    >
-                      Watch Now →
-                    </motion.div>
-                  </div>
-                </div>
-              </motion.a>
+                  </motion.a>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
-      </div>
+          </div>
 
-      {/* Stats Footer */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto px-6 py-12 text-center"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/50 shadow-xl">
-            <div className="text-3xl font-black text-indigo-600 mb-3">
-              {collectionData.videoShares.length}
+          {/* Stats Footer */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-7xl mx-auto px-6 py-12 text-center"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/50 shadow-xl">
+                <div className="text-3xl font-black text-indigo-600 mb-3">
+                  {collectionData.videoShares.length}
+                </div>
+                <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                  Videos
+                </div>
+              </div>
+              <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/50 shadow-xl">
+                <div className="text-3xl font-black text-emerald-600 mb-3">
+                  {collectionData.collection.allowComments ? 'Enabled' : 'Disabled'}
+                </div>
+                <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                  Comments
+                </div>
+              </div>
+              <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/50 shadow-xl">
+                <div className="text-3xl font-black text-amber-600 mb-3">
+                  {collectionData.collection.allowDownload ? 'Enabled' : 'Disabled'}
+                </div>
+                <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                  Downloads
+                </div>
+              </div>
             </div>
-            <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-              Videos
-            </div>
-          </div>
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/50 shadow-xl">
-            <div className="text-3xl font-black text-emerald-600 mb-3">
-              {collectionData.collection.allowComments ? 'Enabled' : 'Disabled'}
-            </div>
-            <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-              Comments
-            </div>
-          </div>
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/50 shadow-xl">
-            <div className="text-3xl font-black text-amber-600 mb-3">
-              {collectionData.collection.allowDownload ? 'Enabled' : 'Disabled'}
-            </div>
-            <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-              Downloads
-            </div>
-          </div>
-        </div>
-      </motion.div>
+          </motion.div>
+        </>
+      )}
     </div>
   );
 }

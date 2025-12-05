@@ -58,7 +58,7 @@ export async function POST(request) {
     const campaign = await prisma.campaign.findFirst({
       where: { 
         id: campaignId,
-        companyId: currentUser.companyId, // Ensure user's company
+        companyId: currentUser.companyId, 
       },
     });
 
@@ -160,7 +160,7 @@ export async function POST(request) {
 
     console.log(`✅ [UPLOAD START] Session created: ${uploadSession.id}`);
 
-    // ✅ 9. Return success response
+
     return NextResponse.json({
       success: true,
       upload: {
@@ -177,7 +177,6 @@ export async function POST(request) {
   } catch (error) {
     console.error("❌ [UPLOAD START ERROR]", error);
     
-    // Return detailed error in development, generic in production
     return NextResponse.json(
       {
         success: false,
