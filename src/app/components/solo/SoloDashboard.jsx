@@ -17,9 +17,10 @@ import { CampaignPermissionsProvider } from '@/app/context/permissionContext';
 import ShareCollectionButton from '../video/collection/ShareCollectionButton';
 
 
+
 export default function IndividualDashboard() {
   const router = useRouter();
-  
+
   // Data State
   const [stats, setStats] = useState(null);
   const [recentVideos, setRecentVideos] = useState([]);

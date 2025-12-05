@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Grid, List, Search, Filter, Trash2, Share2, Play, 
   Check, X, Loader2, Download, Eye, MessageSquare,
-  Calendar, User, LayoutGrid, LayoutList, ChevronDown
+  Calendar, User, LayoutGrid, LayoutList, ChevronDown,Upload, Layers
 } from 'lucide-react';
-
+import SingleVideoVersionUploadModal from './VersionUploadModal';
 const CampaignPermissionsProvider = lazy(() =>
   import('@/app/context/permissionContext').then(m => ({ default: m.CampaignPermissionsProvider }))
 );
@@ -23,7 +23,9 @@ export default function VideosPage() {
   const [selectedVideos, setSelectedVideos] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [playingVideo, setPlayingVideo] = useState(null);
-  
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [selectedVideoForVersion, setSelectedVideoForVersion] = useState(null);
+
   // Filters
   const [filters, setFilters] = useState({
     campaignId: '',
@@ -47,6 +49,11 @@ export default function VideosPage() {
   useEffect(() => {
     fetchVideos();
   }, [filters, pagination.page]);
+
+  const handleVersionUpload = (video) => {
+    setSelectedVideoForVersion(video);
+    setShowVersionModal(true);
+  };
 
   const fetchCampaigns = async () => {
     try {
@@ -293,6 +300,8 @@ export default function VideosPage() {
             onToggleSelect={toggleSelectVideo}
             onPlay={setPlayingVideo}
             formatDuration={formatDuration}
+            onVersionUpload={handleVersionUpload} 
+
           />
         ) : (
           <ListView
@@ -301,6 +310,7 @@ export default function VideosPage() {
             onToggleSelect={toggleSelectVideo}
             onPlay={setPlayingVideo}
             formatDuration={formatDuration}
+            onVersionUpload={handleVersionUpload} 
           />
         )}
 
@@ -343,12 +353,25 @@ export default function VideosPage() {
           </Suspense>
         )}
       </AnimatePresence>
+      <SingleVideoVersionUploadModal
+        isOpen={showVersionModal}
+        onClose={() => {
+          setShowVersionModal(false);
+          setSelectedVideoForVersion(null);
+        }}
+        videoId={selectedVideoForVersion?.id}
+        videoTitle={selectedVideoForVersion?.title}
+        onUploadComplete={() => {
+          fetchVideos(); // Refresh videos list
+        }}
+      />
     </div>
+    
   );
 }
 
 // Grid View Component
-function GridView({ videos, selectedVideos, onToggleSelect, onPlay, formatDuration }) {
+function GridView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpload, formatDuration }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -410,6 +433,14 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, formatDurati
             <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 backdrop-blur-sm rounded-lg text-xs text-white font-mono">
               {formatDuration(video.duration)}
             </div>
+
+            {/* ✅ Version Badge */}
+            {video.currentVersion > 1 && (
+              <div className="absolute top-3 right-3 px-2 py-1 bg-purple-600/90 backdrop-blur-sm rounded-lg text-xs text-white font-semibold flex items-center gap-1">
+                <Layers className="w-3 h-3" />
+                v{video.currentVersion}
+              </div>
+            )}
           </div>
 
           {/* Content */}
@@ -420,15 +451,31 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, formatDurati
             <p className="text-sm text-slate-600 mb-3">
               {video.campaign.name}
             </p>
-            <div className="flex items-center gap-4 text-xs text-slate-500">
-              <div className="flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" />
-                <span>{video.viewCount || 0}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 text-xs text-slate-500">
+                <div className="flex items-center gap-1">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{video.viewCount || 0}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>{video.commentCount || 0}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>{video.commentCount || 0}</span>
-              </div>
+              
+              {/* ✅ Version Upload Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onVersionUpload(video);
+                }}
+                className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                title="Upload New Version"
+              >
+                <Upload className="w-4 h-4" />
+              </motion.button>
             </div>
           </div>
         </motion.div>
@@ -438,7 +485,7 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, formatDurati
 }
 
 // List View Component
-function ListView({ videos, selectedVideos, onToggleSelect, onPlay, formatDuration }) {
+function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpload, formatDuration }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -486,6 +533,14 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, formatDurati
               >
                 <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
+              
+              {/* ✅ Version Badge */}
+              {video.currentVersion > 1 && (
+                <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-purple-600/90 backdrop-blur-sm rounded text-xs text-white font-semibold flex items-center gap-1">
+                  <Layers className="w-2.5 h-2.5" />
+                  v{video.currentVersion}
+                </div>
+              )}
             </div>
 
             {/* Content */}
@@ -512,9 +567,22 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, formatDurati
               </div>
             </div>
 
-            {/* Duration */}
-            <div className="text-sm font-mono text-slate-600 flex-shrink-0">
-              {formatDuration(video.duration)}
+            {/* Duration & Actions */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="text-sm font-mono text-slate-600">
+                {formatDuration(video.duration)}
+              </div>
+              
+              {/* ✅ Version Upload Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onVersionUpload(video)}
+                className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                title="Upload New Version"
+              >
+                <Upload className="w-4 h-4" />
+              </motion.button>
             </div>
           </div>
         </motion.div>
