@@ -34,7 +34,7 @@ import './globals.css';
 import MainNav from './components/general/navbar';
 import Providers from './provider';
 export const metadata = {
-  title: 'Your App',
+  title: 'CreateOs',
   description: 'Your app description',
 };
 
