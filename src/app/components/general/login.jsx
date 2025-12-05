@@ -166,13 +166,13 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex h-screen w-screen font-sans">
+    <div className="flex-col lg:flex-row flex h-screen w-screen font-sans">
       {/* Left wallpaper */}
       <motion.div
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8 }}
-        className="w-1/2 bg-gradient-to-br from-purple-700 via-purple-300 to-purple-600 flex items-center justify-center"
+        className="w-1/2 bg-gradient-to-br from-purple-700 via-purple-300 to-purple-600 items-center justify-center hidden lg:flex"
       >
         <motion.img
           src="/images/Login_Side.png"
@@ -185,7 +185,7 @@ export default function AuthPage() {
       </motion.div>
 
       {/* Right Auth Section */}
-      <div className="w-1/2 flex flex-col items-center justify-center bg-white p-12 shadow-lg overflow-y-auto ">
+      <div className=" w-full lg:w-1/2 flex flex-col items-center justify-center bg-white p-12 sm:p-8 md:p-12 shadow-lg overflow-y-auto  ">
         <CurvedLoop 
           marqueeText="Create-OS ✦ Where Creativity Meets Control ✦"
           speed={3}
