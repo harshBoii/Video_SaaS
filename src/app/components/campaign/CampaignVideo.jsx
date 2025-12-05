@@ -18,7 +18,9 @@ import {
   X,
   Lock,
   Layers,
-  Star
+  Star,
+  Plus,
+  AlertCircle
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 import VideoPlayer from '../video/VideoPlayer';
@@ -26,7 +28,7 @@ import ProtectedButton from '../general/protectedButton';
 import { CampaignPermissionsProvider, useCampaignPermissions } from '@/app/context/permissionContext';
 import ProtectedShareModal from '../video/ProtectedShareModal';
 import { Share2 } from 'lucide-react';
-
+import { ProtectedUploadSection , UploadQueueItem } from './protectedUploadSection';
 // Helper function
 function toTitleCase(str = '') {
   return str
@@ -78,107 +80,107 @@ function VideoTableSkeleton() {
 }
 
 // Protected Upload Section Component
-function ProtectedUploadSection({ campaign, loading, uploadingFile, uploadProgress, onFileUpload }) {
-  const { permissionsData, loading: permissionsLoading } = useCampaignPermissions();
+// function ProtectedUploadSection({ campaign, loading, uploadingFile, uploadProgress, onFileUpload }) {
+//   const { permissionsData, loading: permissionsLoading } = useCampaignPermissions();
 
-  if (permissionsLoading) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
-        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
+//   if (permissionsLoading) {
+//     return (
+//       <div className="bg-white rounded-xl border border-gray-200 p-6">
+//         <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+//         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+//           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+//         </div>
+//       </div>
+//     );
+//   }
 
-  if (!permissionsData) {
-    return null;
-  }
+//   if (!permissionsData) {
+//     return null;
+//   }
 
-  // Check permissions
-  const isAdmin = permissionsData.isAdmin === true;
-  const isSuperAdmin = permissionsData.role?.toLowerCase() === 'superadmin' || 
-                       permissionsData.role?.toLowerCase() === 'admin';
-  const hasSuperAdminPermission = permissionsData.permissions?.some(p => 
-    toTitleCase(p).toLowerCase() === 'superadmin all'
-  );
+//   // Check permissions
+//   const isAdmin = permissionsData.isAdmin === true;
+//   const isSuperAdmin = permissionsData.role?.toLowerCase() === 'superadmin' || 
+//                        permissionsData.role?.toLowerCase() === 'admin';
+//   const hasSuperAdminPermission = permissionsData.permissions?.some(p => 
+//     toTitleCase(p).toLowerCase() === 'superadmin all'
+//   );
 
-  const permissions = permissionsData.permissions || [];
-  const standardized = permissions.map(toTitleCase);
-  const requiredPermissions = ['Upload Video'];
-  const hasPermission = requiredPermissions.some(perm => standardized.includes(perm));
+//   const permissions = permissionsData.permissions || [];
+//   const standardized = permissions.map(toTitleCase);
+//   const requiredPermissions = ['Upload Video'];
+//   const hasPermission = requiredPermissions.some(perm => standardized.includes(perm));
 
-  const allowed = isAdmin || isSuperAdmin || hasSuperAdminPermission || hasPermission;
+//   const allowed = isAdmin || isSuperAdmin || hasSuperAdminPermission || hasPermission;
 
-  // If no permission, show restricted message
-  if (!allowed) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+//   // If no permission, show restricted message
+//   if (!allowed) {
+//     return (
+//       <div className="bg-white rounded-xl border border-gray-200 p-6">
+//         <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
         
-        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
-          <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-lg font-medium text-gray-600 mb-1">
-            Upload Restricted
-          </p>
-          <p className="text-sm text-gray-500">
-            You don't have permission to upload videos to this campaign
-          </p>
-        </div>
-      </div>
-    );
-  }
+//         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
+//           <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+//           <p className="text-lg font-medium text-gray-600 mb-1">
+//             Upload Restricted
+//           </p>
+//           <p className="text-sm text-gray-500">
+//             You don't have permission to upload videos to this campaign
+//           </p>
+//         </div>
+//       </div>
+//     );
+//   }
 
-  // Render upload section with permission
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+//   // Render upload section with permission
+//   return (
+//     <div className="bg-white rounded-xl border border-gray-200 p-6">
+//       <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
       
-      <div className="border-2 border-dashed border-blue-300 rounded-xl p-8 text-center hover:border-blue-500 transition-colors bg-blue-50/50">
-        {!uploadingFile ? (
-          <label className="cursor-pointer block">
-            <Upload className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-            <p className="text-lg font-medium text-gray-900 mb-1">
-              Click to upload or drag and drop
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              MP4, MOV, AVI, MKV, WEBM up to 100GB
-            </p>
-            <input
-              type="file"
-              accept="video/*"
-              onChange={onFileUpload}
-              className="hidden"
-              disabled={loading}
-            />
-            <div className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Select Video File
-            </div>
-          </label>
-        ) : (
-          <div>
-            <FileVideo className="w-12 h-12 text-blue-600 mx-auto mb-3 animate-pulse" />
-            <p className="text-lg font-medium text-gray-900 mb-2">
-              Uploading: {uploadingFile.name}
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              {(uploadingFile.size / 1024 / 1024 / 1024).toFixed(2)} GB
-            </p>
-            <div className="w-full max-w-md mx-auto bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${uploadProgress}%` }}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full"
-              />
-            </div>
-            <p className="text-sm font-medium text-blue-600">{uploadProgress}% complete</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+//       <div className="border-2 border-dashed border-blue-300 rounded-xl p-8 text-center hover:border-blue-500 transition-colors bg-blue-50/50">
+//         {!uploadingFile ? (
+//           <label className="cursor-pointer block">
+//             <Upload className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+//             <p className="text-lg font-medium text-gray-900 mb-1">
+//               Click to upload or drag and drop
+//             </p>
+//             <p className="text-sm text-gray-600 mb-4">
+//               MP4, MOV, AVI, MKV, WEBM up to 100GB
+//             </p>
+//             <input
+//               type="file"
+//               accept="video/*"
+//               onChange={onFileUpload}
+//               className="hidden"
+//               disabled={loading}
+//             />
+//             <div className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+//               Select Video File
+//             </div>
+//           </label>
+//         ) : (
+//           <div>
+//             <FileVideo className="w-12 h-12 text-blue-600 mx-auto mb-3 animate-pulse" />
+//             <p className="text-lg font-medium text-gray-900 mb-2">
+//               Uploading: {uploadingFile.name}
+//             </p>
+//             <p className="text-sm text-gray-600 mb-4">
+//               {(uploadingFile.size / 1024 / 1024 / 1024).toFixed(2)} GB
+//             </p>
+//             <div className="w-full max-w-md mx-auto bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
+//               <motion.div
+//                 initial={{ width: 0 }}
+//                 animate={{ width: `${uploadProgress}%` }}
+//                 className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full"
+//               />
+//             </div>
+//             <p className="text-sm font-medium text-blue-600">{uploadProgress}% complete</p>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
 
 // Main Component
 export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
@@ -198,6 +200,9 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
   const [versionUploadModal, setVersionUploadModal] = useState(null);
   const [versionNote, setVersionNote] = useState('');
   const [showVersionModal, setShowVersionModal] = useState(false);
+  const MAX_CONCURRENT_UPLOADS = 2;
+  const MAX_FILES = 5;
+  const [uploadQueue, setUploadQueue] = useState([]);
 
   useEffect(() => {
     fetchVideos();
@@ -399,166 +404,372 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
     }
   };
 
+  // const handleFileUpload = async (event) => {
+    
+  //   const file = event.target.files[0];
+  //   if (!file) return;
+
+  //   setUploadingFile(file);
+  //   setLoading(true);
+  //   setUploadProgress(0);
+
+  //   try {
+  //     console.log('[UPLOAD] Starting upload for:', file.name);
+  //     const getVideoDuration = (file) => {
+  //         return new Promise((resolve, reject) => {
+  //           const video = document.createElement('video');
+  //           video.preload = 'metadata';
+  //           video.onloadedmetadata = () => {
+  //             window.URL.revokeObjectURL(video.src);
+  //             resolve(video.duration);
+  //           };
+  //           video.onerror = () => {
+  //             resolve(null);
+  //           };
+  //           video.src = URL.createObjectURL(file);
+  //         });
+  //       };
+
+  //     const duration = await getVideoDuration(file)
+
+  //     const startRes = await fetch('/api/upload/start', {
+  //       method: 'POST',
+  //       credentials: 'include',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         fileName: file.name,
+  //         fileType: file.type,
+  //         fileSize: file.size,
+  //         campaignId: campaign.id,
+  //         metadata: {
+  //           title: file.name.replace(/\.[^/.]+$/, ''),
+  //           description: `Uploaded to ${campaign.name}`,
+  //         }
+  //       })
+  //     });
+
+  //     if (!startRes.ok) {
+  //       const errorData = await startRes.json();
+  //       throw new Error(errorData.error || errorData.message || 'Failed to start upload');
+  //     }
+
+  //     const startData = await startRes.json();
+      
+  //     if (!startData.success || !startData.upload || !startData.urls) {
+  //       throw new Error('Invalid response from server');
+  //     }
+
+  //     const { upload, urls } = startData;
+      
+  //     console.log('[UPLOAD] Upload initialized:', {
+  //       uploadId: upload.uploadId,
+  //       totalParts: upload.totalParts,
+  //     });
+
+  //     const partSize = upload.partSize;
+  //     const uploadedParts = [];
+
+  //     for (let i = 0; i < urls.length; i++) {
+  //       const start = i * partSize;
+  //       const end = Math.min(start + partSize, file.size);
+  //       const chunk = file.slice(start, end);
+
+  //       console.log(`[UPLOAD] Uploading part ${i + 1}/${urls.length} (${chunk.size} bytes)`);
+
+  //       let uploadRes;
+  //       let retries = 3;
+        
+  //       while (retries > 0) {
+  //         try {
+  //           uploadRes = await fetch(urls[i].url, {
+  //             method: 'PUT',
+  //             body: chunk,
+  //             headers: {
+  //               'Content-Type': file.type,
+  //             },
+  //           });
+
+  //           if (uploadRes.ok) break;
+            
+  //           console.warn(`[UPLOAD] Part ${i + 1} failed (${uploadRes.status}), retrying... (${retries - 1} left)`);
+  //           retries--;
+            
+  //           if (retries === 0) {
+  //             throw new Error(`Failed to upload part ${i + 1}: ${uploadRes.status}`);
+  //           }
+            
+  //           await new Promise(resolve => setTimeout(resolve, 1000));
+  //         } catch (fetchError) {
+  //           console.error(`[UPLOAD] Network error uploading part ${i + 1}:`, fetchError);
+  //           retries--;
+            
+  //           if (retries === 0) {
+  //             throw new Error(`Network error uploading part ${i + 1}: ${fetchError.message}`);
+  //           }
+            
+  //           await new Promise(resolve => setTimeout(resolve, 1000));
+  //         }
+  //       }
+
+  //       const etag = uploadRes.headers.get('ETag');
+        
+  //       if (!etag) {
+  //         throw new Error(`Part ${i + 1} uploaded but no ETag received`);
+  //       }
+
+  //       uploadedParts.push({
+  //         PartNumber: urls[i].partNumber,
+  //         ETag: etag.replace(/"/g, ''),
+  //       });
+
+  //       console.log(`[UPLOAD] Part ${i + 1} uploaded successfully`);
+  //       setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+  //     }
+
+  //     console.log('[UPLOAD] All parts uploaded, completing...');
+
+  //     const completeRes = await fetch('/api/upload/complete', {
+  //       method: 'POST',
+  //       credentials: 'include',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         uploadId: upload.uploadId,
+  //         key: upload.key,
+  //         parts: uploadedParts,
+  //         duration:duration,
+  //       })
+  //     });
+
+  //     if (!completeRes.ok) {
+  //       const errorData = await completeRes.json();
+  //       throw new Error(errorData.error || errorData.message || 'Failed to complete upload');
+  //     }
+
+  //     const result = await completeRes.json();
+      
+  //     if (result.success) {
+  //       console.log('[UPLOAD] Upload completed successfully:', result.video);
+  //       await showSuccess('Upload Complete', 'Video uploaded successfully and queued for processing');
+  //       fetchVideos();
+  //       fetchStats();
+  //       if (onUpdate) onUpdate();
+  //     } else {
+  //       throw new Error(result.error || 'Upload completion failed');
+  //     }
+  //   } catch (error) {
+  //     console.error('[UPLOAD ERROR]', error);
+  //     await showError('Upload Failed', error.message || 'An unexpected error occurred');
+  //   } finally {
+  //     setLoading(false);
+  //     setUploadingFile(null);
+  //     setUploadProgress(0);
+  //   }
+  // };
+
   const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  const currentQueueLength = uploadQueue.length;
+  const availableSlots = MAX_FILES - currentQueueLength;
+  
+  if (files.length > availableSlots) {
+    await showError(
+      'Too Many Files', 
+      `You can only upload ${MAX_FILES} videos at once. You have ${availableSlots} slot(s) remaining.`
+    );
+    return;
+  }
 
-    setUploadingFile(file);
-    setLoading(true);
-    setUploadProgress(0);
+  // Initialize queue with all selected files
+  const newQueue = files.map((file, index) => ({
+    id: `${Date.now()}-${index}`,
+    file,
+    progress: 0,
+    status: 'pending',
+    error: null,
+    videoId: null,
+  }));
 
-    try {
-      console.log('[UPLOAD] Starting upload for:', file.name);
-      const getVideoDuration = (file) => {
-          return new Promise((resolve, reject) => {
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.onloadedmetadata = () => {
-              window.URL.revokeObjectURL(video.src);
-              resolve(video.duration);
-            };
-            video.onerror = () => {
-              resolve(null);
-            };
-            video.src = URL.createObjectURL(file);
-          });
-        };
+  setUploadQueue(prev => [...prev, ...newQueue]);
+  
+  // Start processing queue
+  processUploadQueue(newQueue);
+};
 
-      const duration = await getVideoDuration(file)
+const handleClearQueue = () => {
+  // Only clear completed/failed items, not uploading ones
+  setUploadQueue(prev => 
+    prev.filter(item => item.status === 'uploading')
+  );
+};
 
-      const startRes = await fetch('/api/upload/start', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-          campaignId: campaign.id,
-          metadata: {
-            title: file.name.replace(/\.[^/.]+$/, ''),
-            description: `Uploaded to ${campaign.name}`,
-          }
-        })
-      });
+const handleRemoveFromQueue = (id) => {
+  setUploadQueue(prev => prev.filter(item => item.id !== id));
+};
 
-      if (!startRes.ok) {
-        const errorData = await startRes.json();
-        throw new Error(errorData.error || errorData.message || 'Failed to start upload');
-      }
 
-      const startData = await startRes.json();
-      
-      if (!startData.success || !startData.upload || !startData.urls) {
-        throw new Error('Invalid response from server');
-      }
+const processUploadQueue = async (queue) => {
+  // setIsUploading(true);
 
-      const { upload, urls } = startData;
-      
-      console.log('[UPLOAD] Upload initialized:', {
-        uploadId: upload.uploadId,
-        totalParts: upload.totalParts,
-      });
+  // Process uploads with concurrency limit
+  const chunks = [];
+  for (let i = 0; i < queue.length; i += MAX_CONCURRENT_UPLOADS) {
+    chunks.push(queue.slice(i, i + MAX_CONCURRENT_UPLOADS));
+  }
 
-      const partSize = upload.partSize;
-      const uploadedParts = [];
+  for (const chunk of chunks) {
+    await Promise.allSettled(
+      chunk.map(item => uploadSingleFile(item))
+    );
+  }
 
-      for (let i = 0; i < urls.length; i++) {
-        const start = i * partSize;
-        const end = Math.min(start + partSize, file.size);
-        const chunk = file.slice(start, end);
+  // setIsUploading(false);
+  fetchVideos();
+  fetchStats();
+  if (onUpdate) onUpdate();
+};
 
-        console.log(`[UPLOAD] Uploading part ${i + 1}/${urls.length} (${chunk.size} bytes)`);
+const uploadSingleFile = async (queueItem) => {
+  const { id, file } = queueItem;
 
-        let uploadRes;
-        let retries = 3;
-        
-        while (retries > 0) {
-          try {
-            uploadRes = await fetch(urls[i].url, {
-              method: 'PUT',
-              body: chunk,
-              headers: {
-                'Content-Type': file.type,
-              },
-            });
+  try {
+    // Update status to uploading
+    updateQueueItem(id, { status: 'uploading' });
 
-            if (uploadRes.ok) break;
-            
-            console.warn(`[UPLOAD] Part ${i + 1} failed (${uploadRes.status}), retrying... (${retries - 1} left)`);
-            retries--;
-            
-            if (retries === 0) {
-              throw new Error(`Failed to upload part ${i + 1}: ${uploadRes.status}`);
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (fetchError) {
-            console.error(`[UPLOAD] Network error uploading part ${i + 1}:`, fetchError);
-            retries--;
-            
-            if (retries === 0) {
-              throw new Error(`Network error uploading part ${i + 1}: ${fetchError.message}`);
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+    console.log(`[UPLOAD] Starting upload for: ${file.name}`);
+
+    // Get video duration
+    const duration = await getVideoDuration(file);
+
+    // Start upload
+    const startRes = await fetch('/api/upload/start', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        campaignId: campaign.id,
+        metadata: {
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          description: `Uploaded to ${campaign.name}`,
         }
+      })
+    });
 
-        const etag = uploadRes.headers.get('ETag');
-        
-        if (!etag) {
-          throw new Error(`Part ${i + 1} uploaded but no ETag received`);
-        }
-
-        uploadedParts.push({
-          PartNumber: urls[i].partNumber,
-          ETag: etag.replace(/"/g, ''),
-        });
-
-        console.log(`[UPLOAD] Part ${i + 1} uploaded successfully`);
-        setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
-      }
-
-      console.log('[UPLOAD] All parts uploaded, completing...');
-
-      const completeRes = await fetch('/api/upload/complete', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uploadId: upload.uploadId,
-          key: upload.key,
-          parts: uploadedParts,
-          duration:duration,
-        })
-      });
-
-      if (!completeRes.ok) {
-        const errorData = await completeRes.json();
-        throw new Error(errorData.error || errorData.message || 'Failed to complete upload');
-      }
-
-      const result = await completeRes.json();
-      
-      if (result.success) {
-        console.log('[UPLOAD] Upload completed successfully:', result.video);
-        await showSuccess('Upload Complete', 'Video uploaded successfully and queued for processing');
-        fetchVideos();
-        fetchStats();
-        if (onUpdate) onUpdate();
-      } else {
-        throw new Error(result.error || 'Upload completion failed');
-      }
-    } catch (error) {
-      console.error('[UPLOAD ERROR]', error);
-      await showError('Upload Failed', error.message || 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-      setUploadingFile(null);
-      setUploadProgress(0);
+    if (!startRes.ok) {
+      const errorData = await startRes.json();
+      throw new Error(errorData.error || 'Failed to start upload');
     }
-  };
+
+    const startData = await startRes.json();
+    const { upload, urls } = startData;
+
+    // Upload parts
+    const partSize = upload.partSize;
+    const uploadedParts = [];
+
+    for (let i = 0; i < urls.length; i++) {
+      const start = i * partSize;
+      const end = Math.min(start + partSize, file.size);
+      const chunk = file.slice(start, end);
+
+      let retries = 3;
+      let uploadRes;
+
+      while (retries > 0) {
+        try {
+          uploadRes = await fetch(urls[i].url, {
+            method: 'PUT',
+            body: chunk,
+            headers: { 'Content-Type': file.type },
+          });
+
+          if (uploadRes.ok) break;
+
+          retries--;
+          if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (fetchError) {
+          retries--;
+          if (retries === 0) throw fetchError;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      const etag = uploadRes.headers.get('ETag');
+      if (!etag) throw new Error(`Part ${i + 1} uploaded but no ETag received`);
+
+      uploadedParts.push({
+        PartNumber: urls[i].partNumber,
+        ETag: etag.replace(/"/g, ''),
+      });
+
+      // Update progress for this specific file
+      const progress = Math.round(((i + 1) / urls.length) * 100);
+      updateQueueItem(id, { progress });
+    }
+
+    // Complete upload
+    const completeRes = await fetch('/api/upload/complete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uploadId: upload.uploadId,
+        key: upload.key,
+        parts: uploadedParts,
+        duration,
+      })
+    });
+
+    if (!completeRes.ok) {
+      const errorData = await completeRes.json();
+      throw new Error(errorData.error || 'Failed to complete upload');
+    }
+
+    const result = await completeRes.json();
+
+    // Mark as completed
+    updateQueueItem(id, {
+      status: 'completed',
+      progress: 100,
+      videoId: result.video.id,
+    });
+
+    console.log(`[UPLOAD] ✅ Completed: ${file.name}`);
+
+  } catch (error) {
+    console.error(`[UPLOAD ERROR] ${file.name}:`, error);
+    updateQueueItem(id, {
+      status: 'failed',
+      error: error.message,
+    });
+  }
+};
+
+// Helper to update individual queue item
+const updateQueueItem = (id, updates) => {
+  setUploadQueue(prev =>
+    prev.map(item => item.id === id ? { ...item, ...updates } : item)
+  );
+};
+
+// Helper function (reuse existing)
+const getVideoDuration = (file) => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      resolve(video.duration);
+    };
+    video.onerror = () => resolve(null);
+    video.src = URL.createObjectURL(file);
+  });
+};
+
 
   const viewVideoDetails = async (videoId) => {
     try {
@@ -745,9 +956,10 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
         <ProtectedUploadSection
           campaign={campaign}
           loading={loading}
-          uploadingFile={uploadingFile}
-          uploadProgress={uploadProgress}
+          uploadQueue={uploadQueue}
           onFileUpload={handleFileUpload}
+          onClearQueue={handleClearQueue}
+          onRemoveFromQueue={handleRemoveFromQueue}
         />
         
         {/* Filters and Search */}

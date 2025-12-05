@@ -16,6 +16,7 @@ import SearchModal from './SearchModal';
 import { CampaignPermissionsProvider } from '@/app/context/permissionContext';
 import ShareCollectionButton from '../video/collection/ShareCollectionButton';
 
+
 export default function IndividualDashboard() {
   const router = useRouter();
   
@@ -30,6 +31,11 @@ export default function IndividualDashboard() {
   const [uploadingFile, setUploadingFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingProjectId, setUploadingProjectId] = useState(null);
+
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const MAX_FILES = 5;
+  const MAX_CONCURRENT_UPLOADS = 2;
+
   
   // Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -80,146 +86,329 @@ export default function IndividualDashboard() {
     setVersionUploadModal(null);
     setSelectedVersionFile(null); // ← Important
   };
-  const handleFileUpload = async (event, campaignId) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // const handleFileUpload = async (event, campaignId) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
 
-    if (!file.type.startsWith('video/')) {
-      await showError('Invalid File', 'Please select a valid video file.');
-      return;
-    }
+  //   if (!file.type.startsWith('video/')) {
+  //     await showError('Invalid File', 'Please select a valid video file.');
+  //     return;
+  //   }
 
-    setUploadingFile(file);
-    setUploadProgress(0);
-    setUploadingProjectId(campaignId);
+  //   setUploadingFile(file);
+  //   setUploadProgress(0);
+  //   setUploadingProjectId(campaignId);
 
-    try {
-      console.log('[UPLOAD] Starting upload for:', file.name, 'to campaign:', campaignId);
+  //   try {
+  //     console.log('[UPLOAD] Starting upload for:', file.name, 'to campaign:', campaignId);
       
-      const getVideoDuration = (file) => {
-        return new Promise((resolve) => {
-          const video = document.createElement('video');
-          video.preload = 'metadata';
-          video.onloadedmetadata = () => {
-            window.URL.revokeObjectURL(video.src);
-            resolve(video.duration);
-          };
-          video.onerror = () => resolve(null);
-          video.src = URL.createObjectURL(file);
-        });
-      };
+  //     const getVideoDuration = (file) => {
+  //       return new Promise((resolve) => {
+  //         const video = document.createElement('video');
+  //         video.preload = 'metadata';
+  //         video.onloadedmetadata = () => {
+  //           window.URL.revokeObjectURL(video.src);
+  //           resolve(video.duration);
+  //         };
+  //         video.onerror = () => resolve(null);
+  //         video.src = URL.createObjectURL(file);
+  //       });
+  //     };
 
-      const duration = await getVideoDuration(file);
+  //     const duration = await getVideoDuration(file);
 
-      const startRes = await fetch('/api/upload/start', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-          campaignId,
-          metadata: {
-            title: file.name.replace(/\.[^/.]+$/, ''),
-            description: 'Uploaded from dashboard',
-          },
-        }),
-      });
+  //     const startRes = await fetch('/api/upload/start', {
+  //       method: 'POST',
+  //       credentials: 'include',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         fileName: file.name,
+  //         fileType: file.type,
+  //         fileSize: file.size,
+  //         campaignId,
+  //         metadata: {
+  //           title: file.name.replace(/\.[^/.]+$/, ''),
+  //           description: 'Uploaded from dashboard',
+  //         },
+  //       }),
+  //     });
 
-      if (!startRes.ok) {
-        const errorData = await startRes.json();
-        throw new Error(errorData.error || 'Failed to start upload');
-      }
+  //     if (!startRes.ok) {
+  //       const errorData = await startRes.json();
+  //       throw new Error(errorData.error || 'Failed to start upload');
+  //     }
 
-      const startData = await startRes.json();
-      if (!startData.success || !startData.upload || !startData.urls) {
-        throw new Error('Invalid response from server');
-      }
+  //     const startData = await startRes.json();
+  //     if (!startData.success || !startData.upload || !startData.urls) {
+  //       throw new Error('Invalid response from server');
+  //     }
 
-      const { upload, urls } = startData;
-      console.log('[UPLOAD] Upload initialized:', {
-        uploadId: upload.uploadId,
-        totalParts: upload.totalParts,
-      });
+  //     const { upload, urls } = startData;
+  //     console.log('[UPLOAD] Upload initialized:', {
+  //       uploadId: upload.uploadId,
+  //       totalParts: upload.totalParts,
+  //     });
 
-      const partSize = upload.partSize;
-      const uploadedParts = [];
+  //     const partSize = upload.partSize;
+  //     const uploadedParts = [];
 
-      for (let i = 0; i < urls.length; i++) {
-        const start = i * partSize;
-        const end = Math.min(start + partSize, file.size);
-        const chunk = file.slice(start, end);
+  //     for (let i = 0; i < urls.length; i++) {
+  //       const start = i * partSize;
+  //       const end = Math.min(start + partSize, file.size);
+  //       const chunk = file.slice(start, end);
 
-        console.log(`[UPLOAD] Uploading part ${i + 1}/${urls.length}`);
+  //       console.log(`[UPLOAD] Uploading part ${i + 1}/${urls.length}`);
 
-        let retries = 3;
-        let uploadRes = null;
+  //       let retries = 3;
+  //       let uploadRes = null;
         
-        while (retries > 0) {
-          try {
-            uploadRes = await fetch(urls[i].url, {
-              method: 'PUT',
-              body: chunk,
-              headers: { 'Content-Type': file.type },
-            });
+  //       while (retries > 0) {
+  //         try {
+  //           uploadRes = await fetch(urls[i].url, {
+  //             method: 'PUT',
+  //             body: chunk,
+  //             headers: { 'Content-Type': file.type },
+  //           });
 
-            if (uploadRes.ok) break;
-            retries--;
-            if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (error) {
-            retries--;
-            if (retries === 0) throw error;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+  //           if (uploadRes.ok) break;
+  //           retries--;
+  //           if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+  //           await new Promise(resolve => setTimeout(resolve, 1000));
+  //         } catch (error) {
+  //           retries--;
+  //           if (retries === 0) throw error;
+  //           await new Promise(resolve => setTimeout(resolve, 1000));
+  //         }
+  //       }
+
+  //       const etag = uploadRes.headers.get('ETag');
+  //       if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
+
+  //       uploadedParts.push({
+  //         PartNumber: urls[i].partNumber,
+  //         ETag: etag.replace(/"/g, ''),
+  //       });
+
+  //       setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+  //     }
+
+  //     console.log('[UPLOAD] All parts uploaded, completing...');
+
+  //     const completeRes = await fetch('/api/upload/complete', {
+  //       method: 'POST',
+  //       credentials: 'include',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         uploadId: upload.uploadId,
+  //         key: upload.key,
+  //         parts: uploadedParts,
+  //         duration,
+  //       }),
+  //     });
+
+  //     if (!completeRes.ok) {
+  //       const errorData = await completeRes.json();
+  //       throw new Error(errorData.error || 'Failed to complete upload');
+  //     }
+
+  //     const result = await completeRes.json();
+  //     if (result.success) {
+  //       console.log('[UPLOAD] Upload completed successfully');
+  //       await showSuccess('Upload Complete', 'Video uploaded successfully and queued for processing!');
+  //       loadDashboardData();
+  //     }
+  //   } catch (error) {
+  //     console.error('[UPLOAD ERROR]', error);
+  //     await showError('Upload Failed', error.message || 'An unexpected error occurred during upload.');
+  //   } finally {
+  //     setUploadingFile(null);
+  //     setUploadProgress(0);
+  //     setUploadingProjectId(null);
+  //   }
+  // };
+const handleFileUpload = async (event, campaignId) => {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+
+  // Validate max files
+  const currentQueueForProject = uploadQueue.filter(
+    item => item.campaignId === campaignId && item.status !== 'completed'
+  );
+  const availableSlots = MAX_FILES - currentQueueForProject.length;
+
+  if (files.length > availableSlots) {
+    await showError(
+      'Too Many Files',
+      `You can only upload ${MAX_FILES} videos at once per project. You have ${availableSlots} slot(s) remaining.`
+    );
+    return;
+  }
+
+  // Validate file types
+  const invalidFiles = files.filter(file => !file.type.startsWith('video/'));
+  if (invalidFiles.length > 0) {
+    await showError('Invalid Files', 'Please select only video files.');
+    return;
+  }
+
+  // Initialize queue
+  const newQueue = files.map((file, index) => ({
+    id: `${Date.now()}-${index}`,
+    file,
+    campaignId,
+    progress: 0,
+    status: 'pending',
+    error: null,
+    videoId: null,
+  }));
+
+  setUploadQueue(prev => [...prev, ...newQueue]);
+  processUploadQueue(newQueue, campaignId);
+};
+
+const processUploadQueue = async (queue, campaignId) => {
+  // Process uploads with concurrency limit
+  const chunks = [];
+  for (let i = 0; i < queue.length; i += MAX_CONCURRENT_UPLOADS) {
+    chunks.push(queue.slice(i, i + MAX_CONCURRENT_UPLOADS));
+  }
+
+  for (const chunk of chunks) {
+    await Promise.allSettled(
+      chunk.map(item => uploadSingleFile(item, campaignId))
+    );
+  }
+
+  loadDashboardData(); // Refresh after all uploads
+};
+
+const uploadSingleFile = async (queueItem, campaignId) => {
+  const { id, file } = queueItem;
+
+  try {
+    updateQueueItem(id, { status: 'uploading' });
+
+    const duration = await getVideoDuration(file);
+
+    const startRes = await fetch('/api/upload/start', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        campaignId,
+        metadata: {
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          description: 'Uploaded from dashboard',
+        },
+      }),
+    });
+
+    if (!startRes.ok) {
+      const errorData = await startRes.json();
+      throw new Error(errorData.error || 'Failed to start upload');
+    }
+
+    const startData = await startRes.json();
+    const { upload, urls } = startData;
+
+    const partSize = upload.partSize;
+    const uploadedParts = [];
+
+    for (let i = 0; i < urls.length; i++) {
+      const start = i * partSize;
+      const end = Math.min(start + partSize, file.size);
+      const chunk = file.slice(start, end);
+
+      let retries = 3;
+      let uploadRes;
+
+      while (retries > 0) {
+        try {
+          uploadRes = await fetch(urls[i].url, {
+            method: 'PUT',
+            body: chunk,
+            headers: { 'Content-Type': file.type },
+          });
+
+          if (uploadRes.ok) break;
+          retries--;
+          if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-
-        const etag = uploadRes.headers.get('ETag');
-        if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
-
-        uploadedParts.push({
-          PartNumber: urls[i].partNumber,
-          ETag: etag.replace(/"/g, ''),
-        });
-
-        setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
       }
 
-      console.log('[UPLOAD] All parts uploaded, completing...');
+      const etag = uploadRes.headers.get('ETag');
+      if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
 
-      const completeRes = await fetch('/api/upload/complete', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uploadId: upload.uploadId,
-          key: upload.key,
-          parts: uploadedParts,
-          duration,
-        }),
+      uploadedParts.push({
+        PartNumber: urls[i].partNumber,
+        ETag: etag.replace(/"/g, ''),
       });
 
-      if (!completeRes.ok) {
-        const errorData = await completeRes.json();
-        throw new Error(errorData.error || 'Failed to complete upload');
-      }
-
-      const result = await completeRes.json();
-      if (result.success) {
-        console.log('[UPLOAD] Upload completed successfully');
-        await showSuccess('Upload Complete', 'Video uploaded successfully and queued for processing!');
-        loadDashboardData();
-      }
-    } catch (error) {
-      console.error('[UPLOAD ERROR]', error);
-      await showError('Upload Failed', error.message || 'An unexpected error occurred during upload.');
-    } finally {
-      setUploadingFile(null);
-      setUploadProgress(0);
-      setUploadingProjectId(null);
+      const progress = Math.round(((i + 1) / urls.length) * 100);
+      updateQueueItem(id, { progress });
     }
-  };
+
+    const completeRes = await fetch('/api/upload/complete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uploadId: upload.uploadId,
+        key: upload.key,
+        parts: uploadedParts,
+        duration,
+      }),
+    });
+
+    if (!completeRes.ok) {
+      const errorData = await completeRes.json();
+      throw new Error(errorData.error || 'Failed to complete upload');
+    }
+
+    const result = await completeRes.json();
+    updateQueueItem(id, {
+      status: 'completed',
+      progress: 100,
+      videoId: result.video.id,
+    });
+
+    console.log(`[UPLOAD] ✅ Completed: ${file.name}`);
+  } catch (error) {
+    console.error(`[UPLOAD ERROR] ${file.name}:`, error);
+    updateQueueItem(id, {
+      status: 'failed',
+      error: error.message,
+    });
+  }
+};
+
+const updateQueueItem = (id, updates) => {
+  setUploadQueue(prev =>
+    prev.map(item => item.id === id ? { ...item, ...updates } : item)
+  );
+};
+
+const getVideoDuration = (file) => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      resolve(video.duration);
+    };
+    video.onerror = () => resolve(null);
+    video.src = URL.createObjectURL(file);
+  });
+};
+
   const handleVersionFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -586,14 +775,13 @@ const handleVersionUpload = async () => {
               <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
                 {projects.length > 0 ? (
                   projects.map((project) => (
-                    <ProjectCard 
-                      key={project.id}
-                      project={project}
-                      onClick={() => router.push(`/projects/${project.id}`)}
-                      onUpload={(e) => handleFileUpload(e, project.id)}
-                      isUploading={uploadingProjectId === project.id}
-                      uploadProgress={uploadingProjectId === project.id ? uploadProgress : 0}
-                    />
+                  <ProjectCard 
+                    key={project.id}
+                    project={project}
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                    onUpload={(e) => handleFileUpload(e, project.id)}
+                    uploadQueue={uploadQueue}
+                  />
                   ))
                 ) : (
                   <div className="py-10 text-center">
@@ -983,22 +1171,19 @@ function VideoCard({ video, formatDuration, formatNumber, onPlay , openVersionUp
   );
 }
 
-function ProjectCard({ project, onClick, onUpload, isUploading, uploadProgress }) {
-  console.log('🟢 ProjectCard rendering for:', project.name);
-  console.log('🟢 About to render ShareCollectionButton with campaignId:', project.id);
+function ProjectCard({ project, onClick, onUpload, uploadQueue }) {
+  // Filter queue items for this project
+  const projectUploads = uploadQueue.filter(
+    item => item.campaignId === project.id && item.status !== 'completed'
+  );
+  const isUploading = projectUploads.some(item => item.status === 'uploading');
+  const activeUploads = projectUploads.filter(item => item.status === 'uploading');
 
   return (
-
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="bg-white rounded-xl border border-slate-200/60 hover:border-blue-300 hover:shadow-md hover:shadow-blue-500/10 transition-all overflow-hidden"
-    >
+    <motion.div className="bg-white rounded-xl border border-slate-200/60 hover:border-blue-300 hover:shadow-md hover:shadow-blue-500/10 transition-all overflow-hidden">
       <div className="flex items-center gap-3 p-3">
-        <div 
-          onClick={onClick}
-          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
-        >
+        {/* Project Info */}
+        <div onClick={onClick} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg shadow-blue-500/25">
             {(project.name && project.name.charAt(0).toUpperCase()) || 'P'}
           </div>
@@ -1009,54 +1194,61 @@ function ProjectCard({ project, onClick, onUpload, isUploading, uploadProgress }
             <p className="text-xs text-slate-500">{project.videoCount || 0} videos</p>
           </div>
         </div>
-        <ShareCollectionButton 
-          campaignId={project.id}
-          preSelectedVideos={[]}
-        />
 
-          {/* Upload Button */}
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept="video/*"
-              onChange={onUpload}
-              className="hidden"
-              disabled={isUploading}
-            />
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`p-2 rounded-lg transition-all ${
-                isUploading 
-                  ? 'bg-blue-100 text-blue-600 cursor-not-allowed' 
-                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-              }`}
-              title="Upload to this project"
-            >
-              <Upload className={`w-4 h-4 ${isUploading ? 'animate-pulse' : ''}`} />
-            </motion.div>
-          </label>
+        <ShareCollectionButton campaignId={project.id} preSelectedVideos={[]} />
+
+        {/* Multi-file Upload Button */}
+        <label className="cursor-pointer">
+          <input
+            type="file"
+            accept="video/*"
+            multiple
+            onChange={onUpload}
+            className="hidden"
+            disabled={isUploading}
+          />
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`p-2 rounded-lg transition-all ${
+              isUploading
+                ? 'bg-blue-100 text-blue-600 cursor-not-allowed'
+                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+            }`}
+            title="Upload videos (up to 5)"
+          >
+            <Upload className={`w-4 h-4 ${isUploading ? 'animate-pulse' : ''}`} />
+          </motion.div>
+        </label>
       </div>
 
-      {/* Upload Progress Bar */}
-      {isUploading && (
-        <div className="px-3 pb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-600">Uploading...</span>
-            <span className="text-xs font-bold text-blue-600">{uploadProgress}%</span>
-          </div>
-          <div className="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${uploadProgress}%` }}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 h-1.5 rounded-full"
-            />
-          </div>
+      {/* Upload Progress - Show all active uploads for this project */}
+      {activeUploads.length > 0 && (
+        <div className="px-3 pb-3 space-y-2">
+          {activeUploads.map(upload => (
+            <div key={upload.id}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-slate-600 truncate max-w-[200px]">
+                  {upload.file.name}
+                </span>
+                <span className="text-xs font-bold text-blue-600">{upload.progress}%</span>
+              </div>
+              <div className="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${upload.progress}%` }}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 h-1.5 rounded-full"
+                />
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </motion.div>
   );
 }
+
+
 
 function ReviewItem({ review, onClick }) {
   const getPriorityColor = (priority) => {

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggler from './ThemeToggler';
-import { Menu, X, LogOut, UserCircle2, ChevronDown,RefreshCcw} from 'lucide-react';
+import { Menu, X, LogOut, UserCircle2, ChevronDown,RefreshCcw,CloudLightningIcon} from 'lucide-react';
 import Link from 'next/link';
 
 export default function MainNav() {
@@ -113,7 +113,7 @@ export default function MainNav() {
                 onClick={() => triggerCron()}
                 className="flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <RefreshCcw />
+                <CloudLightningIcon />
               </motion.button>
             </div>
             {/* Guest CTA - Perfect height */}

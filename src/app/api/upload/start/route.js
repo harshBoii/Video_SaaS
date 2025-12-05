@@ -89,7 +89,7 @@ export async function POST(request) {
       Key: key,
       ContentType: fileType,
       Metadata: {
-        originalName: fileName,
+        originalName: encodeURIComponent(fileName),
         campaignId: campaignId,
         uploaderId: currentUser.id,
         uploaderEmail: currentUser.email,
