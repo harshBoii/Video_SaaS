@@ -116,7 +116,7 @@ export default function CampaignDetailPage({ params }) {
           {/* Top Row - Back button and Actions */}
           <div className="flex items-center justify-between mb-4">
             <button
-              onClick={() => router.push('/admin')}
+              onClick={() => router.back()}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

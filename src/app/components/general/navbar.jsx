@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggler from './ThemeToggler';
-import { Menu, X, LogOut, UserCircle2, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut, UserCircle2, ChevronDown,RefreshCcw} from 'lucide-react';
 import Link from 'next/link';
 
 export default function MainNav() {
@@ -44,7 +44,9 @@ export default function MainNav() {
       console.error('Logout failed:', err);
     }
   };
-
+  const triggerCron = async () => {
+    await fetch("/api/run-cron");
+  };
   return (
     <motion.header
       initial={{ y: -100 }}
@@ -96,15 +98,24 @@ export default function MainNav() {
           <div className="flex items-center h-full space-x-2 sm:space-x-3 lg:space-x-4 shrink-0">
             
             {/* Theme Toggle - Perfect height */}
-            <div className="h-12 w-12 flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <motion.div
-                whileHover={{ scale: 0.75 }}
+                whileHover={{ scale: 0.9 }}
                 transition={{ duration: 0.15 }}
+                className="h-12 w-12 flex items-center justify-center"
               >
                 <ThemeToggler />
               </motion.div>
-            </div>
 
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => triggerCron()}
+                className="flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <RefreshCcw />
+              </motion.button>
+            </div>
             {/* Guest CTA - Perfect height */}
             {!user && (
               <motion.div 
@@ -127,112 +138,113 @@ export default function MainNav() {
 
             {/* User Avatar Button - Perfect height */}
             <AnimatePresence>
-  {user && (
-    <motion.div
-      ref={userDropdownRef}
-      className="relative h-10 flex-shrink-0"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
-    >
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-        aria-haspopup="true"
-        aria-expanded={userDropdownOpen}
-        className="group flex items-center h-full p-1.5 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm  transition-all duration-200   shadow-sm hover:shadow-md flex-shrink-0"
-      >
-        {/* Avatar - Responsive sizes */}
-        <motion.div
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 text-white flex items-center justify-center font-semibold text-sm sm:text-base shadow-xl shadow-slate-500/30 group-hover:shadow-2xl group-hover:shadow-slate-500/50 overflow-hidden relative flex-shrink-0"
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2 }}
-        >
-          <span className="relative z-10">{user.firstName?.[0]}{user.lastName?.[0]}</span>
-          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </motion.div>
-
-
-        {/* Chevron - Responsive */}
-        <AnimatePresence>
-          {userDropdownOpen && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0, rotate: -90 }}
-              animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              exit={{ scale: 0, opacity: 0, rotate: -90 }}
-              transition={{ duration: 0.2 }}
-              className="hidden md:hidden lg:block w-4 h-4 sm:w-5 sm:h-5 bg-slate-800 rounded-full shadow-lg shadow-slate-800/25 ml-1 flex-shrink-0"
-            >
-              <ChevronDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white rotate-180 absolute inset-0 m-auto" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-
-      {/* User Dropdown - Responsive width */}
-      <AnimatePresence>
-        {userDropdownOpen && (
-          <motion.div
-            initial={{ y: -20, opacity: 0, scale: 0.95 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -20, opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="absolute right-0 w-72 sm:w-80 max-w-[90vw] mt-3 rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 p-4 sm:p-5 z-50"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-              className="border-b border-slate-200/50 dark:border-slate-700/50 pb-4 sm:pb-5 mb-4 sm:mb-5"
-            >
-              {/* Large avatar */}
+            {user && (
               <motion.div
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 flex items-center justify-center text-xl sm:text-2xl font-semibold text-white shadow-2xl shadow-slate-500/40 mx-auto mb-3 sm:mb-4"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                {user.firstName?.[0]}{user.lastName?.[0]}
-              </motion.div>
-              
-              {/* Full name */}
-              <motion.p className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 text-center truncate">
-                {user.firstName} {user.lastName}
-              </motion.p>
-              
-              {/* Email */}
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center truncate mt-1">
-                {user.email}
-              </p>
-              
-              {/* Role badge */}
-              <p className="text-xs text-center font-semibold mt-2 inline-block px-3 py-1 bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-full capitalize">
-                {user.role?.name?.replace(/_/g, ' ') || 'User'}
-              </p>
-            </motion.div>
-
-            {/* Logout button */}
-            <motion.button
-              onClick={handleLogout}
-              whileHover={{ scale: 1.02, x: 2 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex w-full items-center justify-center gap-3 rounded-xl py-3 sm:py-3.5 px-4 sm:px-5 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 dark:hover:from-red-500/10 dark:hover:to-red-400/10 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 transition-all duration-300 shadow-sm hover:shadow-md group"
-            >
-              <motion.div
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-xl group-hover:shadow-red-500/50 transition-all duration-300 flex-shrink-0"
-                whileHover={{ scale: 1.08 }}
+                ref={userDropdownRef}
+                className="relative h-10 flex-shrink-0"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-              </motion.div>
-              <span className="leading-none">Sign Out</span>
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  )}
-</AnimatePresence>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  aria-haspopup="true"
+                  aria-expanded={userDropdownOpen}
+                  className="group flex items-center h-full p-1.5 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm  transition-all duration-200   shadow-sm hover:shadow-md flex-shrink-0"
+                >
+                  {/* Avatar - Responsive sizes */}
+                  <motion.div
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 text-white flex items-center justify-center font-semibold text-sm sm:text-base shadow-xl shadow-slate-500/30 group-hover:shadow-2xl group-hover:shadow-slate-500/50 overflow-hidden relative flex-shrink-0"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <span className="relative z-10">{user.firstName?.[0]}{user.lastName?.[0]}</span>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </motion.div>
+
+
+               {/* Chevron - Responsive */}
+                  <AnimatePresence>
+                    {userDropdownOpen && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0, rotate: -90 }}
+                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                        exit={{ scale: 0, opacity: 0, rotate: -90 }}
+                        transition={{ duration: 0.2 }}
+                        className="hidden md:hidden lg:block w-4 h-4 sm:w-5 sm:h-5 bg-slate-800 rounded-full shadow-lg shadow-slate-800/25 ml-1 flex-shrink-0"
+                      >
+                        <ChevronDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white rotate-180 absolute inset-0 m-auto" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+
+
+                  {/* User Dropdown - Responsive width */}
+                  <AnimatePresence>
+                    {userDropdownOpen && (
+                      <motion.div
+                        initial={{ y: -20, opacity: 0, scale: 0.95 }}
+                        animate={{ y: 0, opacity: 1, scale: 1 }}
+                        exit={{ y: -20, opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.25, ease: 'easeOut' }}
+                        className="absolute right-0 w-72 sm:w-80 max-w-[90vw] mt-3 rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 p-4 sm:p-5 z-50"
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1, duration: 0.3 }}
+                          className="border-b border-slate-200/50 dark:border-slate-700/50 pb-4 sm:pb-5 mb-4 sm:mb-5"
+                        >
+                          {/* Large avatar */}
+                          <motion.div
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 flex items-center justify-center text-xl sm:text-2xl font-semibold text-white shadow-2xl shadow-slate-500/40 mx-auto mb-3 sm:mb-4"
+                            whileHover={{ scale: 1.05, rotate: 5 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            {user.firstName?.[0]}{user.lastName?.[0]}
+                          </motion.div>
+                          
+                          {/* Full name */}
+                          <motion.p className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 text-center truncate">
+                            {user.firstName} {user.lastName}
+                          </motion.p>
+                          
+                          {/* Email */}
+                          <p className="text-sm text-slate-500 dark:text-slate-400 text-center truncate mt-1">
+                            {user.email}
+                          </p>
+                          
+                          {/* Role badge */}
+                          <p className="text-xs text-center font-semibold mt-2 inline-block px-3 py-1 bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-full capitalize">
+                            {user.role?.name?.replace(/_/g, ' ') || 'User'}
+                          </p>
+                        </motion.div>
+
+                        {/* Logout button */}
+                        <motion.button
+                          onClick={handleLogout}
+                          whileHover={{ scale: 1.02, x: 2 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex w-full items-center justify-center gap-3 rounded-xl py-3 sm:py-3.5 px-4 sm:px-5 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 dark:hover:from-red-500/10 dark:hover:to-red-400/10 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 transition-all duration-300 shadow-sm hover:shadow-md group"
+                        >
+                          <motion.div
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-xl group-hover:shadow-red-500/50 transition-all duration-300 flex-shrink-0"
+                            whileHover={{ scale: 1.08 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                          </motion.div>
+                          <span className="leading-none">Sign Out</span>
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
 
             {/* Mobile Menu Button - Perfect height */}

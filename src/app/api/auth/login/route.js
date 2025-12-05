@@ -9,7 +9,7 @@ export async function POST(req) {
   try {
     const { email, password } = await req.json()
       console.log("The Data Is , " , email , password)
-      email=email.toLowerCase()
+      // email=email.toLowerCase()
     // 1. Find employee
     const user = await prisma.employee.findUnique({
       where: { email },
