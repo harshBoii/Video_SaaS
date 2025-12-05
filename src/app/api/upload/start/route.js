@@ -6,7 +6,7 @@ import { CreateMultipartUploadCommand, UploadPartCommand } from "@aws-sdk/client
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import prisma from "@/app/lib/prisma";
 import { verifyJWT } from "@/app/lib/auth";
-
+import { sanitizeMetadata } from "@/app/lib/validation";
 // Validation schema
 const startUploadSchema = z.object({
   fileName: z.string().min(1, "File name is required"),
@@ -83,18 +83,18 @@ export async function POST(request) {
     console.log(`[UPLOAD START] Size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
     console.log(`[UPLOAD START] Parts: ${totalParts}`);
 
-    // ✅ 6. Create multipart upload in R2
+
     const createCommand = new CreateMultipartUploadCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
       ContentType: fileType,
       Metadata: {
-        originalName: encodeURIComponent(fileName),
+        originalName: sanitizeMetadata(fileName),
         campaignId: campaignId,
         uploaderId: currentUser.id,
         uploaderEmail: currentUser.email,
-        ...(metadata?.title && { title: metadata.title }),
-        ...(metadata?.description && { description: metadata.description }),
+        ...(metadata?.title && { title: sanitizeMetadata(metadata.title) }),
+        ...(metadata?.description && { description: sanitizeMetadata(metadata.description) }),
       },
     });
 

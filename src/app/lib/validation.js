@@ -355,3 +355,16 @@ export const signupSchema = z.object({
   
   workspaceType: z.enum(['SOLO', 'TEAM', 'ENTERPRISE']).default('SOLO')
 });
+
+export function sanitizeMetadata(value) {
+  if (!value) return '';
+  
+  // Convert to string and limit length (max 2KB per metadata value)
+  const str = String(value).slice(0, 1024);
+  
+  // Replace invalid characters with underscores
+  // S3/R2 allows: alphanumeric, spaces, and: _ . : / = + - @
+  return str
+    .replace(/[^\x20-\x7E]/g, '_') // Replace non-ASCII with underscore
+    .replace(/[^\w\s.:\/=+\-@]/g, '_'); // Replace invalid chars with underscore
+}
