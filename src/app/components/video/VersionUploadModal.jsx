@@ -350,9 +350,6 @@ function ModalContent({ onClose, videoId, videoTitle, onUploadComplete }) {
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 h-3 rounded-full transition-all"
                   />
                 </div>
-                <p className="text-xs text-gray-600 mt-2 text-center">
-                  Please don't close this window
-                </p>
               </motion.div>
             )}
 

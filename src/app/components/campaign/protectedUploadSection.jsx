@@ -122,7 +122,7 @@ export function ProtectedUploadSection({
               MP4, MOV, AVI, MKV, WEBM up to 100GB
             </p>
             <p className="text-xs text-gray-500 mb-4">
-              Upload up to {MAX_FILES} videos at once
+              Upload multiple videos at once
             </p>
             <input
               type="file"
