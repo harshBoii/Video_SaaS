@@ -1,11 +1,20 @@
 //cachebale invalidate on post 
 
 import prisma from "@/app/lib/prisma";
+import { cookies } from "next/headers";
+import jwt from 'jsonwebtoken';
 
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const companyId = searchParams.get("companyId");
+    const token = (await cookies()).get("token").value
+
+    if (!token) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const companyId = decoded.companyId;
 
     const roles = await prisma.role.findMany({
       where: companyId ? { companyId } : {},

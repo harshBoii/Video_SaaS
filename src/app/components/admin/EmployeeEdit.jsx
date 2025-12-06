@@ -13,7 +13,11 @@ export default function EditEmployeeModal({ isOpen, onClose, employee, onSuccess
     if (!isOpen || !employee) return;
     setForm(employee);
     (async () => {
-      const res = await fetch('/api/admin/roles');
+      const res = await fetch('/api/admin/roles',
+        {
+          credentials:"include"
+        }
+      );
       const data = await res.json();
       setRoles(data.data || []);
     })();
