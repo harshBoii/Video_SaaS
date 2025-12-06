@@ -27,9 +27,10 @@ const tabs = [
   { id:'videos',    label:'Videos',    icon:Video}
 ];
 
-export default function CampaignDetailPage({ params }) {
+export default async function CampaignDetailPage({ params }) {
   const router = useRouter();
-  const campaignId = params.id;
+  const resolvedParams = await params
+  const campaignId = resolvedParams.id;
   
   const [activeTab, setActiveTab] = useState('overview');
   const [campaign, setCampaign] = useState(null);
