@@ -106,7 +106,7 @@ export async function GET(request, { params }) {
 // Password verification
 export async function POST(request, { params }) {
   try {
-    const { collectionId } = params;
+    const { collectionId } = await params;
     const { password } = await request.json();
 
     const collection = await prisma.videoCollection.findUnique({

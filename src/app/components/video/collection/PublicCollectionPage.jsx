@@ -8,9 +8,9 @@ import PublicVideoPlayer from '@/components/PublicVideoPlayer';
 import Swal from 'sweetalert2';
 
 export default function PublicCollectionPage({collectionId}) {
-  const params = useParams();
+  // const params = useParams();
   const searchParams = useSearchParams();
-  const collectionId = params.id;
+  // const collectionId = params.id;
 
   const [collection, setCollection] = useState(null);
   const [loading, setLoading] = useState(true);
