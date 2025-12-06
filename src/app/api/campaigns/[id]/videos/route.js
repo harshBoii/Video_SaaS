@@ -10,7 +10,7 @@ export async function GET(request, { params }) {
   if (!authenticated) return error;
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Verify user has access to this campaign
     const hasAccess = await canAccessCampaign(user.id, user.companyId, id);
