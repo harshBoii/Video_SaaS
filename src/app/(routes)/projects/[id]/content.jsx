@@ -27,19 +27,19 @@ const tabs = [
   { id:'videos',    label:'Videos',    icon:Video}
 ];
 
-export default async function CampaignDetailPage({ params }) {
+export default function CampaignDetailContent({ campaignId }) {
   const router = useRouter();
-  const resolvedParams = await params
-  const campaignId = resolvedParams.id;
-  
   const [activeTab, setActiveTab] = useState('overview');
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showActions, setShowActions] = useState(false);
 
   useEffect(() => {
-    loadCampaignData();
+    if (campaignId) {
+      loadCampaignData();
+    }
   }, [campaignId]);
+
 
   const loadCampaignData = async () => {
     setLoading(true);
