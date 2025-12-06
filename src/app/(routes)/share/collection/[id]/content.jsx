@@ -5,8 +5,8 @@ import {
   Play, Share2, Download, MessageSquare, Clock, Eye, Users, Lock, X 
 } from 'lucide-react';
 
-export default function PublicCollectionPage({ params }) {
-  const { id: collectionId } = params;
+export default function PublicCollectionPage({ collectionId }) {
+//   const { id: collectionId } = params;
   
   const [collectionData, setCollectionData] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 
 export async function GET(request, { params }) {
   try {
-    const { collectionId } = params;
+    const { collectionId } = await params;
 
     // Find collection by ID (UUID)
     const collection = await prisma.videoCollection.findUnique({

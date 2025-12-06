@@ -7,7 +7,7 @@ import { Play, Lock, Loader2, Calendar, User, AlertCircle } from 'lucide-react';
 import PublicVideoPlayer from '@/components/PublicVideoPlayer';
 import Swal from 'sweetalert2';
 
-export default function PublicCollectionPage() {
+export default function PublicCollectionPage({collectionId}) {
   const params = useParams();
   const searchParams = useSearchParams();
   const collectionId = params.id;

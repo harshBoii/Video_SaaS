@@ -114,7 +114,13 @@ export async function POST(request) {
       );
 
       return { collection, collectionShare, videoShares };
-    });
+    },
+    {
+        maxWait: 10000, // Maximum time to wait for transaction to start (10s)
+        timeout: 15000, // Maximum time transaction can run (15s)
+      }
+
+  );
 
     // Build share URL using collection ID (which is UUID)
     const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/collection/${result.collection.id}`;
