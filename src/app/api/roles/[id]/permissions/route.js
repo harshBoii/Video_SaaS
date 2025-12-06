@@ -4,7 +4,7 @@ import prisma from '@/app/lib/prisma';
 // POST → Assign a permission to a role
 export async function POST(request, { params }) {
   try {
-    const { id: roleId } = params;
+    const { id: roleId } = await params;
     const { permissionId } = await request.json();
 
     if (!permissionId) {
