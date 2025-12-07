@@ -5,7 +5,8 @@ import prisma from '@/app/lib/prisma';
 // PATCH /api/employees/[id]/manager - Update employee's manager
 export async function PATCH(request, { params }) {
   try {
-    const employeeId =  (params.id);
+    const {employeeId} = await params
+    // const employeeId =  (params.id);
     const body = await request.json();
     const { managerId } = body;
 
