@@ -41,7 +41,7 @@ export default function AdminDashboard() {
         const data = await res.json();
         console.log("data is :",data)
         setUser(data.employee);
-        setCompanyId(data.companyId);
+        setCompanyId(data.employee.companyId);
 
       } catch (err) {
         console.error(err);
