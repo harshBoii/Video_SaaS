@@ -5,7 +5,7 @@ import prisma from '@/app/lib/prisma';
 // PATCH /api/employees/[id]/manager - Update employee's manager
 export async function PATCH(request, { params }) {
   try {
-    const {employeeId} = await params
+    const {id: employeeId} = await params
     // const employeeId =  (params.id);
     const body = await request.json();
     const { managerId } = body;
@@ -103,7 +103,7 @@ export async function PATCH(request, { params }) {
 // DELETE /api/employees/[id]/manager - Remove employee's manager
 export async function DELETE(request, { params }) {
   try {
-    const employeeId =  (params.id);
+    const {id:employeeId} = await params;
 
     // Verify employee exists
     const employee = await prisma.employee.findUnique({
