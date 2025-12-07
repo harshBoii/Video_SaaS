@@ -32,8 +32,8 @@ export default function ChatWidget() {
     let reply;
 
     // Detect "red car"
-    if (/red\s*car/i.test(message)) {
-      const id = "123";
+    if (/(role|video)/i.test(message)) {
+      const id = "167b6f16-5a02-460c-bc46-4d1c6512bdf8";
       reply = {
         sender: "bot",
         type: "attachment",
@@ -46,8 +46,8 @@ export default function ChatWidget() {
     }
 
     // Detect "campaign" or "project"
-    else if (/(campaign|project)/i.test(message)) {
-      const id = "99";
+    else if (/(campaign|project|camp)/i.test(message)) {
+      const id = "cmgno4dpc0001l704xpl63zro";
       reply = {
         sender: "bot",
         type: "attachment",
