@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FiBriefcase } from 'react-icons/fi';
 
-import { FiGrid, FiUploadCloud, FiMap , FiCheckSquare, FiBarChart2, FiHelpCircle, FiSettings,FiPlus,FiClipboard,FiCodesandbox,FiGitBranch,FiPlayCircle } from 'react-icons/fi';
+import { FiGrid, FiUploadCloud, FiMap , FiCheckSquare, FiBarChart2, FiHelpCircle, FiSettings,FiPlus,FiClipboard,FiCodesandbox,FiGitBranch,FiPlayCircle,} from 'react-icons/fi';
 
 // 2. Modify NavItem to handle links and dynamic active state
 const NavItem = ({ icon, label, href }) => {
@@ -50,6 +50,7 @@ const AdminSide = () => {
         <NavItem icon={<FiBriefcase/>} href="/admin/employees" label="Employees"/>
         <NavItem icon={<FiGitBranch/>} href="/admin/hierarchy" label="Hierarchy"/>
         <NavItem icon={<FiPlayCircle/>} href="/admin/ads" label="Ads"/>
+        <NavItem icon={<FiPlus/>} href="/admin/integration" label="Integration"/>
 
 
       </nav>
