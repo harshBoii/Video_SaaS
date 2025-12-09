@@ -49,6 +49,31 @@ enum AccessType {
   PASSWORD     // Requires password
 }
 
+enum SocialPlatform {
+  TWITTER
+  INSTAGRAM
+  FACEBOOK
+  LINKEDIN
+  TIKTOK
+  YOUTUBE
+  PINTEREST
+  REDDIT
+  BLUESKY
+  THREADS
+  GOOGLE_BUSINESS
+}
+
+enum PostStatus {
+  DRAFT          
+  SCHEDULED     
+  PUBLISHING    
+  PUBLISHED      
+  FAILED         
+  CANCELLED      
+  DELETED        // Deleted from platform (history kept)
+}
+
+
 // ===================== CORE MODELS =====================
 
 model Company {
@@ -68,6 +93,9 @@ model Company {
   flowchains       FlowChain[]
   permissionCombos PermissionCombo[]
   videoCollections VideoCollection[]
+  lateProfile      LateProfile?    // ONE-TO-ONE relationship
+  socialAccounts   SocialAccount[] // Direct access to all social accounts
+  socialPosts      SocialPost[]    // Direct access to all posts (history + scheduled)
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -435,7 +463,8 @@ model Video {
   description     VideoDescription?
   uploadedBy      String
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
-  collections VideoCollectionItem[]
+  collections     VideoCollectionItem[]
+  socialPosts     SocialPost[]
 
   // Versions
   currentVersion  Int      @default(1)
@@ -842,3 +871,111 @@ model CollectionShare {
   createdAt     DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime        @updatedAt @db.Timestamptz(3)
 }
+
+// ===================== LATE API INTEGRATION MODELS =====================
+
+model LateProfile {
+  id          String   @id @default(cuid())
+  lateId      String   @unique @db.VarChar(255) // prof_abc123 from Late API
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  companyId   String   @unique  // ONE-TO-ONE relationship
+  
+  // Relations
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  socialAccounts SocialAccount[]
+  
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  
+  @@index([lateId])
+}
+
+model SocialAccount {
+  id            String   @id @default(cuid())
+  lateAccountId String   @unique @db.VarChar(255) // acc_xyz789 from Late API
+  profileId     String
+  companyId     String   // Direct relation to Company
+  platform      SocialPlatform
+  username      String   @db.VarChar(255)
+  displayName   String?  @db.VarChar(255)
+  avatarUrl     String?  @db.Text
+  isActive      Boolean  @default(true)
+  
+  // OAuth tokens (encrypted in production)
+  accessToken   String?  @db.Text
+  refreshToken  String?  @db.Text
+  tokenExpiresAt DateTime? @db.Timestamptz(3)
+  
+  // Relations
+  profile       LateProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  posts         SocialPost[]  // All posts (scheduled + published history)
+  
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  
+  @@index([profileId])
+  @@index([companyId])
+  @@index([platform])
+  @@index([lateAccountId])
+  @@index([companyId, platform])
+  @@unique([profileId, platform]) // One account per platform per profile
+}
+
+model SocialPost {
+  id              String      @id @default(cuid())
+  companyId       String      // Direct relation to Company for faster queries
+  socialAccountId String
+  videoId         String?     // Link to Video model (optional for text-only posts)
+  
+  // Post content
+  content         String      @db.Text
+  caption         String?     @db.Text  // Platform-specific caption/description
+  
+  // Scheduling
+  scheduledAt     DateTime?   @db.Timestamptz(3)  // Null if published immediately
+  timezone        String      @default("UTC") @db.VarChar(100)
+  status          PostStatus  @default(DRAFT)
+  
+  // Late API tracking
+  latePostId      String?     @unique @db.VarChar(255) // post_123abc from Late
+  
+  // Media attachments (if not using Video relation)
+  mediaUrls       String[]    @default([])
+  
+  // Platform-specific config (hashtags, mentions, etc.)
+  platformConfig  Json?       @default("{}")
+  
+  // Relations
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  video           Video?        @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  
+  // Analytics & Tracking
+  publishedAt     DateTime?   @db.Timestamptz(3)
+  views           Int         @default(0)
+  likes           Int         @default(0)
+  comments        Int         @default(0)
+  shares          Int         @default(0)
+  
+  // Error handling
+  error           String?     @db.Text
+  retryCount      Int         @default(0)
+  
+  createdAt       DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @db.Timestamptz(3)
+  
+  @@index([companyId])
+  @@index([socialAccountId])
+  @@index([videoId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([publishedAt])
+  @@index([companyId, status])
+  @@index([companyId, publishedAt(sort: Desc)])
+  @@index([socialAccountId, status])
+  @@index([socialAccountId, publishedAt(sort: Desc)])
+  @@index([videoId, publishedAt(sort: Desc)])
+}
+
