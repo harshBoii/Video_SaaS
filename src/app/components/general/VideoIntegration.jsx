@@ -127,7 +127,7 @@ const SocialConnector = ({ redirectUrl }) => {
     }
   }, []);
 
-  // ✅ Handle OAuth callback with proper dependencies
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get('success');
@@ -241,11 +241,23 @@ const SocialConnector = ({ redirectUrl }) => {
     
     try {
       const params = new URLSearchParams();
-      const platformsWithRedirect = ['facebook', 'linkedin', 'googlebusiness'];
+      // const platformsWithRedirect = [
+      //                                 'facebook',
+      //                                 'instagram',
+      //                                 'linkedin',
+      //                                 'twitter',
+      //                                 'tiktok',
+      //                                 'youtube',
+      //                                 'threads',
+      //                                 'reddit',
+      //                                 'pinterest',
+      //                                 'bluesky',
+      //                                 'googlebusiness'
+      //                               ];
       
-      if (redirectUrl && platformsWithRedirect.includes(platform.toLowerCase())) {
-        params.append('redirect_url', redirectUrl);
-      }
+      // if (redirectUrl && platformsWithRedirect.includes(platform.toLowerCase())) {
+      //   params.append('redirect_url', redirectUrl);
+      // }
 
       const response = await fetch(
         `/api/social/connect/${platform}${params.toString() ? `?${params}` : ''}`,

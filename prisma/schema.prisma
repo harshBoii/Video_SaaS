@@ -893,7 +893,6 @@ model LateProfile {
 
 model SocialAccount {
   id            String   @id @default(cuid())
-  lateAccountId String   @unique @db.VarChar(255) // acc_xyz789 from Late API
   profileId     String
   companyId     String   // Direct relation to Company
   platform      SocialPlatform
@@ -901,11 +900,6 @@ model SocialAccount {
   displayName   String?  @db.VarChar(255)
   avatarUrl     String?  @db.Text
   isActive      Boolean  @default(true)
-  
-  // OAuth tokens (encrypted in production)
-  accessToken   String?  @db.Text
-  refreshToken  String?  @db.Text
-  tokenExpiresAt DateTime? @db.Timestamptz(3)
   
   // Relations
   profile       LateProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -918,7 +912,6 @@ model SocialAccount {
   @@index([profileId])
   @@index([companyId])
   @@index([platform])
-  @@index([lateAccountId])
   @@index([companyId, platform])
   @@unique([profileId, platform]) // One account per platform per profile
 }
@@ -979,3 +972,14 @@ model SocialPost {
   @@index([videoId, publishedAt(sort: Desc)])
 }
 
+model ConnectionToken {
+  id          String   @id @default(cuid())
+  token       String   @unique @default(cuid())
+  companyId   String
+  platform    String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([token])
+  @@index([companyId])
+}

@@ -44,38 +44,21 @@ export async function GET(request, { params }) {
     const companyId = await getCompanyFromToken(request);
     
     if (!companyId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get platform from route params
     const { platform } = await params;
 
-    // Validate platform
-    if (!platform || !VALID_PLATFORMS.includes(platform.toLowerCase())) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid platform',
-          validPlatforms: VALID_PLATFORMS
-        },
-        { status: 400 }
-      );
+    if (!VALID_PLATFORMS.includes(platform.toLowerCase())) {
+      return NextResponse.json({ 
+        error: 'Invalid platform',
+        validPlatforms: VALID_PLATFORMS
+      }, { status: 400 });
     }
 
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const redirectUrl = searchParams.get('redirect_url');
-    const headless = searchParams.get('headless');
-
-    // Get company's Late profile from database
     const profile = await prisma.lateProfile.findUnique({
       where: { companyId },
-      select: {
-        lateId: true,
-        name: true
-      }
+      select: { lateId: true, name: true, id: true }
     });
 
     if (!profile) {
@@ -85,24 +68,32 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Build query parameters for Late API
-    const lateQueryParams = new URLSearchParams({
-      profileId: profile.lateId
+    // ✅ Create temporary connection token
+    const connectionToken = await prisma.connectionToken.create({
+      data: {
+        companyId: companyId,
+        platform: platform,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+      }
     });
 
-    // Add redirect_url only for supported platforms
-    if (redirectUrl && PLATFORMS_WITH_REDIRECT.includes(platform.toLowerCase())) {
-      lateQueryParams.append('redirect_url', redirectUrl);
-    }
+    console.log('🔑 Created connection token:', connectionToken.token);
 
-    // Add headless mode if requested (only for Facebook, LinkedIn, Google Business)
-    if (headless === 'true' && PLATFORMS_WITH_REDIRECT.includes(platform.toLowerCase())) {
-      lateQueryParams.append('headless', 'true');
-    }
-
-    // Call Late API
-    const lateApiUrl = `https://getlate.dev/api/v1/connect/${platform}?${lateQueryParams}`;
+    // ✅ Build callback URL with token in PATH (no query params)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`;
     
+    const callbackUrl = `${baseUrl}/api/social/callback/${platform}/${connectionToken.token}`;
+
+    console.log('✅ Callback URL:', callbackUrl);
+
+    const lateQueryParams = new URLSearchParams({
+      profileId: profile.lateId,
+      redirect_url: callbackUrl
+    });
+
+    const lateApiUrl = `https://getlate.dev/api/v1/connect/${platform}?${lateQueryParams}`;
+
     const response = await fetch(lateApiUrl, {
       method: 'GET',
       headers: {
@@ -118,7 +109,6 @@ export async function GET(request, { params }) {
 
     const data = await response.json();
 
-    // Return authorization URL to client
     return NextResponse.json({
       success: true,
       authorizationUrl: data.authUrl || data.authorizationUrl,
