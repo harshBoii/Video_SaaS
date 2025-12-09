@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
     const { platform, token } = await params;
     const { searchParams } = new URL(request.url);
     
-    // Get OAuth response parameters
+
     const connected = searchParams.get('connected');
     const profileId = searchParams.get('profileId');
     const username = searchParams.get('username');
@@ -80,70 +80,54 @@ export async function GET(request, { params }) {
       );
     }
 
-    // ✅ Connection completed by Late API
+
+// Connection completed by Late API
     if (username) {
-      console.log('✅ Connection completed, fetching account details...');
-      
-      try {
-        const accountsResponse = await fetch(
-          `https://getlate.dev/api/v1/profiles/${profile.lateId}/accounts`,
-          {
-            headers: {
-              'Authorization': `Bearer ${process.env.LATE_API_KEY}`,
-              'Content-Type': 'application/json'
+    console.log('✅ Connection completed, saving account...');
+    
+    try {
+        // ✅ Save with available info only
+        const savedAccount = await prisma.socialAccount.upsert({
+        where: {
+            profileId_platform: {
+            profileId: profile.id,
+            platform: platform.toUpperCase()
             }
-          }
+        },
+        update: {
+            username: username,
+            displayName: username, // Fallback to username
+            isActive: true
+        },
+        create: {
+            profileId: profile.id,
+            companyId: companyId,
+            platform: platform.toUpperCase(),
+            username: username,
+            displayName: username, // Fallback to username
+            isActive: true
+
+        }
+        });
+
+        console.log('✅ Account saved:', savedAccount);
+
+
+        await prisma.connectionToken.delete({ where: { token } });
+
+        return NextResponse.redirect(
+        new URL(`/admin/integration?success=true&platform=${platform}&account=${username}`, request.url)
         );
 
-        if (accountsResponse.ok) {
-          const accountsData = await accountsResponse.json();
-          console.log('📊 Accounts from Late:', accountsData);
-          
-          const connectedAccount = accountsData.accounts?.find(
-            acc => acc.username === username && acc.platform.toLowerCase() === platform.toLowerCase()
-          );
-
-          if (connectedAccount) {
-            const savedAccount = await prisma.socialAccount.upsert({
-              where: {
-                lateProfileId_platform_accountId: {
-                  lateProfileId: profile.id,
-                  platform: platform.toUpperCase(),
-                  accountId: connectedAccount.id
-                }
-              },
-              update: {
-                username: connectedAccount.username,
-                displayName: connectedAccount.displayName || connectedAccount.name,
-                avatarUrl: connectedAccount.avatarUrl || connectedAccount.profilePictureUrl,
-                isActive: true,
-                metadata: connectedAccount
-              },
-              create: {
-                lateProfileId: profile.id,
-                platform: platform.toUpperCase(),
-                accountId: connectedAccount.id,
-                username: connectedAccount.username,
-                displayName: connectedAccount.displayName || connectedAccount.name,
-                avatarUrl: connectedAccount.avatarUrl || connectedAccount.profilePictureUrl,
-                isActive: true,
-                metadata: connectedAccount
-              }
-            });
-
-            console.log('✅ Account saved:', savedAccount);
-
-            // Delete used token
-            await prisma.connectionToken.delete({ where: { token } });
-
-            return NextResponse.redirect(
-              new URL(`/admin/integration?success=true&platform=${platform}&account=${username}`, request.url)
-            );
-          }
-        }
-      } catch (fetchError) {
-        console.error('Failed to fetch account details:', fetchError);
-      }
+    } catch (error) {
+        console.error('❌ Failed to save account:', error);
+        
+        await prisma.connectionToken.delete({ where: { token } }).catch(() => {});
+        
+        return NextResponse.redirect(
+        new URL(`/admin/integration?error=save_failed&message=${encodeURIComponent(error.message)}`, request.url)
+        );
+    }
     }
 
     // Fallback success
