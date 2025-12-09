@@ -1,6 +1,7 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast, { Toaster } from 'react-hot-toast';
 import { 
   FaFacebook, 
   FaInstagram, 
@@ -13,53 +14,20 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaRocket,
-  FaPlus,
   FaTrash
 } from 'react-icons/fa';
 import { SiThreads } from 'react-icons/si';
-import { MdBusiness, MdClose, MdRefresh } from 'react-icons/md';
+import { MdBusiness, MdClose } from 'react-icons/md';
 import { HiLightningBolt } from 'react-icons/hi';
 
-const SocialConnector = ({ apiKey, redirectUrl }) => {
+const SocialConnector = ({ redirectUrl }) => {
   const [profileStatus, setProfileStatus] = useState('loading');
   const [profile, setProfile] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [connecting, setConnecting] = useState(null);
   const [error, setError] = useState(null);
-  const [DeletingProfile , setDeletingProfile] = useState(null)
-
-
-  useEffect(() => {
-  // Check for OAuth success/error in URL params
-  const params = new URLSearchParams(window.location.search);
-  const success = params.get('success');
-  const error = params.get('error');
-  const message = params.get('message');
-
-  if (success) {
-    const platform = params.get('platform');
-    const account = params.get('account');
-    
-    // Show success message
-    setError(null);
-    // Optionally show a toast/notification
-    console.log(`Successfully connected ${platform}: ${account}`);
-    
-    // Refresh profile data
-    checkProfileStatus();
-    
-    // Clean URL
-    window.history.replaceState({}, '', '/admin/integration');
-  }
-
-  if (error) {
-    setError(decodeURIComponent(message || 'Connection failed'));
-    
-    // Clean URL
-    window.history.replaceState({}, '', '/admin/integration');
-  }
-}, []);
+  const [deletingProfile, setDeletingProfile] = useState(false);
 
   const platforms = [
     { 
@@ -132,11 +100,8 @@ const SocialConnector = ({ apiKey, redirectUrl }) => {
     }
   ];
 
-  useEffect(() => {
-    checkProfileStatus();
-  }, []);
-
-  const checkProfileStatus = async () => {
+  // ✅ Wrapped in useCallback to prevent dependency issues
+  const checkProfileStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/social/profile', {
         method: 'GET',
@@ -156,10 +121,44 @@ const SocialConnector = ({ apiKey, redirectUrl }) => {
       }
     } catch (error) {
       console.error('Failed to check profile:', error);
+      toast.error('Failed to load profile status');
       setError('Failed to load profile status');
       setProfileStatus('needsSetup');
     }
-  };
+  }, []);
+
+  // ✅ Handle OAuth callback with proper dependencies
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+    const message = params.get('message');
+
+    if (success) {
+      const platform = params.get('platform');
+      const account = params.get('account');
+      
+      toast.success(`Successfully connected ${platform}: ${account || 'Account'}`, {
+        duration: 5000,
+        icon: '🎉',
+      });
+      setError(null);
+      checkProfileStatus();
+      window.history.replaceState({}, '', '/admin/integration');
+    }
+
+    if (error) {
+      const errorMsg = decodeURIComponent(message || 'Connection failed');
+      toast.error(errorMsg, { duration: 6000 });
+      setError(errorMsg);
+      window.history.replaceState({}, '', '/admin/integration');
+    }
+  }, [checkProfileStatus]);
+
+  // Initial profile check
+  useEffect(() => {
+    checkProfileStatus();
+  }, [checkProfileStatus]);
 
   const createProfile = async () => {
     setCreatingProfile(true);
@@ -183,15 +182,24 @@ const SocialConnector = ({ apiKey, redirectUrl }) => {
       setProfile(data.profile);
       setProfileStatus('ready');
       setShowModal(false);
+      toast.success('Profile created successfully! 🚀', { duration: 4000 });
     } catch (error) {
       console.error('Profile creation error:', error);
       setError(error.message);
+      toast.error(error.message);
     } finally {
       setCreatingProfile(false);
     }
   };
 
-  const DeleteProfile = async () => {
+  // ✅ Added confirmation dialog
+  const deleteProfile = async () => {
+    const confirmed = window.confirm(
+      '⚠️ Are you sure you want to delete your profile?\n\nThis will disconnect all social accounts and cannot be undone.'
+    );
+    
+    if (!confirmed) return;
+
     setDeletingProfile(true);
     setError(null);
 
@@ -205,72 +213,72 @@ const SocialConnector = ({ apiKey, redirectUrl }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create profile');
+        throw new Error(errorData.error || 'Failed to delete profile');
       }
 
-      const data = await response.json();
-      
       setProfile(null);
-      setProfileStatus('loading');
-      window.location.reload();
+      setProfileStatus('needsSetup');
+      setShowModal(true);
+      toast.success('Profile deleted successfully', { icon: '✅' });
     } catch (error) {
-      console.error('Profile creation error:', error);
+      console.error('Profile deletion error:', error);
       setError(error.message);
+      toast.error(error.message);
     } finally {
       setDeletingProfile(false);
     }
   };
 
-
-  
-const handleConnect = async (platform) => {
-  if (profileStatus !== 'ready') return;
-  
-  setConnecting(platform);
-  setError(null);
-  
-  try {
-    // Build query params
-    const params = new URLSearchParams();
-    
-    // Only add redirect_url for Facebook, LinkedIn, and Google Business
-    const platformsWithRedirect = ['facebook', 'linkedin', 'googlebusiness'];
-    if (redirectUrl && platformsWithRedirect.includes(platform.toLowerCase())) {
-      params.append('redirect_url', redirectUrl);
+  const handleConnect = async (platform) => {
+    if (profileStatus !== 'ready') {
+      toast.error('Please create a profile first');
+      setShowModal(true);
+      return;
     }
-
-    // Call YOUR API route (server-side)
-    const response = await fetch(
-      `/api/social/connect/${platform}${params.toString() ? `?${params}` : ''}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+    
+    setConnecting(platform);
+    setError(null);
+    
+    try {
+      const params = new URLSearchParams();
+      const platformsWithRedirect = ['facebook', 'linkedin', 'googlebusiness'];
+      
+      if (redirectUrl && platformsWithRedirect.includes(platform.toLowerCase())) {
+        params.append('redirect_url', redirectUrl);
       }
-    );
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to initiate connection');
+      const response = await fetch(
+        `/api/social/connect/${platform}${params.toString() ? `?${params}` : ''}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to initiate connection');
+      }
+
+      const data = await response.json();
+      
+      if (data.authorizationUrl) {
+        toast.loading(`Redirecting to ${platform}...`, { duration: 2000 });
+        setTimeout(() => {
+          window.location.href = data.authorizationUrl;
+        }, 500);
+      } else {
+        throw new Error('No authorization URL returned');
+      }
+    } catch (error) {
+      console.error('Connection error:', error);
+      setError(error.message);
+      toast.error(error.message);
+      setConnecting(null);
     }
-
-    const data = await response.json();
-    
-    if (data.authorizationUrl) {
-      // Redirect to OAuth authorization page
-      window.location.href = data.authorizationUrl;
-    } else {
-      throw new Error('No authorization URL returned');
-    }
-  } catch (error) {
-    console.error('Connection error:', error);
-    setError(error.message);
-  } finally {
-    setConnecting(null);
-  }
-};
-
+  };
 
   const backdropVariants = {
     hidden: { opacity: 0 },
@@ -317,6 +325,33 @@ const handleConnect = async (platform) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+      {/* ✅ Toast Notifications */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            borderRadius: '10px',
+            padding: '16px',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+            duration: 5000,
+          },
+        }}
+      />
+
       {/* Setup Modal */}
       <AnimatePresence>
         {showModal && (
@@ -500,19 +535,33 @@ const handleConnect = async (platform) => {
               </motion.button>
             )}
 
-            {/* Delete Profile Button */}
+            {/* ✅ Delete Profile Button with Loading State */}
             {profileStatus === 'ready' && (
               <motion.button
-                onClick={() => DeleteProfile()}
+                onClick={deleteProfile}
+                disabled={deletingProfile}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center space-x-2 bg-white text-gray-700 px-4 py-2 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ scale: deletingProfile ? 1 : 1.05 }}
+                whileTap={{ scale: deletingProfile ? 1 : 0.95 }}
+                className="inline-flex items-center space-x-2 bg-white text-red-600 px-4 py-2 rounded-full border border-red-300 shadow-sm hover:shadow-md hover:bg-red-50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Delete Profile"
               >
-                <FaTrash className="text-lg" />
-                <span className="text-sm font-medium">Delete Profile</span>
+                {deletingProfile ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full"
+                    />
+                    <span className="text-sm font-medium">Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaTrash className="text-sm" />
+                    <span className="text-sm font-medium">Delete Profile</span>
+                  </>
+                )}
               </motion.button>
             )}
           </div>
@@ -530,13 +579,13 @@ const handleConnect = async (platform) => {
               {profile.socialAccounts.map((account) => (
                 <div
                   key={account.id}
-                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   {account.avatarUrl && (
                     <img 
                       src={account.avatarUrl} 
                       alt={account.username}
-                      className="w-10 h-10 rounded-full"
+                      className="w-10 h-10 rounded-full object-cover"
                     />
                   )}
                   <div className="flex-1 min-w-0">
