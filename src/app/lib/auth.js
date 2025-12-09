@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import prisma from './prisma';
 import { ApiResponse } from './api-response';
 import { NextResponse } from "next/server";
-
+import { verify } from 'jsonwebtoken';
 /**
  * Verify and decode JWT token from cookies
  * @returns {Promise<Object|null>} Decoded token or null
@@ -563,4 +563,19 @@ export async function canAccessCampaign(userId, companyId, campaignId) {
   });
 
   return !!campaign;
+}
+export async function getCompanyFromToken(request) {
+  try {
+    const token = (await cookies()).get("token")?.value;
+    
+    if (!token) {
+      return null;
+    }
+    
+    const decoded = verify(token, process.env.JWT_SECRET);
+    return decoded.companyId;
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return null;
+  }
 }

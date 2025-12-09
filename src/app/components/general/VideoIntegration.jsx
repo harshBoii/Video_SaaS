@@ -19,6 +19,7 @@ import {
 import { SiThreads } from 'react-icons/si';
 import { MdBusiness, MdClose } from 'react-icons/md';
 import { HiLightningBolt } from 'react-icons/hi';
+import Link from 'next/link';
 
 const SocialConnector = ({ redirectUrl }) => {
   const [profileStatus, setProfileStatus] = useState('loading');
@@ -35,56 +36,65 @@ const SocialConnector = ({ redirectUrl }) => {
       value: 'twitter', 
       icon: FaTwitter, 
       color: 'from-[#1DA1F2] to-[#0d8bd9]',
-      hoverColor: 'hover:shadow-[#1DA1F2]/50'
+      hoverColor: 'hover:shadow-[#1DA1F2]/50',
+      link:"/socials/twitter"
     },
     { 
       name: 'Instagram', 
       value: 'instagram', 
       icon: FaInstagram, 
       color: 'from-[#E4405F] to-[#9C27B0]',
-      hoverColor: 'hover:shadow-[#E4405F]/50'
+      hoverColor: 'hover:shadow-[#E4405F]/50',
+      link:"/socials/instagram"
+
     },
     { 
       name: 'Facebook', 
       value: 'facebook', 
       icon: FaFacebook, 
       color: 'from-[#1877F2] to-[#0c5ecf]',
-      hoverColor: 'hover:shadow-[#1877F2]/50'
+      hoverColor: 'hover:shadow-[#1877F2]/50',
+      link:"/socials/facebook"
     },
     { 
       name: 'LinkedIn', 
       value: 'linkedin', 
       icon: FaLinkedin, 
       color: 'from-[#0A66C2] to-[#004182]',
-      hoverColor: 'hover:shadow-[#0A66C2]/50'
+      hoverColor: 'hover:shadow-[#0A66C2]/50',
+      link:"/socials/linkedin"
     },
     { 
       name: 'YouTube', 
       value: 'youtube', 
       icon: FaYoutube, 
       color: 'from-[#FF0000] to-[#cc0000]',
-      hoverColor: 'hover:shadow-[#FF0000]/50'
+      hoverColor: 'hover:shadow-[#FF0000]/50',
+      link:"/socials/youtube"
     },
     { 
       name: 'Pinterest', 
       value: 'pinterest', 
       icon: FaPinterest, 
       color: 'from-[#E60023] to-[#bd001c]',
-      hoverColor: 'hover:shadow-[#E60023]/50'
+      hoverColor: 'hover:shadow-[#E60023]/50',
+      link:"/socials/pinterest"
     },
     { 
       name: 'Reddit', 
       value: 'reddit', 
       icon: FaReddit, 
       color: 'from-[#FF4500] to-[#d63a00]',
-      hoverColor: 'hover:shadow-[#FF4500]/50'
+      hoverColor: 'hover:shadow-[#FF4500]/50',
+      link:"/socials/reddit"
     },
     { 
       name: 'Threads', 
       value: 'threads', 
       icon: SiThreads, 
       color: 'from-[#000000] to-[#333333]',
-      hoverColor: 'hover:shadow-gray-700/50'
+      hoverColor: 'hover:shadow-gray-700/50',
+      link:"/socials/threads"
     },
     { 
       name: 'Google Business', 
@@ -96,7 +106,8 @@ const SocialConnector = ({ redirectUrl }) => {
         </div>
       ),
       color: 'from-[#4285F4] to-[#34a853]',
-      hoverColor: 'hover:shadow-[#4285F4]/50'
+      hoverColor: 'hover:shadow-[#4285F4]/50',
+      link:"/socials/google"
     }
   ];
 
@@ -241,24 +252,6 @@ const SocialConnector = ({ redirectUrl }) => {
     
     try {
       const params = new URLSearchParams();
-      // const platformsWithRedirect = [
-      //                                 'facebook',
-      //                                 'instagram',
-      //                                 'linkedin',
-      //                                 'twitter',
-      //                                 'tiktok',
-      //                                 'youtube',
-      //                                 'threads',
-      //                                 'reddit',
-      //                                 'pinterest',
-      //                                 'bluesky',
-      //                                 'googlebusiness'
-      //                               ];
-      
-      // if (redirectUrl && platformsWithRedirect.includes(platform.toLowerCase())) {
-      //   params.append('redirect_url', redirectUrl);
-      // }
-
       const response = await fetch(
         `/api/social/connect/${platform}${params.toString() ? `?${params}` : ''}`,
         {
@@ -615,44 +608,117 @@ const SocialConnector = ({ redirectUrl }) => {
         )}
 
         {/* Platform Grid */}
-        <motion.div
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: { staggerChildren: 0.08 }
-            }
-          }}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {platforms.map((platform) => {
-            const Icon = platform.icon;
-            const isConnecting = connecting === platform.value;
-            const isConnected = profile?.socialAccounts?.some(
-              acc => acc.platform.toLowerCase() === platform.value.toLowerCase()
-            );
-
-            return (
               <motion.div
-                key={platform.value}
-                variants={{
-                  hidden: { y: 20, opacity: 0 },
-                  visible: {
-                    y: 0,
-                    opacity: 1,
-                    transition: {
-                      type: "spring",
-                      stiffness: 100,
-                      damping: 12
-                    }
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.08 }
+          }
+        }}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
+        {platforms.map((platform) => {
+          const Icon = platform.icon;
+          const isConnecting = connecting === platform.value;
+          const isConnected = profile?.socialAccounts?.some(
+            acc => acc.platform.toLowerCase() === platform.value.toLowerCase()
+          );
+
+          return (
+            <motion.div
+              key={platform.value}
+              variants={{
+                hidden: { y: 20, opacity: 0 },
+                visible: {
+                  y: 0,
+                  opacity: 1,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 12
                   }
-                }}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className="group relative"
-              >
+                }
+              }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="group relative"
+            >
+              {/* ✅ If connected, wrap in Link; if not, use button */}
+              {isConnected ? (
+                <Link
+                  href={platform.link}
+                  className={`
+                    w-full bg-white rounded-xl p-6 
+                    shadow-md hover:shadow-xl 
+                    ${platform.hoverColor}
+                    transition-all duration-300
+                    border border-gray-200
+                    relative overflow-hidden
+                    ring-2 ring-green-500
+                    flex flex-col items-center
+                    cursor-pointer
+                  `}
+                >
+                  <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                    <FaCheckCircle className="text-white text-sm" />
+                  </div>
+
+                  <div className={`
+                    absolute inset-0 bg-gradient-to-r ${platform.color} 
+                    opacity-0 group-hover:opacity-5 transition-opacity duration-300
+                  `} />
+
+                  <div className="relative z-10 flex flex-col items-center space-y-4 w-full">
+                    <motion.div
+                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                      transition={{ duration: 0.5 }}
+                      className={`
+                        w-16 h-16 rounded-full 
+                        bg-gradient-to-r ${platform.color}
+                        flex items-center justify-center
+                        shadow-lg relative
+                      `}
+                    >
+                      <Icon className="text-white text-3xl" />
+                    </motion.div>
+
+                    <div className="text-center">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                        {platform.name}
+                      </h3>
+                      
+                      <div className="flex items-center justify-center space-x-2">
+                        <span className="text-sm font-medium text-green-600">
+                          Connected
+                        </span>
+                      </div>
+                    </div>
+
+                    <motion.div
+                      initial={{ x: 0 }}
+                      whileHover={{ x: 5 }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg 
+                        className="w-5 h-5 text-gray-400" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M9 5l7 7-7 7" 
+                        />
+                      </svg>
+                    </motion.div>
+                  </div>
+                </Link>
+              ) : (
                 <button
                   onClick={() => handleConnect(platform.value)}
                   disabled={isConnecting || profileStatus !== 'ready'}
@@ -664,15 +730,8 @@ const SocialConnector = ({ redirectUrl }) => {
                     border border-gray-200
                     disabled:opacity-70 disabled:cursor-not-allowed
                     relative overflow-hidden
-                    ${isConnected ? 'ring-2 ring-green-500' : ''}
                   `}
                 >
-                  {isConnected && (
-                    <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                      <FaCheckCircle className="text-white text-sm" />
-                    </div>
-                  )}
-
                   <div className={`
                     absolute inset-0 bg-gradient-to-r ${platform.color} 
                     opacity-0 group-hover:opacity-5 transition-opacity duration-300
@@ -713,10 +772,6 @@ const SocialConnector = ({ redirectUrl }) => {
                               Connecting...
                             </span>
                           </>
-                        ) : isConnected ? (
-                          <span className="text-sm font-medium text-green-600">
-                            Connected
-                          </span>
                         ) : (
                           <span className={`
                             text-sm font-medium bg-gradient-to-r ${platform.color}
@@ -729,33 +784,33 @@ const SocialConnector = ({ redirectUrl }) => {
                       </div>
                     </div>
 
-                    {!isConnected && (
-                      <motion.div
-                        initial={{ x: 0 }}
-                        whileHover={{ x: 5 }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    <motion.div
+                      initial={{ x: 0 }}
+                      whileHover={{ x: 5 }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg 
+                        className="w-5 h-5 text-gray-400" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
                       >
-                        <svg 
-                          className="w-5 h-5 text-gray-400" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={2} 
-                            d="M9 5l7 7-7 7" 
-                          />
-                        </svg>
-                      </motion.div>
-                    )}
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M9 5l7 7-7 7" 
+                        />
+                      </svg>
+                    </motion.div>
                   </div>
                 </button>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+              )}
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
 
         {/* Info Section */}
         <motion.div
