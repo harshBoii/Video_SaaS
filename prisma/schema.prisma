@@ -894,6 +894,7 @@ model LateProfile {
 model SocialAccount {
   id            String   @id @default(cuid())
   profileId     String
+  accountId     String    @default("")
   companyId     String   // Direct relation to Company
   platform      SocialPlatform
   username      String   @db.VarChar(255)

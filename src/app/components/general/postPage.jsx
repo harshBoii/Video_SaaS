@@ -21,6 +21,7 @@ import {
   FaSearch
 } from 'react-icons/fa';
 import { SiThreads } from 'react-icons/si';
+import CreatePostModal from './postModal';
 
 const PostsPage = () => {
   const [posts, setPosts] = useState([]);
@@ -31,7 +32,11 @@ const PostsPage = () => {
     total: 0,
     pages: 0
   });
+  const [modalOpen,setModalOpen] = useState(false)
 
+  const OpenModal = async ()=>{
+    setModalOpen(true)
+  }
   // Filters
   const [filters, setFilters] = useState({
     status: '',
@@ -280,12 +285,12 @@ const PostsPage = () => {
                 ? 'Try adjusting your filters'
                 : 'Create your first post to get started'}
             </p>
-            <Link
-              href="/admin/create-post"
+            <button
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={()=>OpenModal()}
             >
               Create Post
-            </Link>
+            </button>
           </div>
         ) : (
           <>
@@ -453,6 +458,14 @@ const PostsPage = () => {
           </>
         )}
       </div>
+      <CreatePostModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={(result) => {
+          console.log('Post created:', result);
+        }}
+      />
+
     </div>
   );
 };
