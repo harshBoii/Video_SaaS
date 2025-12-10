@@ -22,8 +22,9 @@ import { MdBusiness, MdClose } from 'react-icons/md';
 import { HiLightningBolt } from 'react-icons/hi';
 import Link from 'next/link';
 import { showConfirm } from '@/app/lib/swal';
+import customSwal from '@/app/lib/swal';
 
-const SocialConnector = () => {
+const SocialConnector = ({ redirectUrl }) => {
   const [profileStatus, setProfileStatus] = useState('loading');
   const [profile, setProfile] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -124,6 +125,15 @@ const SocialConnector = () => {
 
       const data = await response.json();
 
+      fetch('/api/social/accounts/sync',{
+        method:'POST',
+        headers:{
+          'Content-Type': 'application/json',
+        },
+        credentials:'include',
+      })
+
+
       if (data.hasProfile) {
         setProfileStatus('ready');
         setProfile(data.profile);
@@ -188,7 +198,15 @@ const SocialConnector = () => {
       }
 
       const data = await response.json();
-      // fetch()
+
+      fetch('api/social/accounts/sync',{
+        method:'POST',
+        headers:{
+          'Content-Type': 'application/json',
+        },
+        credentials:'include',
+      })
+
       setProfile(data.profile);
       setProfileStatus('ready');
       setShowModal(false);
@@ -202,65 +220,72 @@ const SocialConnector = () => {
     }
   };
 
-const deleteProfile = async () => {
-  const result = await showConfirm(
+  const deleteProfile = async () => {
+    const confirmed = await showConfirm(
     '⚠️ Are you sure you want to delete your profile?',
     'This will disconnect all social accounts and cannot be undone.',
     'Yes, delete',
     'No'
   );
+    
+    if (!confirmed.isConfirmed) return;
 
-  if (!result.isConfirmed) return;
+    setDeletingProfile(true);
+    setError(null);
 
-  setDeletingProfile(true);
-  setError(null);
+    try {
+      customSwal.fire({
+                        title: 'Deleting...',
+                        allowOutsideClick: false,
+                        didOpen: () => customSwal.showLoading()
+                      });
 
-  try {
+      const response = await fetch('/api/social/profile', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-    customSwal.fire({
-                      title: 'Deleting...',
-                      allowOutsideClick: false,
-                      didOpen: () => customSwal.showLoading()
-                    });
-
-
-    const response = await fetch('/api/social/profile', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete profile');
       }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to delete profile');
+      customSwal.close()
+      setProfile(null);
+      setProfileStatus('needsSetup');
+      setShowModal(true);
+      toast.success('Profile deleted successfully', { icon: '✅' });
+    } catch (error) {
+      customSwal.close()
+      console.error('Profile deletion error:', error);
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setDeletingProfile(false);
     }
-
-    setProfile(null);
-    setProfileStatus('needsSetup');
-    setShowModal(true);
-
-    toast.success('Profile deleted successfully', { icon: '✅' });
-  } catch (error) {
-    console.error('Profile deletion error:', error);
-    setError(error.message);
-    toast.error(error.message);
-  } finally {
-    setDeletingProfile(false);
-  }
-};
+  };
 
   const deleteAccount = async (accountId, platform, username) => {
-    const confirmed = window.confirm(
-      `⚠️ Are you sure you want to disconnect ${platform} account (@${username})?\n\nYou can reconnect it later.`
+    const confirmed = await showConfirm(
+      `⚠️ Are you sure you want to disconnect ${platform} (@${username})?`,
+      'You can reconnect it later.',
+      'Disconnect',
+      'Keep Connected'
     );
     
-    if (!confirmed) return;
+    if (!confirmed.isConfirmed) return;
 
     setDeletingAccount(accountId);
     setError(null);
 
     try {
+      customSwal.fire({
+                  title: 'Deleting...',
+                  allowOutsideClick: false,
+                  didOpen: () => customSwal.showLoading()
+                });
+
       const response = await fetch(`/api/social/accounts/${accountId}`, {
         method: 'DELETE',
         headers: {
@@ -274,12 +299,13 @@ const deleteProfile = async () => {
       }
 
       await checkProfileStatus();
-      
+      customSwal.close()
       toast.success(`${platform} account disconnected successfully`, {
         icon: '✅',
         duration: 4000
       });
     } catch (error) {
+      customSwal.close()
       console.error('Account deletion error:', error);
       setError(error.message);
       toast.error(error.message);
@@ -713,7 +739,7 @@ const deleteProfile = async () => {
               >
                 {isConnected ? (
                   <Link
-                    href={platform.link}
+                    href={''}
                     className={`
                       w-full bg-white rounded-xl p-6 
                       shadow-md hover:shadow-xl 

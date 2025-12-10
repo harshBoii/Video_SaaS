@@ -67,26 +67,27 @@ export async function POST(request) {
       try {
         const socialAccount = await prisma.socialAccount.upsert({
           where: {
-            lateProfileId_platform: {
-              lateProfileId: profile.id,
-              platform: account.platform
+            profileId_platform: {
+              profileId: profile.id,
+              platform: account.platform.toUpperCase()
             }
           },
           update: {
             accountId: account._id,
-            username: account.username || account.displayName,
+            username: account.displayName,
             displayName: account.displayName || account.username,
-            profilePicture: account.profilePicture || null,
+            // avatarUrl: account.profilePicture || null,
             isActive: true,
             updatedAt: new Date()
           },
           create: {
-            lateProfileId: profile.id,
-            platform: account.platform,
+            profileId: profile.id,
+            platform: account.platform.toUpperCase(),
+            companyId:companyId,
             accountId: account._id,
             username: account.username || account.displayName,
             displayName: account.displayName || account.username,
-            profilePicture: account.profilePicture || null,
+            // profilePicture: account.profilePicture || null,
             isActive: true
           }
         });
