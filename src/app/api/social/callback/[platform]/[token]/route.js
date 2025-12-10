@@ -132,6 +132,8 @@ export async function GET(request, { params }) {
 
     // Fallback success
     await prisma.connectionToken.delete({ where: { token } });
+
+    syncAccountsInBackground(companyId, request);
     return NextResponse.redirect(
       new URL(`/admin/integration?success=true&platform=${platform}`, request.url)
     );
@@ -142,4 +144,33 @@ export async function GET(request, { params }) {
       new URL(`/admin/integration?error=server_error&message=${encodeURIComponent(error.message)}`, request.url)
     );
   }
+}
+
+function syncAccountsInBackground(companyId, request) {
+  // Get base URL
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                  `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`;
+
+  // Make async call without await (fire-and-forget)
+  fetch(`${baseUrl}/api/social/accounts/sync`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-company-id': companyId, // Pass companyId in header for auth
+    },
+    body: JSON.stringify({ companyId })
+  })
+    .then(response => {
+      if (response.ok) {
+        console.log('✅ Background sync initiated successfully');
+      } else {
+        console.error('⚠️ Background sync failed:', response.status);
+      }
+    })
+    .catch(error => {
+      console.error('⚠️ Background sync error:', error.message);
+      // Don't throw - this is fire-and-forget
+    });
+
+  console.log('🔄 Background account sync triggered (non-blocking)');
 }
