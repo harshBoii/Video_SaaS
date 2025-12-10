@@ -44,7 +44,8 @@ export async function GET(request) {
             platform: true,
             username: true,
             displayName: true,
-            avatarUrl: true
+            avatarUrl: true,
+            accountId:true
           }
         }
       }

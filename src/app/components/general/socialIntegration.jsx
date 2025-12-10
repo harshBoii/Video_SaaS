@@ -21,8 +21,9 @@ import { SiThreads } from 'react-icons/si';
 import { MdBusiness, MdClose } from 'react-icons/md';
 import { HiLightningBolt } from 'react-icons/hi';
 import Link from 'next/link';
+import { showConfirm } from '@/app/lib/swal';
 
-const SocialConnector = ({ redirectUrl }) => {
+const SocialConnector = () => {
   const [profileStatus, setProfileStatus] = useState('loading');
   const [profile, setProfile] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -30,7 +31,7 @@ const SocialConnector = ({ redirectUrl }) => {
   const [connecting, setConnecting] = useState(null);
   const [error, setError] = useState(null);
   const [deletingProfile, setDeletingProfile] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(null); // Track which account is being deleted
+  const [deletingAccount, setDeletingAccount] = useState(null);
 
   const platforms = [
     { 
@@ -187,7 +188,7 @@ const SocialConnector = ({ redirectUrl }) => {
       }
 
       const data = await response.json();
-      
+      // fetch()
       setProfile(data.profile);
       setProfileStatus('ready');
       setShowModal(false);
@@ -201,43 +202,54 @@ const SocialConnector = ({ redirectUrl }) => {
     }
   };
 
-  const deleteProfile = async () => {
-    const confirmed = window.confirm(
-      '⚠️ Are you sure you want to delete your profile?\n\nThis will disconnect all social accounts and cannot be undone.'
-    );
-    
-    if (!confirmed) return;
+const deleteProfile = async () => {
+  const result = await showConfirm(
+    '⚠️ Are you sure you want to delete your profile?',
+    'This will disconnect all social accounts and cannot be undone.',
+    'Yes, delete',
+    'No'
+  );
 
-    setDeletingProfile(true);
-    setError(null);
+  if (!result.isConfirmed) return;
 
-    try {
-      const response = await fetch('/api/social/profile', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+  setDeletingProfile(true);
+  setError(null);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete profile');
+  try {
+
+    customSwal.fire({
+                      title: 'Deleting...',
+                      allowOutsideClick: false,
+                      didOpen: () => customSwal.showLoading()
+                    });
+
+
+    const response = await fetch('/api/social/profile', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
       }
+    });
 
-      setProfile(null);
-      setProfileStatus('needsSetup');
-      setShowModal(true);
-      toast.success('Profile deleted successfully', { icon: '✅' });
-    } catch (error) {
-      console.error('Profile deletion error:', error);
-      setError(error.message);
-      toast.error(error.message);
-    } finally {
-      setDeletingProfile(false);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete profile');
     }
-  };
 
-  // 🔥 NEW: Delete individual social account
+    setProfile(null);
+    setProfileStatus('needsSetup');
+    setShowModal(true);
+
+    toast.success('Profile deleted successfully', { icon: '✅' });
+  } catch (error) {
+    console.error('Profile deletion error:', error);
+    setError(error.message);
+    toast.error(error.message);
+  } finally {
+    setDeletingProfile(false);
+  }
+};
+
   const deleteAccount = async (accountId, platform, username) => {
     const confirmed = window.confirm(
       `⚠️ Are you sure you want to disconnect ${platform} account (@${username})?\n\nYou can reconnect it later.`
@@ -261,7 +273,6 @@ const SocialConnector = ({ redirectUrl }) => {
         throw new Error(errorData.error || 'Failed to disconnect account');
       }
 
-      // Refresh profile to update UI
       await checkProfileStatus();
       
       toast.success(`${platform} account disconnected successfully`, {
@@ -393,7 +404,6 @@ const SocialConnector = ({ redirectUrl }) => {
         }}
       />
 
-      {/* Setup Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -441,7 +451,7 @@ const SocialConnector = ({ redirectUrl }) => {
                     Welcome Aboard!
                   </h2>
                   <p className="text-blue-100">
-                    Let's set up your social media hub
+                    Let&apos;s set up your social media hub
                   </p>
                 </motion.div>
               </div>
@@ -471,7 +481,7 @@ const SocialConnector = ({ redirectUrl }) => {
                   <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
                     <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                       <HiLightningBolt className="mr-2 text-purple-600" />
-                      What you'll get:
+                      What you&apos;ll get:
                     </h4>
                     <ul className="space-y-2 text-sm text-gray-700">
                       <li className="flex items-start">
@@ -535,7 +545,6 @@ const SocialConnector = ({ redirectUrl }) => {
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
       <div className="max-w-5xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -605,7 +614,6 @@ const SocialConnector = ({ redirectUrl }) => {
           </div>
         </motion.div>
 
-        {/* Connected Accounts Section */}
         {profile?.socialAccounts && profile.socialAccounts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -635,12 +643,11 @@ const SocialConnector = ({ redirectUrl }) => {
                     </p>
                   </div>
                   
-                  {/* 🔥 Delete button for each account */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteAccount(
-                        account.lateAccountId,
+                        account.accountId,
                         account.platform,
                         account.username
                       );
@@ -665,7 +672,6 @@ const SocialConnector = ({ redirectUrl }) => {
           </motion.div>
         )}
 
-        {/* Platform Grid */}
         <motion.div
           variants={{
             hidden: { opacity: 0 },
@@ -720,18 +726,16 @@ const SocialConnector = ({ redirectUrl }) => {
                       cursor-pointer
                     `}
                   >
-                    {/* Connected checkmark */}
                     <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
                       <FaCheckCircle className="text-white text-sm" />
                     </div>
 
-                    {/* 🔥 Delete button - shows on hover */}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         deleteAccount(
-                          connectedAccount.lateAccountId,
+                          connectedAccount.accountId,
                           platform.name,
                           connectedAccount.username
                         );

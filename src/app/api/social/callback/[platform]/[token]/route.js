@@ -133,7 +133,7 @@ export async function GET(request, { params }) {
     // Fallback success
     await prisma.connectionToken.delete({ where: { token } });
 
-    syncAccountsInBackground(companyId, request);
+    await syncAccountsInBackground(companyId, request);
     return NextResponse.redirect(
       new URL(`/admin/integration?success=true&platform=${platform}`, request.url)
     );
@@ -146,7 +146,7 @@ export async function GET(request, { params }) {
   }
 }
 
-function syncAccountsInBackground(companyId, request) {
+async function syncAccountsInBackground(companyId, request) {
   // Get base URL
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
                   `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`;

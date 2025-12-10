@@ -5,12 +5,8 @@
 // }
 
 
-import SocialConnector from "@/app/components/general/VideoIntegration"
+import SocialConnector from "@/app/components/general/socialIntegration"
 export default function IntegrationPage(){
-    return <SocialConnector 
-            apiKey="your_late_api_key"
-            profileId="your_profile_id"
-            redirectUrl="https://yourapp.com/callback"
-            />
+    return <SocialConnector/>
 
 }
