@@ -18,7 +18,7 @@ export async function DELETE(request, { params }) {
     // Find the account in database
     const account = await prisma.socialAccount.findFirst({
       where: {
-        lateAccountId: accountId,
+        accountId: accountId,
         companyId: companyId
       }
     });
