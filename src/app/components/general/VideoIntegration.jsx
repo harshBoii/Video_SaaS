@@ -14,7 +14,8 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaRocket,
-  FaTrash
+  FaTrash,
+  FaTimes
 } from 'react-icons/fa';
 import { SiThreads } from 'react-icons/si';
 import { MdBusiness, MdClose } from 'react-icons/md';
@@ -29,6 +30,7 @@ const SocialConnector = ({ redirectUrl }) => {
   const [connecting, setConnecting] = useState(null);
   const [error, setError] = useState(null);
   const [deletingProfile, setDeletingProfile] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(null); // Track which account is being deleted
 
   const platforms = [
     { 
@@ -46,7 +48,6 @@ const SocialConnector = ({ redirectUrl }) => {
       color: 'from-[#E4405F] to-[#9C27B0]',
       hoverColor: 'hover:shadow-[#E4405F]/50',
       link:"/socials/instagram"
-
     },
     { 
       name: 'Facebook', 
@@ -111,7 +112,6 @@ const SocialConnector = ({ redirectUrl }) => {
     }
   ];
 
-  // ✅ Wrapped in useCallback to prevent dependency issues
   const checkProfileStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/social/profile', {
@@ -137,7 +137,6 @@ const SocialConnector = ({ redirectUrl }) => {
       setProfileStatus('needsSetup');
     }
   }, []);
-
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -166,7 +165,6 @@ const SocialConnector = ({ redirectUrl }) => {
     }
   }, [checkProfileStatus]);
 
-  // Initial profile check
   useEffect(() => {
     checkProfileStatus();
   }, [checkProfileStatus]);
@@ -203,7 +201,6 @@ const SocialConnector = ({ redirectUrl }) => {
     }
   };
 
-  // ✅ Added confirmation dialog
   const deleteProfile = async () => {
     const confirmed = window.confirm(
       '⚠️ Are you sure you want to delete your profile?\n\nThis will disconnect all social accounts and cannot be undone.'
@@ -237,6 +234,46 @@ const SocialConnector = ({ redirectUrl }) => {
       toast.error(error.message);
     } finally {
       setDeletingProfile(false);
+    }
+  };
+
+  // 🔥 NEW: Delete individual social account
+  const deleteAccount = async (accountId, platform, username) => {
+    const confirmed = window.confirm(
+      `⚠️ Are you sure you want to disconnect ${platform} account (@${username})?\n\nYou can reconnect it later.`
+    );
+    
+    if (!confirmed) return;
+
+    setDeletingAccount(accountId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/social/accounts/${accountId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to disconnect account');
+      }
+
+      // Refresh profile to update UI
+      await checkProfileStatus();
+      
+      toast.success(`${platform} account disconnected successfully`, {
+        icon: '✅',
+        duration: 4000
+      });
+    } catch (error) {
+      console.error('Account deletion error:', error);
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setDeletingAccount(null);
     }
   };
 
@@ -330,7 +367,6 @@ const SocialConnector = ({ redirectUrl }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-      {/* ✅ Toast Notifications */}
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -376,7 +412,6 @@ const SocialConnector = ({ redirectUrl }) => {
               className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header */}
               <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -411,7 +446,6 @@ const SocialConnector = ({ redirectUrl }) => {
                 </motion.div>
               </div>
 
-              {/* Modal Body */}
               <div className="p-8">
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
@@ -540,7 +574,6 @@ const SocialConnector = ({ redirectUrl }) => {
               </motion.button>
             )}
 
-            {/* ✅ Delete Profile Button with Loading State */}
             {profileStatus === 'ready' && (
               <motion.button
                 onClick={deleteProfile}
@@ -584,11 +617,11 @@ const SocialConnector = ({ redirectUrl }) => {
               {profile.socialAccounts.map((account) => (
                 <div
                   key={account.id}
-                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="relative flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
                 >
-                  {account.avatarUrl && (
+                  {account.profilePicture && (
                     <img 
-                      src={account.avatarUrl} 
+                      src={account.profilePicture} 
                       alt={account.username}
                       className="w-10 h-10 rounded-full object-cover"
                     />
@@ -601,6 +634,31 @@ const SocialConnector = ({ redirectUrl }) => {
                       {account.platform.toLowerCase()}
                     </p>
                   </div>
+                  
+                  {/* 🔥 Delete button for each account */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteAccount(
+                        account.lateAccountId,
+                        account.platform,
+                        account.username
+                      );
+                    }}
+                    disabled={deletingAccount === account.lateAccountId}
+                    className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`Disconnect ${account.platform}`}
+                  >
+                    {deletingAccount === account.lateAccountId ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        className="w-3 h-3 border-2 border-white border-t-transparent rounded-full"
+                      />
+                    ) : (
+                      <FaTimes className="text-xs" />
+                    )}
+                  </button>
                 </div>
               ))}
             </div>
@@ -608,239 +666,234 @@ const SocialConnector = ({ redirectUrl }) => {
         )}
 
         {/* Platform Grid */}
-              <motion.div
-        variants={{
-          hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.08 }
-          }
-        }}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {platforms.map((platform) => {
-          const Icon = platform.icon;
-          const isConnecting = connecting === platform.value;
-          const isConnected = profile?.socialAccounts?.some(
-            acc => acc.platform.toLowerCase() === platform.value.toLowerCase()
-          );
-
-          return (
-            <motion.div
-              key={platform.value}
-              variants={{
-                hidden: { y: 20, opacity: 0 },
-                visible: {
-                  y: 0,
-                  opacity: 1,
-                  transition: {
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 12
-                  }
-                }
-              }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="group relative"
-            >
-              {/* ✅ If connected, wrap in Link; if not, use button */}
-              {isConnected ? (
-                <Link
-                  href={platform.link}
-                  className={`
-                    w-full bg-white rounded-xl p-6 
-                    shadow-md hover:shadow-xl 
-                    ${platform.hoverColor}
-                    transition-all duration-300
-                    border border-gray-200
-                    relative overflow-hidden
-                    ring-2 ring-green-500
-                    flex flex-col items-center
-                    cursor-pointer
-                  `}
-                >
-                  <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                    <FaCheckCircle className="text-white text-sm" />
-                  </div>
-
-                  <div className={`
-                    absolute inset-0 bg-gradient-to-r ${platform.color} 
-                    opacity-0 group-hover:opacity-5 transition-opacity duration-300
-                  `} />
-
-                  <div className="relative z-10 flex flex-col items-center space-y-4 w-full">
-                    <motion.div
-                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                      transition={{ duration: 0.5 }}
-                      className={`
-                        w-16 h-16 rounded-full 
-                        bg-gradient-to-r ${platform.color}
-                        flex items-center justify-center
-                        shadow-lg relative
-                      `}
-                    >
-                      <Icon className="text-white text-3xl" />
-                    </motion.div>
-
-                    <div className="text-center">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-1">
-                        {platform.name}
-                      </h3>
-                      
-                      <div className="flex items-center justify-center space-x-2">
-                        <span className="text-sm font-medium text-green-600">
-                          Connected
-                        </span>
-                      </div>
-                    </div>
-
-                    <motion.div
-                      initial={{ x: 0 }}
-                      whileHover={{ x: 5 }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <svg 
-                        className="w-5 h-5 text-gray-400" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M9 5l7 7-7 7" 
-                        />
-                      </svg>
-                    </motion.div>
-                  </div>
-                </Link>
-              ) : (
-                <button
-                  onClick={() => handleConnect(platform.value)}
-                  disabled={isConnecting || profileStatus !== 'ready'}
-                  className={`
-                    w-full bg-white rounded-xl p-6 
-                    shadow-md hover:shadow-xl 
-                    ${platform.hoverColor}
-                    transition-all duration-300
-                    border border-gray-200
-                    disabled:opacity-70 disabled:cursor-not-allowed
-                    relative overflow-hidden
-                  `}
-                >
-                  <div className={`
-                    absolute inset-0 bg-gradient-to-r ${platform.color} 
-                    opacity-0 group-hover:opacity-5 transition-opacity duration-300
-                  `} />
-
-                  <div className="relative z-10 flex flex-col items-center space-y-4">
-                    <motion.div
-                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                      transition={{ duration: 0.5 }}
-                      className={`
-                        w-16 h-16 rounded-full 
-                        bg-gradient-to-r ${platform.color}
-                        flex items-center justify-center
-                        shadow-lg relative
-                      `}
-                    >
-                      <Icon className="text-white text-3xl" />
-                    </motion.div>
-
-                    <div className="text-center">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-1">
-                        {platform.name}
-                      </h3>
-                      
-                      <div className="flex items-center justify-center space-x-2">
-                        {isConnecting ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ 
-                                repeat: Infinity, 
-                                duration: 1, 
-                                ease: "linear" 
-                              }}
-                              className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"
-                            />
-                            <span className="text-sm text-gray-500">
-                              Connecting...
-                            </span>
-                          </>
-                        ) : (
-                          <span className={`
-                            text-sm font-medium bg-gradient-to-r ${platform.color}
-                            bg-clip-text text-transparent
-                            group-hover:underline
-                          `}>
-                            Connect Account
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <motion.div
-                      initial={{ x: 0 }}
-                      whileHover={{ x: 5 }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <svg 
-                        className="w-5 h-5 text-gray-400" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M9 5l7 7-7 7" 
-                        />
-                      </svg>
-                    </motion.div>
-                  </div>
-                </button>
-              )}
-            </motion.div>
-          );
-        })}
-      </motion.div>
-
-
-        {/* Info Section */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
-          className="mt-12 bg-blue-50 border border-blue-200 rounded-lg p-6"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.08 }
+            }
+          }}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <div className="flex items-start space-x-3">
-            <svg 
-              className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" 
-              fill="currentColor" 
-              viewBox="0 0 20 20"
-            >
-              <path 
-                fillRule="evenodd" 
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
-                clipRule="evenodd" 
-              />
-            </svg>
-            <div>
-              <h4 className="text-sm font-semibold text-blue-900 mb-1">
-                Enterprise-Grade Security
-              </h4>
-              <p className="text-sm text-blue-700">
-                Your credentials are encrypted and securely stored using industry-standard protocols. 
-                You maintain full control and can disconnect any account at any time from your settings dashboard.
-              </p>
-            </div>
-          </div>
+          {platforms.map((platform) => {
+            const Icon = platform.icon;
+            const isConnecting = connecting === platform.value;
+            const connectedAccount = profile?.socialAccounts?.find(
+              acc => acc.platform.toLowerCase() === platform.value.toLowerCase()
+            );
+            const isConnected = !!connectedAccount;
+
+            return (
+              <motion.div
+                key={platform.value}
+                variants={{
+                  hidden: { y: 20, opacity: 0 },
+                  visible: {
+                    y: 0,
+                    opacity: 1,
+                    transition: {
+                      type: "spring",
+                      stiffness: 100,
+                      damping: 12
+                    }
+                  }
+                }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                className="group relative"
+              >
+                {isConnected ? (
+                  <Link
+                    href={platform.link}
+                    className={`
+                      w-full bg-white rounded-xl p-6 
+                      shadow-md hover:shadow-xl 
+                      ${platform.hoverColor}
+                      transition-all duration-300
+                      border border-gray-200
+                      relative overflow-hidden
+                      ring-2 ring-green-500
+                      flex flex-col items-center
+                      cursor-pointer
+                    `}
+                  >
+                    {/* Connected checkmark */}
+                    <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                      <FaCheckCircle className="text-white text-sm" />
+                    </div>
+
+                    {/* 🔥 Delete button - shows on hover */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteAccount(
+                          connectedAccount.lateAccountId,
+                          platform.name,
+                          connectedAccount.username
+                        );
+                      }}
+                      disabled={deletingAccount === connectedAccount.lateAccountId}
+                      className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                      title={`Disconnect ${platform.name}`}
+                    >
+                      {deletingAccount === connectedAccount.lateAccountId ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                        />
+                      ) : (
+                        <FaTrash className="text-sm" />
+                      )}
+                    </button>
+
+                    <div className={`
+                      absolute inset-0 bg-gradient-to-r ${platform.color} 
+                      opacity-0 group-hover:opacity-5 transition-opacity duration-300
+                    `} />
+
+                    <div className="relative z-10 flex flex-col items-center space-y-4 w-full">
+                      <motion.div
+                        whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                        transition={{ duration: 0.5 }}
+                        className={`
+                          w-16 h-16 rounded-full 
+                          bg-gradient-to-r ${platform.color}
+                          flex items-center justify-center
+                          shadow-lg relative
+                        `}
+                      >
+                        <Icon className="text-white text-3xl" />
+                      </motion.div>
+
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                          {platform.name}
+                        </h3>
+                        
+                        <div className="flex items-center justify-center space-x-2">
+                          <span className="text-sm font-medium text-green-600">
+                            Connected
+                          </span>
+                        </div>
+                      </div>
+
+                      <motion.div
+                        initial={{ x: 0 }}
+                        whileHover={{ x: 5 }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg 
+                          className="w-5 h-5 text-gray-400" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M9 5l7 7-7 7" 
+                          />
+                        </svg>
+                      </motion.div>
+                    </div>
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => handleConnect(platform.value)}
+                    disabled={isConnecting || profileStatus !== 'ready'}
+                    className={`
+                      w-full bg-white rounded-xl p-6 
+                      shadow-md hover:shadow-xl 
+                      ${platform.hoverColor}
+                      transition-all duration-300
+                      border border-gray-200
+                      disabled:opacity-70 disabled:cursor-not-allowed
+                      relative overflow-hidden
+                    `}
+                  >
+                    <div className={`
+                      absolute inset-0 bg-gradient-to-r ${platform.color} 
+                      opacity-0 group-hover:opacity-5 transition-opacity duration-300
+                    `} />
+
+                    <div className="relative z-10 flex flex-col items-center space-y-4">
+                      <motion.div
+                        whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                        transition={{ duration: 0.5 }}
+                        className={`
+                          w-16 h-16 rounded-full 
+                          bg-gradient-to-r ${platform.color}
+                          flex items-center justify-center
+                          shadow-lg relative
+                        `}
+                      >
+                        <Icon className="text-white text-3xl" />
+                      </motion.div>
+
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                          {platform.name}
+                        </h3>
+                        
+                        <div className="flex items-center justify-center space-x-2">
+                          {isConnecting ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ 
+                                  repeat: Infinity, 
+                                  duration: 1, 
+                                  ease: "linear" 
+                                }}
+                                className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"
+                              />
+                              <span className="text-sm text-gray-500">
+                                Connecting...
+                              </span>
+                            </>
+                          ) : (
+                            <span className={`
+                              text-sm font-medium bg-gradient-to-r ${platform.color}
+                              bg-clip-text text-transparent
+                              group-hover:underline
+                            `}>
+                              Connect Account
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <motion.div
+                        initial={{ x: 0 }}
+                        whileHover={{ x: 5 }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg 
+                          className="w-5 h-5 text-gray-400" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M9 5l7 7-7 7" 
+                          />
+                        </svg>
+                      </motion.div>
+                    </div>
+                  </button>
+                )}
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </div>
