@@ -21,7 +21,7 @@ import {
   FaSearch
 } from 'react-icons/fa';
 import { SiThreads } from 'react-icons/si';
-import CreatePostModal from './postModal';
+import CreatePostModal from './CreatePostModal';
 
 const PostsPage = () => {
   const [posts, setPosts] = useState([]);
