@@ -2,6 +2,8 @@ import React from 'react';
 import { FaInstagram } from 'react-icons/fa';
 
 const InstagramSettings = ({ settings, onChange }) => {
+  const isStory = settings.contentType === 'story';
+
   return (
     <div className="bg-gradient-to-r from-[#E4405F] via-[#DD2A7B] to-[#9C27B0] p-6 rounded-2xl text-white">
       <div className="flex items-center gap-3 mb-4">
@@ -14,7 +16,15 @@ const InstagramSettings = ({ settings, onChange }) => {
           <label className="block text-sm font-medium mb-2">Content Type</label>
           <select
             value={settings.contentType || ''}
-            onChange={(e) => onChange('contentType', e.target.value || null)}
+            onChange={(e) => {
+              const newType = e.target.value || null;
+              onChange('contentType', newType);
+              
+              // ✅ FIX: Auto-clear shareToFeed when switching to Story
+              if (newType === 'story') {
+                onChange('shareToFeed', undefined); // Remove the field
+              }
+            }}
             className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-white/50"
           >
             <option value="">Regular Post / Reel</option>
@@ -22,7 +32,8 @@ const InstagramSettings = ({ settings, onChange }) => {
           </select>
         </div>
         
-        {settings.contentType !== 'story' && (
+        {/* ✅ FIX: Only show shareToFeed for Reels, NOT for Stories */}
+        {!isStory && (
           <>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -58,6 +69,15 @@ const InstagramSettings = ({ settings, onChange }) => {
               />
             </div>
           </>
+        )}
+
+        {/* ✅ For Stories, show a helpful message */}
+        {isStory && (
+          <div className="bg-white/10 border border-white/30 rounded-xl p-4">
+            <p className="text-sm text-white/90">
+              📌 Instagram Stories are 24-hour ephemeral content. Collaborators and first comments are not available for Stories.
+            </p>
+          </div>
         )}
       </div>
     </div>

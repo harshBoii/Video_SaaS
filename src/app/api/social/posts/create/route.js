@@ -3,9 +3,15 @@ import prisma from '@/app/lib/prisma';
 import { getCompanyFromToken } from '@/app/lib/auth';
 import { generatePresignedUrl } from '@/app/lib/r2';
 
-// ============================================================================
-// POST - Create Social Media Post via Late API
-// ============================================================================
+// Helper to convert BigInt to Number for JSON serialization
+const serializeBigInt = (obj) => {
+  return JSON.parse(
+    JSON.stringify(obj, (key, value) =>
+      typeof value === 'bigint' ? Number(value) : value
+    )
+  );
+};
+
 export async function POST(request) {
   const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
@@ -66,7 +72,7 @@ export async function POST(request) {
       videoIds = [],
       title,
       content,
-      platforms = [], // Array of { platform, accountId, customContent?, scheduledFor?, platformSpecificData }
+      platforms = [],
       scheduledFor,
       publishNow = false,
       isDraft = false,
@@ -123,7 +129,7 @@ export async function POST(request) {
         where: {
           id: { in: videoIds },
           campaign: {
-            companyId: companyId, // Security: Ensure videos belong to this company
+            companyId: companyId,
           },
         },
         select: {
@@ -174,7 +180,7 @@ export async function POST(request) {
         const videoUrl = await generatePresignedUrl(
           video.r2Key,
           video.r2Bucket,
-          86400 // 24 hours
+          86400
         );
 
         console.log(`     ✓ Video URL generated (expires in 24h)`);
@@ -196,7 +202,7 @@ export async function POST(request) {
           filename: video.title || 'video.mp4',
           ...(video.duration && { duration: video.duration }),
           ...(width && height && { width, height }),
-          ...(video.originalSize && { size: video.originalSize }),
+          ...(video.originalSize && { size: Number(video.originalSize) }),
           mimeType: 'video/mp4',
         };
 
@@ -204,7 +210,6 @@ export async function POST(request) {
         if (video.thumbnailUrl) {
           try {
             if (video.thumbnailUrl.includes(video.r2Bucket)) {
-              // R2-hosted thumbnail - generate presigned URL
               const thumbnailKey = video.thumbnailUrl.split('/').pop();
               const signedThumbnail = await generatePresignedUrl(
                 `thumbnails/${thumbnailKey}`,
@@ -214,7 +219,6 @@ export async function POST(request) {
               mediaItem.thumbnail = signedThumbnail;
               console.log(`     ✓ Thumbnail signed (R2-hosted)`);
             } else {
-              // External URL
               mediaItem.thumbnail = video.thumbnailUrl;
               console.log(`     ✓ Thumbnail added (external URL)`);
             }
@@ -233,7 +237,7 @@ export async function POST(request) {
     }
 
     // ========================================================================
-    // STEP 6: Platform-Specific Validation
+    // STEP 6: Platform-Specific Validation (ENHANCED)
     // ========================================================================
     console.log(`\n📋 [${requestId}] STEP 6: Platform-Specific Validation`);
 
@@ -258,6 +262,70 @@ export async function POST(request) {
         { error: `${needsMedia.join(' and ')} posts require media` },
         { status: 400 }
       );
+    }
+
+    // ✅ Instagram Story Duration Validation
+    const instagramPlatform = platforms.find((p) => p.platform.toLowerCase() === 'instagram');
+    if (instagramPlatform) {
+      const instagramData = instagramPlatform.platformSpecificData;
+      
+      if (instagramData?.contentType === 'story' && mediaItems.length > 0) {
+        const videoItem = mediaItems[0];
+        const duration = videoItem.duration;
+        
+        console.log(`📱 [${requestId}] Instagram Story detected - validating...`);
+        console.log(`   - Video duration: ${duration}s`);
+        
+        // Instagram Stories: 3-60 seconds
+        if (duration < 3 || duration > 60) {
+          console.error(`❌ [${requestId}] Instagram Story duration invalid: ${duration}s`);
+          return NextResponse.json(
+            {
+              error: `Instagram Stories require videos between 3-60 seconds. Your video is ${duration} seconds.`,
+              details: {
+                platform: 'instagram',
+                contentType: 'story',
+                videoDuration: duration,
+                requiredRange: '3-60 seconds',
+                suggestion: duration > 60 
+                  ? 'Please trim your video to under 60 seconds' 
+                  : 'Video too short - must be at least 3 seconds',
+              },
+            },
+            { status: 400 }
+          );
+        }
+        
+        // Check video dimensions
+        if (videoItem.width && videoItem.height) {
+          const aspectRatio = videoItem.width / videoItem.height;
+          const isVertical = aspectRatio < 1;
+          
+          if (!isVertical) {
+            console.warn(`⚠️ [${requestId}] Warning: Video is not vertical (${aspectRatio.toFixed(2)})`);
+          } else {
+            console.log(`   ✓ Video is vertical (${aspectRatio.toFixed(2)})`);
+          }
+        }
+        
+        // Check file size (max 100MB)
+        if (videoItem.size) {
+          const sizeInMB = videoItem.size / (1024 * 1024);
+          console.log(`   - File size: ${sizeInMB.toFixed(2)}MB`);
+          
+          if (sizeInMB > 100) {
+            console.error(`❌ [${requestId}] File too large: ${sizeInMB.toFixed(2)}MB`);
+            return NextResponse.json(
+              {
+                error: `Instagram Stories require videos under 100MB. Your video is ${sizeInMB.toFixed(2)}MB.`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+        
+        console.log(`✅ [${requestId}] Instagram Story validation passed`);
+      }
     }
 
     // Validate TikTok settings
@@ -324,23 +392,31 @@ export async function POST(request) {
         console.log(`      ✓ Custom schedule: ${platformPayload.scheduledFor}`);
       }
 
-      // Add platformSpecificData with threadItems structure
+      // Process platformSpecificData
       if (p.platformSpecificData && Object.keys(p.platformSpecificData).length > 0) {
-        console.log(`      ✓ Platform-specific data:`, JSON.stringify(p.platformSpecificData, null, 8));
+        const platformData = { ...p.platformSpecificData };
         
-        // Build threadItems for video posts
-        if (mediaItems.length > 0) {
-          const threadItems = mediaItems.map((media) => ({
-            content: p.customContent || content || '',
-            mediaItems: [media],
-          }));
+        // Instagram Story Fix: Remove shareToFeed
+        if (p.platform.toLowerCase() === 'instagram') {
+          if (platformData.contentType === 'story') {
+            console.log(`      ⚠️ Instagram Story - removing shareToFeed`);
+            delete platformData.shareToFeed;
+          }
+        }
 
+        console.log(`      ✓ Platform-specific data:`, JSON.stringify(platformData, null, 8));
+        
+        // Build threadItems structure
+        if (mediaItems.length > 0) {
           platformPayload.platformSpecificData = {
-            threadItems,
-            ...p.platformSpecificData, // Merge other platform-specific settings
+            ...platformData,
+            threadItems: [{
+              content: p.customContent || content || '',
+              mediaItems: mediaItems,
+            }],
           };
         } else {
-          platformPayload.platformSpecificData = p.platformSpecificData;
+          platformPayload.platformSpecificData = platformData;
         }
       }
 
@@ -379,7 +455,7 @@ export async function POST(request) {
     };
 
     console.log(`\n📦 [${requestId}] Complete Late API Payload:`);
-    console.log(JSON.stringify(latePayload, null, 2));
+    console.log(JSON.stringify(serializeBigInt(latePayload), null, 2));
 
     // ========================================================================
     // STEP 8: Call Late API
@@ -396,7 +472,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.LATE_API_KEY}`,
       },
-      body: JSON.stringify(latePayload),
+      body: JSON.stringify(serializeBigInt(latePayload)),
     });
 
     const lateResponseTime = Date.now() - lateStartTime;
@@ -421,74 +497,218 @@ export async function POST(request) {
     console.log(`\n✅ [${requestId}] Late API Success!`);
     console.log(`📊 [${requestId}] Late Response:`, JSON.stringify(lateResult, null, 2));
 
-    // ========================================================================
-    // STEP 9: Save to Database
-    // ========================================================================
-    console.log(`\n📋 [${requestId}] STEP 9: Saving to Database`);
+// ========================================================================
+// STEP 9: Save to Database - ONE SocialPost PER PLATFORM
+// ========================================================================
+    console.log(`\n📋 [${requestId}] STEP 9: Saving to Database (per-platform)`);
 
-    let savedPost = null;
+    // Will hold all created local posts (one per platform)
+    let savedPosts= [];
+    let baseStatus;
+
     try {
-      savedPost = await prisma.socialPost.create({
-        data: {
-          latePostId: lateResult._id || lateResult.id,
-          companyId: companyId,
-          socialAccountId: platforms[0]?.accountId, // First platform's accountId
-          ...(videoIds[0] && { videoId: videoIds[0] }),
-          title: title || null,
-          content: content || null,
-          status: isDraft ? 'DRAFT' : publishNow ? 'PUBLISHING' : 'SCHEDULED',
-          scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
-          timezone: timezone,
-          tags: normTags,
-          hashtags: normHashtags,
-          mentions: normMentions,
-          platformConfig: latePayload, // Store entire config for reference
-          metadata: {
-            ...lateResult,
-            requestId,
-            platforms: platformTypes,
-          },
-        },
-      });
+      // Extract Late Post ID once
+      const latePostId =
+        lateResult.post?._id || lateResult._id || lateResult.id || null;
 
-      console.log(`✅ [${requestId}] Post saved to database - ID: ${savedPost.id}`);
+      const hasErrors =
+        lateResult.error ||
+        lateResult.platformResults?.some((p) => p.status === 'failed');
+      const allFailed =
+        lateResult.platformResults &&
+        lateResult.platformResults.every((p) => p.status === 'failed');
+
+      // Decide base status once
+
+      if (allFailed) baseStatus = 'FAILED';
+      else if (isDraft) baseStatus = 'DRAFT';
+      else if (publishNow) baseStatus = hasErrors ? 'FAILED' : 'PUBLISHING';
+      else baseStatus = 'SCHEDULED';
+
+      console.log(`   - Late Post ID: ${latePostId}`);
+      console.log(`   - Base Status: ${baseStatus}`);
+
+      // Loop over each selected platform from the frontend
+      for (const p of platforms) {
+        console.log(`\n   💾 Creating SocialPost for platform: ${p.platform}`);
+        console.log(`      - Late accountId: ${p.accountId}`);
+
+        if (!p.accountId) {
+          console.warn(`      ⚠️ Skipping: no accountId provided for this platform`);
+          continue;
+        }
+
+        // 1) Map Late accountId → local SocialAccount.id
+        const localAccount = await prisma.socialAccount.findFirst({
+          where: {
+            accountId: p.accountId, // Late's accountId stored in your table
+            companyId,
+          },
+          select: {
+            id: true,
+            platform: true,
+            username: true,
+          },
+        });
+
+        if (!localAccount) {
+          console.warn(
+            `      ❌ No local SocialAccount found for Late accountId=${p.accountId} (platform=${p.platform})`
+          );
+          continue;
+        }
+
+        console.log(`      ✅ Found local SocialAccount:`);
+        console.log(`         - Local ID: ${localAccount.id}`);
+        console.log(`         - Platform: ${localAccount.platform}`);
+        console.log(`         - Username: ${localAccount.username}`);
+
+        // 2) Determine per‑platform status from Late response (if available)
+        let perPlatformStatus = baseStatus;
+        const platformResult = lateResult.platformResults?.find(
+          (r) =>
+            r.platform?.toLowerCase() === String(p.platform).toLowerCase()
+        );
+
+        if (platformResult) {
+          if (platformResult.status === 'failed') {
+            perPlatformStatus = 'FAILED';
+          }
+        }
+
+        // 3) Create one SocialPost row for this platform
+        const created = await prisma.socialPost.create({
+          data: {
+            companyId,
+            socialAccountId: localAccount.id,
+            content: content || title || '',      // required field
+            caption: title || null,               // optional “title” stored as caption
+            videoId: videoIds[0] || null,
+            scheduledAt: scheduledFor ? new Date(scheduledFor) : null,
+            timezone,
+            status: perPlatformStatus,
+            latePostId,                           // same Late post id for all
+
+            mediaUrls: mediaItems.map((m) => m.url),
+
+            platformConfig: serializeBigInt({
+              request: latePayload,
+              thisPlatform: p,                   // only this platform’s config
+              allPlatforms: platforms,           // optional: store all too
+              tags: normTags,
+              hashtags: normHashtags,
+              mentions: normMentions,
+            }),
+
+            error:
+              platformResult?.error ||
+              (typeof lateResult.error === 'string'
+                ? lateResult.error
+                : lateResult.error
+                ? JSON.stringify(lateResult.error)
+                : null),
+          },
+        });
+
+        console.log(
+          `      ✅ SocialPost created: ${created.id} (status=${created.status})`
+        );
+        savedPosts.push(created);
+      }
+
+      if (savedPosts.length === 0) {
+        console.warn(
+          `⚠️ [${requestId}] No SocialPost rows were created (no matching local accounts or all skipped)`
+        );
+      } else {
+        console.log(
+          `✅ [${requestId}] Created ${savedPosts.length} SocialPost row(s) (one per platform)`
+        );
+      }
     } catch (dbError) {
-      console.error(`⚠️ [${requestId}] Database save failed (non-fatal):`, dbError.message);
-      // Don't fail the request if DB save fails
+      console.error(
+        `⚠️ [${requestId}] Database save failed (per-platform loop):`,
+        dbError.message
+      );
+      if (dbError.code === 'P2003') {
+        console.error(
+          `   💡 Foreign key constraint failed. Likely socialAccountId didn't match any SocialAccount.id`
+        );
+      }
+      console.error(`   Full error:`, dbError);
     }
 
     // ========================================================================
-    // STEP 10: Success Response
+    // STEP 10: Success Response (ENHANCED)
     // ========================================================================
-    const responseMessage = isDraft
-      ? 'Draft saved successfully'
-      : publishNow
-      ? `Post is being published to ${platformTypes.length} platform(s)`
-      : `Post scheduled for ${new Date(scheduledFor).toLocaleString()}`;
+    const hasErrors = lateResult.error || lateResult.platformResults?.some(p => p.status === 'failed');
+    const allFailed = lateResult.platformResults?.every(p => p.status === 'failed');
 
-    console.log(`\n✅ [${requestId}] REQUEST COMPLETED SUCCESSFULLY`);
+    let responseMessage;
+    let responseStatus = 201;
+
+    if (allFailed) {
+      responseMessage = 'Post created but publishing failed for all platforms';
+      responseStatus = 207;
+    } else if (hasErrors) {
+      responseMessage = 'Post created but some platforms failed';
+      responseStatus = 207;
+    } else if (isDraft) {
+      responseMessage = 'Draft saved successfully';
+    } else if (publishNow) {
+      responseMessage = `Post published to ${platformTypes.length} platform(s)`;
+    } else {
+      responseMessage = `Post scheduled for ${new Date(scheduledFor).toLocaleString()}`;
+    }
+
+    console.log(`\n${hasErrors ? '⚠️' : '✅'} [${requestId}] REQUEST COMPLETED`);
     console.log(`📊 [${requestId}] Summary:`);
     console.log(`   - Platforms: ${platformTypes.join(', ')}`);
     console.log(`   - Videos: ${videoIds.length}`);
-    console.log(`   - Status: ${isDraft ? 'DRAFT' : publishNow ? 'PUBLISHING' : 'SCHEDULED'}`);
-    console.log(`   - Late Post ID: ${lateResult._id || lateResult.id}`);
-    console.log(`   - Local Post ID: ${savedPost?.id || 'N/A'}`);
+    console.log(`   - Status: ${hasErrors ? 'PARTIAL/FAILED' : savedPosts?.status || 'N/A'}`);
+    console.log(`   - Late Post ID: ${lateResult.post?._id || lateResult._id || 'N/A'}`);
+    console.log(`   - Local Post ID: ${savedPosts?.id || 'N/A'}`);
     console.log(`   - Total Time: ${Date.now() - parseInt(requestId.split('-')[1])}ms`);
+
+    if (lateResult.platformResults) {
+      console.log(`\n   📱 Platform Results:`);
+      lateResult.platformResults.forEach((result) => {
+        const icon = result.status === 'failed' ? '❌' : '✅';
+        console.log(`      ${icon} ${result.platform}: ${result.status}`);
+        if (result.error) {
+          console.log(`         Error: ${result.error.substring(0, 100)}...`);
+        }
+      });
+    }
+
     console.log('='.repeat(80) + '\n');
 
     return NextResponse.json(
       {
-        success: true,
-        post: lateResult,
-        localPostId: savedPost ? savedPost.id : undefined,
+        success: !allFailed,
+        post: lateResult.post || lateResult,
+        localPosts: savedPosts.map((p) => ({ id: p.id, status: p.status })),
         message: responseMessage,
+        
+        platformResults: lateResult.platformResults || [],
+        
+        ...(hasErrors && {
+          warnings: lateResult.platformResults
+            ?.filter(p => p.status === 'failed')
+            .map(p => ({
+              platform: p.platform,
+              error: p.error,
+            })),
+        }),
+        
         debug: process.env.NODE_ENV === 'development' ? {
           requestId,
           responseTime: `${Date.now() - parseInt(requestId.split('-')[1])}ms`,
           lateResponseTime: `${lateResponseTime}ms`,
+          dbSaved: !!savedPosts,
         } : undefined,
       },
-      { status: 201 }
+      { status: responseStatus }
     );
 
   } catch (error) {
@@ -532,7 +752,6 @@ export async function GET(request) {
 
     console.log(`✅ [${requestId}] Authenticated - Company: ${companyId}`);
 
-    // Fetch profile with connected accounts
     const profile = await prisma.lateProfile.findUnique({
       where: { companyId },
       select: {
@@ -561,12 +780,11 @@ export async function GET(request) {
     console.log(`✅ [${requestId}] Profile found: ${profile.name}`);
     console.log(`   - Connected accounts: ${profile.socialAccounts.length}`);
 
-    // Get recent posts count
     const recentPostsCount = await prisma.socialPost.count({
       where: {
         companyId,
         createdAt: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
         },
       },
     });
@@ -588,11 +806,19 @@ export async function GET(request) {
       })),
       recentPostsCount,
       limits: {
-        maxVideoDuration: 3600, // 1 hour (in seconds)
-        maxFileSize: 4 * 1024 * 1024 * 1024, // 4GB
+        maxVideoDuration: 3600,
+        maxFileSize: 4 * 1024 * 1024 * 1024,
         supportedFormats: ['mp4', 'mov', 'avi', 'webm'],
-        presignedUrlExpiry: 86400, // 24 hours
+        presignedUrlExpiry: 86400,
         maxVideosPerPost: 10,
+        platformLimits: {
+          instagram: {
+            story: { minDuration: 3, maxDuration: 60, maxSize: 100 * 1024 * 1024 },
+            reel: { minDuration: 3, maxDuration: 90, maxSize: 100 * 1024 * 1024 },
+          },
+          tiktok: { minDuration: 3, maxDuration: 600, maxSize: 4 * 1024 * 1024 * 1024 },
+          youtube: { minDuration: 1, maxDuration: 43200, maxSize: 256 * 1024 * 1024 * 1024 },
+        },
       },
     };
 
