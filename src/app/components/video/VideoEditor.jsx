@@ -52,6 +52,8 @@ export default function VideoEditor({ video, onClose, onSaveComplete }) {
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
+  const [uploadingFile,setUploadingFile] = useState(null)
+
 
   // Aspect ratio presets
   const aspectRatios = [
@@ -455,6 +457,244 @@ const handleSave = async () => {
     setSaving(false);
     setProgress(0);
     setProgressMessage('');
+  }
+};
+
+const handleVersionUpload = async () => {
+  if (!versionNote.trim()) {
+    showError('Missing Note', 'Please provide a version note');
+    return;
+  }
+
+  setSaving(true);
+  setProgress(0);
+  setProgressMessage('Submitting video for processing...');
+
+  try {
+    const videoUrl = `https://createos.vercel.app/api/videos/${video.id}/raw?expiresIn=3600`;
+
+    const requestBody = {
+      crop_x: Math.round(cropBox.x),
+      crop_y: Math.round(cropBox.y),
+      crop_w: Math.round(cropBox.width),
+      crop_h: Math.round(cropBox.height),
+      resize_w: Math.round(resizeDimensions.width),
+      resize_h: Math.round(resizeDimensions.height),
+      trim_start: parseFloat(trimRange.start.toFixed(2)),
+      trim_end: parseFloat(trimRange.end.toFixed(2)),
+      video_url: videoUrl,
+      version_note: versionNote.trim(),
+      edit_mode: editMode,
+    };
+
+    console.log('[EDITOR] Submitting:', requestBody);
+
+    setProgress(30);
+    setProgressMessage('Processing video...');
+
+    const response = await fetch('http://localhost:8000/process-video', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Processing request failed');
+    }
+
+    setProgress(60);
+    setProgressMessage('Receiving processed video...');
+
+    // ✅ Get the blob from the response
+    const blob = await response.blob();
+    
+    // ✅ Convert Blob to File object (same as event.target.files[0])
+    const processedFile = new File(
+      [blob], 
+      `processed_${versionNote.trim().replace(/\s+/g, '_')}.mp4`,
+      { type: 'video/mp4' }
+    );
+
+    console.log('[EDITOR] ✅ Processed file:', {
+      name: processedFile.name,      // ← Works!
+      size: processedFile.size,      // ← Works!
+      type: processedFile.type,      // ← Works!
+    });
+
+    setProgress(90);
+    setProgressMessage('Uploading as new version...');
+
+    // ✅ Now use your existing upload function with the File object
+    await uploadProcessedVideoAsVersion(processedFile);
+
+    setProgress(100);
+    setProgressMessage('Complete!');
+
+    await showSuccess(
+      'Processing Complete!',
+      'Your video has been processed and uploaded as a new version.'
+    );
+
+    if (onSaveComplete) {
+      onSaveComplete({ success: true });
+    }
+
+    setTimeout(() => {
+      onClose();
+    }, 1500);
+
+  } catch (error) {
+    console.error('[EDITOR ERROR]', error);
+    showError('Processing Failed', error.message || 'Failed to process video');
+  } finally {
+    setSaving(false);
+    setProgress(0);
+    setProgressMessage('');
+  }
+};
+
+// ✅ Reuse your existing upload logic
+const uploadProcessedVideoAsVersion = async (file) => {
+  // This is almost identical to your handleVersionUpload function
+  const videoId = video.id; // from the editor component
+
+  setUploadingFile(file);
+  setLoading(true);
+  setUploadProgress(0);
+
+  try {
+    console.log('[VERSION UPLOAD] Starting upload for:', file.name);
+    
+    // Get video duration
+    const getVideoDuration = (file) => {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(video.src);
+          resolve(video.duration);
+        };
+        video.onerror = () => resolve(null);
+        video.src = URL.createObjectURL(file);
+      });
+    };
+
+    const duration = await getVideoDuration(file);
+
+    // Start multipart upload
+    const startRes = await fetch(`/api/videos/${videoId}/versions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        versionNote: versionNote,
+        fileSize: file.size,        // ✅ Works! Same as regular file
+        fileName: file.name,         // ✅ Works! Same as regular file
+        fileType: file.type,         // ✅ Works! Same as regular file
+      })
+    });
+
+    if (!startRes.ok) {
+      const errorData = await startRes.json();
+      throw new Error(errorData.error || 'Failed to start version upload');
+    }
+
+    const startData = await startRes.json();
+    
+    if (!startData.success || !startData.upload || !startData.urls) {
+      throw new Error('Invalid response from server');
+    }
+
+    const { upload, urls, version } = startData;
+    
+    console.log('[VERSION UPLOAD] Upload initialized:', {
+      versionId: version.id,
+      versionNumber: version.version,
+      uploadId: upload.uploadId,
+      totalParts: upload.totalParts,
+    });
+
+    const partSize = upload.partSize;
+    const uploadedParts = [];
+
+    // Upload all parts
+    for (let i = 0; i < urls.length; i++) {
+      const start = i * partSize;
+      const end = Math.min(start + partSize, file.size); // ✅ Works!
+      const chunk = file.slice(start, end);               // ✅ Works!
+
+      console.log(`[VERSION UPLOAD] Uploading part ${i + 1}/${urls.length}`);
+
+      let retries = 3;
+      let uploadRes;
+      
+      while (retries > 0) {
+        try {
+          uploadRes = await fetch(urls[i].url, {
+            method: 'PUT',
+            body: chunk,
+            headers: { 'Content-Type': file.type }, // ✅ Works!
+          });
+
+          if (uploadRes.ok) break;
+          retries--;
+          if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      const etag = uploadRes.headers.get('ETag');
+      if (!etag) throw new Error(`Part ${i + 1} missing ETag`);
+
+      uploadedParts.push({
+        PartNumber: urls[i].partNumber,
+        ETag: etag.replace(/"/g, ''),
+      });
+
+      setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+    }
+
+    console.log('[VERSION UPLOAD] All parts uploaded, completing...');
+
+    // Complete multipart upload
+    const completeRes = await fetch('/api/upload/complete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uploadId: upload.uploadId,
+        key: upload.key,
+        parts: uploadedParts,
+        duration: duration,
+        versionId: version.id,
+      })
+    });
+
+    if (!completeRes.ok) {
+      const errorData = await completeRes.json();
+      throw new Error(errorData.error || 'Failed to complete upload');
+    }
+
+    const result = await completeRes.json();
+    
+    if (result.success) {
+      console.log('[VERSION UPLOAD] Upload completed:', result);
+      // Don't show success here - already handled in handleSave
+    }
+  } catch (error) {
+    console.error('[VERSION UPLOAD ERROR]', error);
+    throw error; // Re-throw to be caught by handleSave
+  } finally {
+    setLoading(false);
+    setUploadingFile(null);
+    setUploadProgress(0);
   }
 };
 
