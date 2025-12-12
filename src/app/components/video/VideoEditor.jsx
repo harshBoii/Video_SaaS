@@ -49,10 +49,9 @@ export default function VideoEditor({ video, onClose, onSaveComplete }) {
 
   // Save state
   const [versionNote, setVersionNote] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [processingAction, setProcessingAction] = useState(null); // 'download' | 'upload' | null
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const [uploadingFile,setUploadingFile] = useState(null)
 
 
   // Aspect ratio presets
@@ -369,15 +368,13 @@ const handleSave = async () => {
     return;
   }
 
-  setSaving(true);
+  setProcessingAction('download');
   setProgress(0);
-  setProgressMessage('Submitting video for processing...');
+  setProgressMessage('Processing video...');
 
   try {
-    // Build the video URL with expiry
     const videoUrl = `https://createos.vercel.app/api/videos/${video.id}/raw?expiresIn=3600`;
 
-    // Prepare the request body
     const requestBody = {
       crop_x: Math.round(cropBox.x),
       crop_y: Math.round(cropBox.y),
@@ -392,18 +389,12 @@ const handleSave = async () => {
       edit_mode: editMode,
     };
 
-    console.log("Request body is:", requestBody);
-    console.log('[EDITOR] Submitting:', requestBody);
-
     setProgress(30);
     setProgressMessage('Processing video...');
 
-    // ✅ Make POST request and get blob response
     const response = await fetch('http://localhost:8000/process-video', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
     });
 
@@ -415,13 +406,11 @@ const handleSave = async () => {
     setProgress(60);
     setProgressMessage('Downloading processed video...');
 
-    // ✅ Get the blob from the response
     const blob = await response.blob();
     
     setProgress(90);
     setProgressMessage('Saving file...');
 
-    // ✅ Create download link and trigger download
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
@@ -429,32 +418,21 @@ const handleSave = async () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    // ✅ Clean up the blob URL
     window.URL.revokeObjectURL(downloadUrl);
 
-    console.log('[EDITOR] ✅ Video downloaded successfully');
     setProgress(100);
-    setProgressMessage('Video downloaded!');
+    setProgressMessage('Download complete!');
 
-    await showSuccess(
-      'Processing Complete!',
-      'Your video has been processed and downloaded successfully.'
-    );
+    await showSuccess('Success!', 'Your video has been processed and downloaded.');
 
-    if (onSaveComplete) {
-      onSaveComplete({ success: true });
-    }
+    if (onSaveComplete) onSaveComplete({ success: true });
 
-    setTimeout(() => {
-      onClose();
-    }, 1500);
+    onClose();
 
   } catch (error) {
     console.error('[EDITOR ERROR]', error);
     showError('Processing Failed', error.message || 'Failed to process video');
-  } finally {
-    setSaving(false);
+    setProcessingAction(null);
     setProgress(0);
     setProgressMessage('');
   }
@@ -466,9 +444,9 @@ const handleVersionUpload = async () => {
     return;
   }
 
-  setSaving(true);
+  setProcessingAction('upload');
   setProgress(0);
-  setProgressMessage('Submitting video for processing...');
+  setProgressMessage('Processing video...');
 
   try {
     const videoUrl = `https://createos.vercel.app/api/videos/${video.id}/raw?expiresIn=3600`;
@@ -487,16 +465,12 @@ const handleVersionUpload = async () => {
       edit_mode: editMode,
     };
 
-    console.log('[EDITOR] Submitting:', requestBody);
-
-    setProgress(30);
+    setProgress(20);
     setProgressMessage('Processing video...');
 
     const response = await fetch('http://localhost:8000/process-video', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
     });
 
@@ -505,95 +479,58 @@ const handleVersionUpload = async () => {
       throw new Error(errorText || 'Processing request failed');
     }
 
-    setProgress(60);
+    setProgress(40);
     setProgressMessage('Receiving processed video...');
 
-    // ✅ Get the blob from the response
     const blob = await response.blob();
     
-    // ✅ Convert Blob to File object (same as event.target.files[0])
     const processedFile = new File(
       [blob], 
       `processed_${versionNote.trim().replace(/\s+/g, '_')}.mp4`,
       { type: 'video/mp4' }
     );
 
-    console.log('[EDITOR] ✅ Processed file:', {
-      name: processedFile.name,      // ← Works!
-      size: processedFile.size,      // ← Works!
-      type: processedFile.type,      // ← Works!
-    });
+    setProgress(50);
+    setProgressMessage('Starting upload...');
 
-    setProgress(90);
-    setProgressMessage('Uploading as new version...');
+    const calculatedDuration = trimRange.end - trimRange.start;
 
-    // ✅ Now use your existing upload function with the File object
-    await uploadProcessedVideoAsVersion(processedFile);
+    await uploadProcessedVideoAsVersion(processedFile, calculatedDuration);
 
     setProgress(100);
     setProgressMessage('Complete!');
 
-    await showSuccess(
-      'Processing Complete!',
-      'Your video has been processed and uploaded as a new version.'
-    );
+    await showSuccess('Success!', 'Video processed and uploaded as new version.');
 
-    if (onSaveComplete) {
-      onSaveComplete({ success: true });
-    }
+    if (onSaveComplete) onSaveComplete({ success: true });
 
-    setTimeout(() => {
-      onClose();
-    }, 1500);
+    onClose();
 
   } catch (error) {
     console.error('[EDITOR ERROR]', error);
-    showError('Processing Failed', error.message || 'Failed to process video');
-  } finally {
-    setSaving(false);
+    showError('Upload Failed', error.message || 'Failed to upload video');
+    setProcessingAction(null);
     setProgress(0);
     setProgressMessage('');
   }
 };
 
 // ✅ Reuse your existing upload logic
-const uploadProcessedVideoAsVersion = async (file) => {
-  // This is almost identical to your handleVersionUpload function
-  const videoId = video.id; // from the editor component
-
-  setUploadingFile(file);
-  setLoading(true);
-  setUploadProgress(0);
+const uploadProcessedVideoAsVersion = async (file, videoDuration) => {
+  const videoId = video.id;
 
   try {
     console.log('[VERSION UPLOAD] Starting upload for:', file.name);
-    
-    // Get video duration
-    const getVideoDuration = (file) => {
-      return new Promise((resolve) => {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.onloadedmetadata = () => {
-          window.URL.revokeObjectURL(video.src);
-          resolve(video.duration);
-        };
-        video.onerror = () => resolve(null);
-        video.src = URL.createObjectURL(file);
-      });
-    };
 
-    const duration = await getVideoDuration(file);
-
-    // Start multipart upload
     const startRes = await fetch(`/api/videos/${videoId}/versions`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         versionNote: versionNote,
-        fileSize: file.size,        // ✅ Works! Same as regular file
-        fileName: file.name,         // ✅ Works! Same as regular file
-        fileType: file.type,         // ✅ Works! Same as regular file
+        fileSize: file.size,
+        fileName: file.name,
+        fileType: file.type,
       })
     });
 
@@ -610,23 +547,18 @@ const uploadProcessedVideoAsVersion = async (file) => {
 
     const { upload, urls, version } = startData;
     
-    console.log('[VERSION UPLOAD] Upload initialized:', {
-      versionId: version.id,
-      versionNumber: version.version,
-      uploadId: upload.uploadId,
-      totalParts: upload.totalParts,
-    });
-
     const partSize = upload.partSize;
     const uploadedParts = [];
 
-    // Upload all parts
     for (let i = 0; i < urls.length; i++) {
       const start = i * partSize;
-      const end = Math.min(start + partSize, file.size); // ✅ Works!
-      const chunk = file.slice(start, end);               // ✅ Works!
+      const end = Math.min(start + partSize, file.size);
+      const chunk = file.slice(start, end);
 
-      console.log(`[VERSION UPLOAD] Uploading part ${i + 1}/${urls.length}`);
+      setProgressMessage(`Uploading part ${i + 1}/${urls.length}...`);
+      
+      const uploadProgress = 50 + Math.round(((i + 1) / urls.length) * 45);
+      setProgress(uploadProgress);
 
       let retries = 3;
       let uploadRes;
@@ -636,7 +568,7 @@ const uploadProcessedVideoAsVersion = async (file) => {
           uploadRes = await fetch(urls[i].url, {
             method: 'PUT',
             body: chunk,
-            headers: { 'Content-Type': file.type }, // ✅ Works!
+            headers: { 'Content-Type': file.type },
           });
 
           if (uploadRes.ok) break;
@@ -657,13 +589,11 @@ const uploadProcessedVideoAsVersion = async (file) => {
         PartNumber: urls[i].partNumber,
         ETag: etag.replace(/"/g, ''),
       });
-
-      setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
     }
 
-    console.log('[VERSION UPLOAD] All parts uploaded, completing...');
+    setProgress(95);
+    setProgressMessage('Completing upload...');
 
-    // Complete multipart upload
     const completeRes = await fetch('/api/upload/complete', {
       method: 'POST',
       credentials: 'include',
@@ -672,7 +602,7 @@ const uploadProcessedVideoAsVersion = async (file) => {
         uploadId: upload.uploadId,
         key: upload.key,
         parts: uploadedParts,
-        duration: duration,
+        duration: videoDuration,
         versionId: version.id,
       })
     });
@@ -684,17 +614,15 @@ const uploadProcessedVideoAsVersion = async (file) => {
 
     const result = await completeRes.json();
     
-    if (result.success) {
-      console.log('[VERSION UPLOAD] Upload completed:', result);
-      // Don't show success here - already handled in handleSave
+    if (!result.success) {
+      throw new Error('Upload completion failed');
     }
+
+    console.log('[VERSION UPLOAD] ✅ Complete:', result);
+
   } catch (error) {
     console.error('[VERSION UPLOAD ERROR]', error);
-    throw error; // Re-throw to be caught by handleSave
-  } finally {
-    setLoading(false);
-    setUploadingFile(null);
-    setUploadProgress(0);
+    throw error;
   }
 };
 
@@ -1001,7 +929,7 @@ const uploadProcessedVideoAsVersion = async (file) => {
               </div>
 
               {/* Progress */}
-              {saving && (
+              {processingAction && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">{progressMessage}</span>
@@ -1020,22 +948,44 @@ const uploadProcessedVideoAsVersion = async (file) => {
               {/* Save Button */}
               <button
                 onClick={handleSave}
-                disabled={saving || !versionNote.trim()}
+                disabled={processingAction !== null || !versionNote.trim()}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-white transition-all ${
-                  saving || !versionNote.trim()
+                  processingAction !== null || !versionNote.trim()
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-lg'
                 }`}
               >
-                {saving ? (
+                {processingAction === 'download' ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
+                    {progressMessage}
                   </>
                 ) : (
                   <>
                     <Save className="w-5 h-5" />
-                    Process Video
+                    Download Processed
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={handleVersionUpload}
+                disabled={processingAction !== null || !versionNote.trim()}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-white transition-all ${
+                  processingAction !== null || !versionNote.trim()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-600 to-teal-600 hover:shadow-lg'
+                }`}
+              >
+                {processingAction === 'upload' ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {progressMessage}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Upload as Version
                   </>
                 )}
               </button>
