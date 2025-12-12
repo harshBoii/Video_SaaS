@@ -373,7 +373,7 @@ const handleSave = async () => {
   setProgressMessage('Processing video...');
 
   try {
-    const videoUrl = `${process.env.MICROSERVICE_API_URL}/api/videos/${video.id}/raw?expiresIn=3600`;
+    const videoUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/videos/${video.id}/raw?expiresIn=3600`;
 
     const requestBody = {
       crop_x: Math.round(cropBox.x),
@@ -392,7 +392,7 @@ const handleSave = async () => {
     setProgress(30);
     setProgressMessage('Processing video...');
 
-    const response = await fetch('http://localhost:8000/process-video', {
+    const response = await fetch(`${process.env.MICROSERVICE_API_URL}/process-video`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
