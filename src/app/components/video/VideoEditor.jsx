@@ -373,7 +373,7 @@ const handleSave = async () => {
   setProgressMessage('Processing video...');
 
   try {
-    const videoUrl = `https://createos.vercel.app/api/videos/${video.id}/raw?expiresIn=3600`;
+    const videoUrl = `${process.env.MICROSERVICE_API_URL}/api/videos/${video.id}/raw?expiresIn=3600`;
 
     const requestBody = {
       crop_x: Math.round(cropBox.x),
