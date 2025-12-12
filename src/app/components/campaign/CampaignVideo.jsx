@@ -622,7 +622,7 @@ const getVideoDuration = (file) => {
 
   return (
     <CampaignPermissionsProvider campaignId={campaignId}>
-      <div className="space-y-6">
+      <div className="space-y-6 ">
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -636,9 +636,9 @@ const getVideoDuration = (file) => {
                   <p className="text-sm text-blue-600 font-medium">Total Videos</p>
                   <p className="text-3xl font-bold text-blue-900 mt-1">{stats.totalVideos || 0}</p>
                 </div>
-                <div className="bg-blue-500 p-3 rounded-lg">
-                  <Video className="w-6 h-6 text-white" />
-                </div>
+                  <div className="bg-blue-500 p-3 rounded-lg group-hover:scale-110 transition-transform">
+                    <Video className="w-6 h-6 text-white drop-shadow-md" />
+                  </div>
               </div>
             </motion.div>
 
@@ -700,6 +700,32 @@ const getVideoDuration = (file) => {
             </motion.div>
           </div>
         )}
+        {uploadQueue.filter(item => item.status === 'uploading').length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-4 shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Upload className="w-6 h-6 animate-bounce" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+              </div>
+              <div>
+                <p className="font-semibold">
+                  Uploading {uploadQueue.filter(item => item.status === 'uploading').length} video(s)
+                </p>
+                <p className="text-sm opacity-90">
+                  Please wait while your videos are being processed...
+                </p>
+              </div>
+            </div>
+            <RefreshCw className="w-5 h-5 animate-spin opacity-75" />
+          </div>
+        </motion.div>
+      )}
+
 
         {/* Protected Upload Section */}
         <ProtectedUploadSection
@@ -754,7 +780,7 @@ const getVideoDuration = (file) => {
         </div>
 
         {/* Videos Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden ">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -807,22 +833,30 @@ const getVideoDuration = (file) => {
                       key={video.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-gray-50 transition-colors"
+                      className="hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-purple-50/30 transition-all duration-200 border-l-2 border-transparent hover:border-blue-500"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {/* ✅ Show thumbnail from active version */}
                           {video.thumbnailUrl ? (
                             <div className="relative">
-                              <img
-                                src={video.thumbnailUrl}
-                                alt={video.title}
-                                className="w-24 h-14 object-cover rounded-lg border border-gray-200"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
-                              />
+                                <div className="group relative">
+                                  <img
+                                    src={video.thumbnailUrl}
+                                    alt={video.title}
+                                    className="w-24 h-14 object-cover rounded-lg border border-gray-200 transition-all group-hover:shadow-lg group-hover:scale-105 cursor-pointer"
+                                    onClick={() => playVideo(video)}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                  {video.playbackUrl && (
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                                      <Play className="w-6 h-6 text-white drop-shadow-lg" />
+                                    </div>
+                                  )}
+                                </div>
                               <div className="w-24 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border border-blue-200 absolute inset-0" style={{ display: 'none' }}>
                                 <Video className="w-8 h-8 text-blue-500" />
                               </div>
@@ -832,17 +866,25 @@ const getVideoDuration = (file) => {
                               <Video className="w-8 h-8 text-blue-500" />
                             </div>
                           )}
-                          <div>
+                          <div className='max-w-40'>
                             <p className="font-medium text-gray-900">{video.title}</p>
                             <p className="text-sm text-gray-500">{video.filename}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(video.status)}`}>
-                          {getStatusIcon(video.status)}
-                          {video.status}
-                        </span>
+                        <div className="relative">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(video.status)}`}>
+                            {getStatusIcon(video.status)}
+                            <span className="capitalize">{video.status}</span>
+                          </span>
+                          {video.status === 'processing' && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {/* ✅ Show duration from active version */}
@@ -874,7 +916,7 @@ const getVideoDuration = (file) => {
                         {new Date(video.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5 flex-wrap">
                           {/* <button
                             onClick={() => viewVideoDetails(video.id)}
                             className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"

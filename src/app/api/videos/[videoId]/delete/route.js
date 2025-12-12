@@ -16,7 +16,9 @@ export async function DELETE(request, { params }) {
     const { user } = authResult;
 
     // ✅ 2. VALIDATE VIDEO ID
-    const validation = videoIdParamSchema.safeParse(params);
+    const awaitedParams = await(params)
+
+    const validation = videoIdParamSchema.safeParse(awaitedParams);
     if (!validation.success) {
       return NextResponse.json(
         {
