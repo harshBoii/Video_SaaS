@@ -153,7 +153,7 @@ export const handleVersionUpload = async (event) => {
     }
   };
 
-export   const handleFileUpload = async (event, campaignId) => {
+export const handleFileUpload = async (event, campaignId) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
