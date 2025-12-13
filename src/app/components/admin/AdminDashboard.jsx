@@ -51,13 +51,6 @@ export default function AdminDashboard() {
     fetchUser();
   }, []);
 
-  if (loading || !user) {
-  return (
-    <div className="flex items-center justify-center py-12">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    </div>
-  );
-  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,7 +90,7 @@ export default function AdminDashboard() {
     return () => clearTimeout(handler);
   }, [search]);
 
-  if (loading) {
+  if (loading || !user ) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
