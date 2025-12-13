@@ -248,6 +248,10 @@ export default function CampaignPage({ campaignId }) {
       </div>
     );
   }
+  const getBackRoute = () => {
+    if (permissions?.isAdmin) return '/admin';
+    return '/employee';
+  };
 
   // Not Found State
   if (!campaign) {
@@ -264,10 +268,10 @@ export default function CampaignPage({ campaignId }) {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Campaign Not Found</h2>
           <p className="text-gray-600 mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
           <button
-            onClick={() => router.push('/campaigns')}
+            onClick={() => router.push(getBackRoute())}
             className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Go back to campaigns
+            Go back to DashBoard
           </button>
         </motion.div>
       </div>
@@ -282,7 +286,7 @@ export default function CampaignPage({ campaignId }) {
           {/* Top Row - Back button and Actions */}
           <div className="flex items-center justify-between mb-4">
             <button
-              onClick={() => router.push('/admin')}
+              onClick={() => router.push(getBackRoute())}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
