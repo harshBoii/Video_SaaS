@@ -29,8 +29,6 @@ import { CampaignPermissionsProvider, useCampaignPermissions } from '@/app/conte
 import ProtectedShareModal from '../video/ProtectedShareModal';
 import { Share2 } from 'lucide-react';
 import { ProtectedUploadSection , UploadQueueItem } from './protectedUploadSection';
-import { Scissors } from 'lucide-react';
-import VideoEditor from '../video/VideoEditor';
 // Helper function
 function toTitleCase(str = '') {
   return str
@@ -81,6 +79,109 @@ function VideoTableSkeleton() {
   );
 }
 
+// Protected Upload Section Component
+// function ProtectedUploadSection({ campaign, loading, uploadingFile, uploadProgress, onFileUpload }) {
+//   const { permissionsData, loading: permissionsLoading } = useCampaignPermissions();
+
+//   if (permissionsLoading) {
+//     return (
+//       <div className="bg-white rounded-xl border border-gray-200 p-6">
+//         <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+//         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+//           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   if (!permissionsData) {
+//     return null;
+//   }
+
+//   // Check permissions
+//   const isAdmin = permissionsData.isAdmin === true;
+//   const isSuperAdmin = permissionsData.role?.toLowerCase() === 'superadmin' || 
+//                        permissionsData.role?.toLowerCase() === 'admin';
+//   const hasSuperAdminPermission = permissionsData.permissions?.some(p => 
+//     toTitleCase(p).toLowerCase() === 'superadmin all'
+//   );
+
+//   const permissions = permissionsData.permissions || [];
+//   const standardized = permissions.map(toTitleCase);
+//   const requiredPermissions = ['Upload Video'];
+//   const hasPermission = requiredPermissions.some(perm => standardized.includes(perm));
+
+//   const allowed = isAdmin || isSuperAdmin || hasSuperAdminPermission || hasPermission;
+
+//   // If no permission, show restricted message
+//   if (!allowed) {
+//     return (
+//       <div className="bg-white rounded-xl border border-gray-200 p-6">
+//         <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+        
+//         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
+//           <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+//           <p className="text-lg font-medium text-gray-600 mb-1">
+//             Upload Restricted
+//           </p>
+//           <p className="text-sm text-gray-500">
+//             You don't have permission to upload videos to this campaign
+//           </p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Render upload section with permission
+//   return (
+//     <div className="bg-white rounded-xl border border-gray-200 p-6">
+//       <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+      
+//       <div className="border-2 border-dashed border-blue-300 rounded-xl p-8 text-center hover:border-blue-500 transition-colors bg-blue-50/50">
+//         {!uploadingFile ? (
+//           <label className="cursor-pointer block">
+//             <Upload className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+//             <p className="text-lg font-medium text-gray-900 mb-1">
+//               Click to upload or drag and drop
+//             </p>
+//             <p className="text-sm text-gray-600 mb-4">
+//               MP4, MOV, AVI, MKV, WEBM up to 100GB
+//             </p>
+//             <input
+//               type="file"
+//               accept="video/*"
+//               onChange={onFileUpload}
+//               className="hidden"
+//               disabled={loading}
+//             />
+//             <div className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+//               Select Video File
+//             </div>
+//           </label>
+//         ) : (
+//           <div>
+//             <FileVideo className="w-12 h-12 text-blue-600 mx-auto mb-3 animate-pulse" />
+//             <p className="text-lg font-medium text-gray-900 mb-2">
+//               Uploading: {uploadingFile.name}
+//             </p>
+//             <p className="text-sm text-gray-600 mb-4">
+//               {(uploadingFile.size / 1024 / 1024 / 1024).toFixed(2)} GB
+//             </p>
+//             <div className="w-full max-w-md mx-auto bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
+//               <motion.div
+//                 initial={{ width: 0 }}
+//                 animate={{ width: `${uploadProgress}%` }}
+//                 className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full"
+//               />
+//             </div>
+//             <p className="text-sm font-medium text-blue-600">{uploadProgress}% complete</p>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
 // Main Component
 export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
   const [videos, setVideos] = useState([]);
@@ -102,18 +203,6 @@ export default function CampaignVideo({ campaign, onUpdate, campaignId }) {
   const MAX_CONCURRENT_UPLOADS = 2;
   const MAX_FILES = 5;
   const [uploadQueue, setUploadQueue] = useState([]);
-  const [showVideoEditor, setShowVideoEditor] = useState(false);
-  const [videoToEdit, setVideoToEdit] = useState(null);
-
-const openVideoEditor = (video) => {
-  console.log('🗾🗾🗾 SCISSORS CLICKED!', video.id, video); // ← ADD THIS
-  console.log('StreamUrl check:', video.playbackUrl); // ← ADD THIS
-    
-  console.log('✅ OPENING EDITOR'); // ← ADD THIS
-  setVideoToEdit(video);
-  setShowVideoEditor(true);
-  console.log('State updated - showVideoEditor:', true); // ← ADD THIS
-};
 
   useEffect(() => {
     fetchVideos();
@@ -314,6 +403,168 @@ const openVideoEditor = (video) => {
       console.error('Failed to fetch stats:', error);
     }
   };
+
+  // const handleFileUpload = async (event) => {
+    
+  //   const file = event.target.files[0];
+  //   if (!file) return;
+
+  //   setUploadingFile(file);
+  //   setLoading(true);
+  //   setUploadProgress(0);
+
+  //   try {
+  //     console.log('[UPLOAD] Starting upload for:', file.name);
+  //     const getVideoDuration = (file) => {
+  //         return new Promise((resolve, reject) => {
+  //           const video = document.createElement('video');
+  //           video.preload = 'metadata';
+  //           video.onloadedmetadata = () => {
+  //             window.URL.revokeObjectURL(video.src);
+  //             resolve(video.duration);
+  //           };
+  //           video.onerror = () => {
+  //             resolve(null);
+  //           };
+  //           video.src = URL.createObjectURL(file);
+  //         });
+  //       };
+
+  //     const duration = await getVideoDuration(file)
+
+  //     const startRes = await fetch('/api/upload/start', {
+  //       method: 'POST',
+  //       credentials: 'include',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         fileName: file.name,
+  //         fileType: file.type,
+  //         fileSize: file.size,
+  //         campaignId: campaign.id,
+  //         metadata: {
+  //           title: file.name.replace(/\.[^/.]+$/, ''),
+  //           description: `Uploaded to ${campaign.name}`,
+  //         }
+  //       })
+  //     });
+
+  //     if (!startRes.ok) {
+  //       const errorData = await startRes.json();
+  //       throw new Error(errorData.error || errorData.message || 'Failed to start upload');
+  //     }
+
+  //     const startData = await startRes.json();
+      
+  //     if (!startData.success || !startData.upload || !startData.urls) {
+  //       throw new Error('Invalid response from server');
+  //     }
+
+  //     const { upload, urls } = startData;
+      
+  //     console.log('[UPLOAD] Upload initialized:', {
+  //       uploadId: upload.uploadId,
+  //       totalParts: upload.totalParts,
+  //     });
+
+  //     const partSize = upload.partSize;
+  //     const uploadedParts = [];
+
+  //     for (let i = 0; i < urls.length; i++) {
+  //       const start = i * partSize;
+  //       const end = Math.min(start + partSize, file.size);
+  //       const chunk = file.slice(start, end);
+
+  //       console.log(`[UPLOAD] Uploading part ${i + 1}/${urls.length} (${chunk.size} bytes)`);
+
+  //       let uploadRes;
+  //       let retries = 3;
+        
+  //       while (retries > 0) {
+  //         try {
+  //           uploadRes = await fetch(urls[i].url, {
+  //             method: 'PUT',
+  //             body: chunk,
+  //             headers: {
+  //               'Content-Type': file.type,
+  //             },
+  //           });
+
+  //           if (uploadRes.ok) break;
+            
+  //           console.warn(`[UPLOAD] Part ${i + 1} failed (${uploadRes.status}), retrying... (${retries - 1} left)`);
+  //           retries--;
+            
+  //           if (retries === 0) {
+  //             throw new Error(`Failed to upload part ${i + 1}: ${uploadRes.status}`);
+  //           }
+            
+  //           await new Promise(resolve => setTimeout(resolve, 1000));
+  //         } catch (fetchError) {
+  //           console.error(`[UPLOAD] Network error uploading part ${i + 1}:`, fetchError);
+  //           retries--;
+            
+  //           if (retries === 0) {
+  //             throw new Error(`Network error uploading part ${i + 1}: ${fetchError.message}`);
+  //           }
+            
+  //           await new Promise(resolve => setTimeout(resolve, 1000));
+  //         }
+  //       }
+
+  //       const etag = uploadRes.headers.get('ETag');
+        
+  //       if (!etag) {
+  //         throw new Error(`Part ${i + 1} uploaded but no ETag received`);
+  //       }
+
+  //       uploadedParts.push({
+  //         PartNumber: urls[i].partNumber,
+  //         ETag: etag.replace(/"/g, ''),
+  //       });
+
+  //       console.log(`[UPLOAD] Part ${i + 1} uploaded successfully`);
+  //       setUploadProgress(Math.round(((i + 1) / urls.length) * 100));
+  //     }
+
+  //     console.log('[UPLOAD] All parts uploaded, completing...');
+
+  //     const completeRes = await fetch('/api/upload/complete', {
+  //       method: 'POST',
+  //       credentials: 'include',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         uploadId: upload.uploadId,
+  //         key: upload.key,
+  //         parts: uploadedParts,
+  //         duration:duration,
+  //       })
+  //     });
+
+  //     if (!completeRes.ok) {
+  //       const errorData = await completeRes.json();
+  //       throw new Error(errorData.error || errorData.message || 'Failed to complete upload');
+  //     }
+
+  //     const result = await completeRes.json();
+      
+  //     if (result.success) {
+  //       console.log('[UPLOAD] Upload completed successfully:', result.video);
+  //       await showSuccess('Upload Complete', 'Video uploaded successfully and queued for processing');
+  //       fetchVideos();
+  //       fetchStats();
+  //       if (onUpdate) onUpdate();
+  //     } else {
+  //       throw new Error(result.error || 'Upload completion failed');
+  //     }
+  //   } catch (error) {
+  //     console.error('[UPLOAD ERROR]', error);
+  //     await showError('Upload Failed', error.message || 'An unexpected error occurred');
+  //   } finally {
+  //     setLoading(false);
+  //     setUploadingFile(null);
+  //     setUploadProgress(0);
+  //   }
+  // };
 
   const handleFileUpload = async (event) => {
   const files = Array.from(event.target.files);
@@ -622,7 +873,7 @@ const getVideoDuration = (file) => {
 
   return (
     <CampaignPermissionsProvider campaignId={campaignId}>
-      <div className="space-y-6 ">
+      <div className="space-y-6">
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -636,9 +887,9 @@ const getVideoDuration = (file) => {
                   <p className="text-sm text-blue-600 font-medium">Total Videos</p>
                   <p className="text-3xl font-bold text-blue-900 mt-1">{stats.totalVideos || 0}</p>
                 </div>
-                  <div className="bg-blue-500 p-3 rounded-lg group-hover:scale-110 transition-transform">
-                    <Video className="w-6 h-6 text-white drop-shadow-md" />
-                  </div>
+                <div className="bg-blue-500 p-3 rounded-lg">
+                  <Video className="w-6 h-6 text-white" />
+                </div>
               </div>
             </motion.div>
 
@@ -700,32 +951,6 @@ const getVideoDuration = (file) => {
             </motion.div>
           </div>
         )}
-        {uploadQueue.filter(item => item.status === 'uploading').length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-4 shadow-lg"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Upload className="w-6 h-6 animate-bounce" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-              </div>
-              <div>
-                <p className="font-semibold">
-                  Uploading {uploadQueue.filter(item => item.status === 'uploading').length} video(s)
-                </p>
-                <p className="text-sm opacity-90">
-                  Please wait while your videos are being processed...
-                </p>
-              </div>
-            </div>
-            <RefreshCw className="w-5 h-5 animate-spin opacity-75" />
-          </div>
-        </motion.div>
-      )}
-
 
         {/* Protected Upload Section */}
         <ProtectedUploadSection
@@ -736,8 +961,6 @@ const getVideoDuration = (file) => {
           onClearQueue={handleClearQueue}
           onRemoveFromQueue={handleRemoveFromQueue}
         />
-
-
         
         {/* Filters and Search */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -780,7 +1003,7 @@ const getVideoDuration = (file) => {
         </div>
 
         {/* Videos Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden ">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -833,30 +1056,22 @@ const getVideoDuration = (file) => {
                       key={video.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-purple-50/30 transition-all duration-200 border-l-2 border-transparent hover:border-blue-500"
+                      className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {/* ✅ Show thumbnail from active version */}
                           {video.thumbnailUrl ? (
                             <div className="relative">
-                                <div className="group relative">
-                                  <img
-                                    src={video.thumbnailUrl}
-                                    alt={video.title}
-                                    className="w-24 h-14 object-cover rounded-lg border border-gray-200 transition-all group-hover:shadow-lg group-hover:scale-105 cursor-pointer"
-                                    onClick={() => playVideo(video)}
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                      e.target.nextSibling.style.display = 'flex';
-                                    }}
-                                  />
-                                  {video.playbackUrl && (
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                                      <Play className="w-6 h-6 text-white drop-shadow-lg" />
-                                    </div>
-                                  )}
-                                </div>
+                              <img
+                                src={video.thumbnailUrl}
+                                alt={video.title}
+                                className="w-24 h-14 object-cover rounded-lg border border-gray-200"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
                               <div className="w-24 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border border-blue-200 absolute inset-0" style={{ display: 'none' }}>
                                 <Video className="w-8 h-8 text-blue-500" />
                               </div>
@@ -866,25 +1081,17 @@ const getVideoDuration = (file) => {
                               <Video className="w-8 h-8 text-blue-500" />
                             </div>
                           )}
-                          <div className='max-w-40'>
+                          <div className='max-w-50'>
                             <p className="font-medium text-gray-900">{video.title}</p>
                             <p className="text-sm text-gray-500">{video.filename}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="relative">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(video.status)}`}>
-                            {getStatusIcon(video.status)}
-                            <span className="capitalize">{video.status}</span>
-                          </span>
-                          {video.status === 'processing' && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-                            </span>
-                          )}
-                        </div>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(video.status)}`}>
+                          {getStatusIcon(video.status)}
+                          {video.status}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {/* ✅ Show duration from active version */}
@@ -916,25 +1123,14 @@ const getVideoDuration = (file) => {
                         {new Date(video.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex gap-1.5 flex-wrap">
-                          {/* <button
+                        <div className="flex gap-2">
+                          <button
                             onClick={() => viewVideoDetails(video.id)}
                             className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
-                          </button> */}
-
-                          <ProtectedButton
-                            onClick={() => openVideoEditor(video)}
-                            className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50"
-                            title="Edit Video"
-                            disabled={!video.playbackUrl || video.status !== 'ready'}
-                            requiredPermissions={['Version Control']}
-                          >
-                            <Scissors className="w-4 h-4" />
-                          </ProtectedButton>
-
+                          </button>
                           <ProtectedButton
                             onClick={() => playVideo(video)}
                             className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1191,35 +1387,15 @@ const getVideoDuration = (file) => {
             onClose={() => setPlayingVideo(null)}
           />
         )}
-
-        <AnimatePresence>
-            {showVideoEditor && videoToEdit && (
-              <VideoEditor
-                video={videoToEdit}
-                onClose={() => {
-                  setShowVideoEditor(false);
-                  setVideoToEdit(null);
-                }}
-                onSaveComplete={(result) => {
-                  console.log('Video edited:', result);
-                  fetchVideos();
-                  fetchStats();
-                  if (onUpdate) onUpdate();
-                }}
-              />
-            )}
-          </AnimatePresence>
-
       </div>
         <ProtectedShareModal 
-                isOpen={shareModalOpen} 
-                onClose={() => {
-                  setShareModalOpen(false);
-                  setVideoToShare(null);
-                }}
-                videoId={videoToShare?.id} 
-              />
-
+          isOpen={shareModalOpen} 
+          onClose={() => {
+            setShareModalOpen(false);
+            setVideoToShare(null);
+          }}
+          videoId={videoToShare?.id} 
+        />
 
     </CampaignPermissionsProvider>
   );

@@ -135,14 +135,29 @@ export async function POST(request) {
         select: {
           id: true,
           title: true,
-          r2Key: true,
+          // r2Key: true,
           r2Bucket: true,
-          thumbnailUrl: true,
+          // thumbnailUrl: true,
           duration: true,
           resolution: true,
           codec: true,
           status: true,
           originalSize: true,
+          versions: {
+          where: {
+            isActive: true  // Filter for active version only
+          },
+          select: {
+            id: true,
+            version: true,
+            r2Key: true,
+            fileSize: true,
+            streamId: true,
+            playbackUrl: true,
+            thumbnailUrl: true,
+          },
+          take: 1  
+          }
         },
       });
 
@@ -173,12 +188,31 @@ export async function POST(request) {
 
       // Generate presigned URLs and build mediaItems
       console.log(`\n🔐 [${requestId}] Generating presigned URLs...`);
-      
+
+
+      let videoVersionMap = new Map();
+
+
       for (const video of videos) {
-        console.log(`   - Processing video: ${video.id} (${video.title})`);
+
+
+        const activeVersion = video.versions[0]
+
+        if (!activeVersion) {
+          console.warn(`⚠️ No active version found for video: ${video.id}`);
+          continue;
+        }
         
+        console.log(`   - Using version ${activeVersion.version} (ID: ${activeVersion.id})`);
+
+        videoVersionMap.set(video.id, {
+          versionId: activeVersion.id,
+          version: activeVersion.version,
+          r2Key: activeVersion.r2Key,
+        });
+
         const videoUrl = await generatePresignedUrl(
-          video.r2Key,
+          activeVersion.r2Key,
           video.r2Bucket,
           86400
         );
@@ -202,32 +236,22 @@ export async function POST(request) {
           filename: video.title || 'video.mp4',
           ...(video.duration && { duration: video.duration }),
           ...(width && height && { width, height }),
-          ...(video.originalSize && { size: Number(video.originalSize) }),
+          ...(activeVersion.fileSize && { size: Number(activeVersion.fileSize) }),
           mimeType: 'video/mp4',
         };
 
         // Handle thumbnail
-        if (video.thumbnailUrl) {
+        if (activeVersion.thumbnailUrl) {
           try {
-            if (video.thumbnailUrl.includes(video.r2Bucket)) {
-              const thumbnailKey = video.thumbnailUrl.split('/').pop();
-              const signedThumbnail = await generatePresignedUrl(
-                `thumbnails/${thumbnailKey}`,
-                video.r2Bucket,
-                86400
-              );
-              mediaItem.thumbnail = signedThumbnail;
-              console.log(`     ✓ Thumbnail signed (R2-hosted)`);
-            } else {
-              mediaItem.thumbnail = video.thumbnailUrl;
-              console.log(`     ✓ Thumbnail added (external URL)`);
-            }
-          } catch (err) {
+              mediaItem.thumbnail = activeVersion.thumbnailUrl;
+              mediaItem.instagramThumbnail= activeVersion.thumbnailUrl
+          } catch (err) 
+          {
             console.error(`     ⚠️ Failed to sign thumbnail:`, err.message);
             mediaItem.thumbnail = video.thumbnailUrl;
+            mediaItem.instagramThumbnail= activeVersion.thumbnailUrl
           }
         }
-
         mediaItems.push(mediaItem);
       }
 
@@ -588,9 +612,7 @@ export async function POST(request) {
             timezone,
             status: perPlatformStatus,
             latePostId,                           // same Late post id for all
-
             mediaUrls: mediaItems.map((m) => m.url),
-
             platformConfig: serializeBigInt({
               request: latePayload,
               thisPlatform: p,                   // only this platform’s config
@@ -598,6 +620,11 @@ export async function POST(request) {
               tags: normTags,
               hashtags: normHashtags,
               mentions: normMentions,
+              videoVersions: Array.from(videoVersionMap.entries()).map(([vId, vData]) => ({
+              videoId: vId,
+              versionId: vData.versionId,
+              version: vData.version,
+              })),
             }),
 
             error:
