@@ -44,7 +44,9 @@ export default function AdminDashboard() {
       } catch (err) {
         console.error(err);
         setError('Failed to load user info');
-      }
+      }finally {
+      setLoading(false); 
+    }
     };
     fetchUser();
   }, []);
