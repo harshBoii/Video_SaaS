@@ -70,7 +70,17 @@ export default function AddCampaignModal({ isOpen, onClose, onSuccess, companyId
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <input name="name" placeholder="Campaign Name*" required onChange={handleChange} className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500" />
-            <input name="budget" placeholder="Budget (optional)" onChange={handleChange} className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500" />
+            <input
+              name="budget"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Budget (optional)"
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                e.target.value = value;
+                handleChange(e);
+            }}className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"/>
             <textarea name="description" placeholder="Description" rows="3" onChange={handleChange} className="col-span-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500" />
           </div>
 
