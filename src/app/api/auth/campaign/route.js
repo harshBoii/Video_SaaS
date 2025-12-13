@@ -1,79 +1,3 @@
-// import { NextResponse } from "next/server";
-// import prisma from "@/app/lib/prisma"; // adjust path if needed
-// import { cookies } from "next/headers";
-// import jwt from "jsonwebtoken";
-
-// export async function GET(req) {
-//   try {
-//     const { searchParams } = new URL(req.url);
-
-//     const token = (await cookies()).get("token")?.value
-//     const decoded=jwt.verify(token,process.env.JWT_SECRET)
-
-//     const campaignId = searchParams.get("campaignId");
-//     const employeeId = decoded.id
-
-//     if (!campaignId || !employeeId) {
-//       return NextResponse.json({ error: "Missing campaignId or employeeId" }, { status: 400 });
-//     }
-
-//     // Fetch ONLY what is required — campaign name, employee name, permissions
-//     const assignment = await prisma.campaignAssignment.findUnique({
-//       where: {
-//         campaignId_employeeId: {
-//           campaignId,
-//           employeeId,
-//         },
-//       },
-//       select: {
-//         employee: {
-//           select: {
-//             firstName: true,
-//             lastName: true,
-//           },
-//         },
-//         campaign: {
-//           select: {
-//             name: true,
-//           },
-//         },
-//         role: {
-//           select: {
-//             name: true,
-//             permissions: {
-//               select: {
-//                 permission: {
-//                   select: {
-//                     name: true,
-//                   },
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       },
-//     });
-
-//     if (!assignment) {
-//       return NextResponse.json({ error: "Not assigned to this campaign" }, { status: 404 });
-//     }
-
-//     const permissions = assignment.role.permissions.map(p => p.permission.name);
-
-//     return NextResponse.json({
-//       employeeName: `${assignment.employee.firstName} ${assignment.employee.lastName}`,
-//       campaignName: assignment.campaign.name,
-//       role: assignment.role.name,
-//       permissions,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-//   }
-// }
-
-
-
 import { PrismaClient } from '@prisma/client';
 import { verify } from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
@@ -100,7 +24,7 @@ export async function GET(req) {
     const decoded = verify(token, process.env.JWT_SECRET);
     const employeeId = decoded.id;
 
-    // Fetch employee details to check if they're admin
+
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       select: {
@@ -117,7 +41,7 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    // Check if user is admin or has admin/superadmin role
+
     const isAdmin = employee.isAdmin;
     const roleName = employee.role?.name || '';
     const isSuperAdminRole = roleName.toLowerCase() === 'superadmin' || roleName.toLowerCase() === 'admin';

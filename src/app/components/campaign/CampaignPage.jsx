@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -23,13 +23,13 @@ import CampaignSettings from '@/app/components/campaign/CampaignSettings';
 import CampaignVideo from '@/app/components/campaign/CampaignVideo';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 
-const tabs = [
-  { id: 'overview', label: 'Overview', icon: TrendingUp },
-  { id: 'team',     label: 'Team',     icon: Users },
-  { id: 'flows',    label: 'Flows',    icon: GitBranch },
-  { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
-  { id: 'settings', label: 'Settings', icon: Settings },
-  { id: 'videos',   label: 'Videos',   icon: Video }
+const ALL_TABS = [
+  { id: 'overview', label: 'Overview', icon: TrendingUp, requiredPermission: null },
+  { id: 'team',     label: 'Team',     icon: Users, requiredPermission: 'Assign Team' },
+  { id: 'flows',    label: 'Flows',    icon: GitBranch, requiredPermission: 'Manage Workflow' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarIcon, requiredPermission: null },
+  { id: 'settings', label: 'Settings', icon: Settings, requiredPermission: null },
+  { id: 'videos',   label: 'Videos',   icon: Video, requiredPermission: null }
 ];
 
 // Skeleton Components
@@ -149,7 +149,7 @@ export default function CampaignPage({ campaignId }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+  const [permissions, setPermissions] = useState(null);
   const tabFromUrl = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [campaign, setCampaign] = useState(null);
@@ -168,9 +168,10 @@ export default function CampaignPage({ campaignId }) {
   const loadCampaignData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/campaigns/${campaignId}`, {
-        credentials: 'include',
-      });
+      const [response,permissionsRes] =await Promise.all([
+      fetch(`/api/admin/campaigns/${campaignId}`, { credentials: 'include' }),
+      fetch(`/api/auth/campaign?campaignId=${campaignId}`, { credentials: 'include' })
+    ]);
 
       if (!response.ok) {
         throw new Error('Failed to load campaign');
@@ -178,13 +179,42 @@ export default function CampaignPage({ campaignId }) {
 
       const result = await response.json();
       setCampaign(result.data);
-    } catch (error) {
+
+      if (permissionsRes.ok) {
+        const permData = await permissionsRes.json();
+        setPermissions(permData);
+      } else {
+        setPermissions({ permissions: [], isAdmin: false, role: null });
+      }
+
+    } 
+    catch (error) {
       console.error('Error loading campaign:', error);
       await showError('Load Failed', error.message);
-    } finally {
+    } 
+    finally {
       setLoading(false);
     }
   };
+
+  const allowedTabs = useMemo(() => {
+  if (!permissions) return ALL_TABS.filter(tab => !tab.requiredPermission);
+  
+  const { isAdmin, permissions: userPermissions } = permissions;
+
+
+  if (isAdmin) return ALL_TABS;
+
+  // Filter based on permissions
+  return ALL_TABS.filter(tab => {
+    // Tabs with null permission are always visible
+    if (!tab.requiredPermission) return true;
+    
+    // Check if user has the required permission
+    return userPermissions.includes(tab.requiredPermission);
+  });
+}, [permissions]);
+
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -320,7 +350,7 @@ export default function CampaignPage({ campaignId }) {
           </div>
 
           {/* Campaign Title and Stats */}
-          <div className="mb-6">
+          <div className="mb-6 w-full">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {campaign.name}
             </h1>
@@ -337,6 +367,11 @@ export default function CampaignPage({ campaignId }) {
                   <span>{campaign.team.name}</span>
                 </div>
               )}
+              {permissions && (
+                  <div className="px-2 sticky right-0 py-1 bg-black text-white border-2 border-yellow-500 text-xs font-semibold rounded-2xl">
+                    Your Role : {permissions.isAdmin ? 'Admin' : permissions.role}
+                  </div>
+                )}
             </div>
           </div>
 
@@ -402,7 +437,7 @@ export default function CampaignPage({ campaignId }) {
 
           {/* Tabs Navigation */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-            {tabs.map((tab) => {
+            {allowedTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
 
