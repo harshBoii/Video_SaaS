@@ -121,6 +121,7 @@ export async function POST(request) {
     
     let mediaItems = [];
     let firstVideoData = null;
+    let videoVersionMap = new Map();
 
     if (videoIds.length > 0) {
       console.log(`🎥 [${requestId}] Fetching ${videoIds.length} video(s)...`);
@@ -190,7 +191,6 @@ export async function POST(request) {
       console.log(`\n🔐 [${requestId}] Generating presigned URLs...`);
 
 
-      let videoVersionMap = new Map();
 
 
       for (const video of videos) {
