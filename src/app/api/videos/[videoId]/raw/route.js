@@ -98,16 +98,16 @@ export async function GET(request, { params }) {
       (publicShare.accessType === 'PUBLIC' || publicShare.accessType === 'PASSWORD') &&
       publicShare.allowDownload === true;
 
-    if (!isPubliclyDownloadable) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Unauthorized", 
-          message: "This video is not available for download." 
-        },
-        { status: 403 }
-      );
-    }
+    // if (!isPubliclyDownloadable) {
+    //   return NextResponse.json(
+    //     { 
+    //       success: false, 
+    //       error: "Unauthorized", 
+    //       message: "This video is not available for download." 
+    //     },
+    //     { status: 403 }
+    //   );
+    // }
 
     // Determine which version to download
     let downloadKey, downloadSize, downloadVersion, downloadNote;
