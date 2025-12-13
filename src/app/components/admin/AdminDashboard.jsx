@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiUsers, FiUserCheck, FiX, FiSearch, FiClock } from 'react-icons/fi';
 import DashboardCharts from './DashboardCharts';
-import Image from 'next/image';
-import EmployeesPage from './EmployeeTable';
 import CampaignTable from './CampaignsTable';
 
 const StatCard = ({ icon, value, label }) => (
@@ -51,7 +49,7 @@ export default function AdminDashboard() {
     fetchUser();
   }, []);
 
-  // ✅ 2. Fetch Stats and Employees
+
   useEffect(() => {
     const fetchData = async () => {
       try {

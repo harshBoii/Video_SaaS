@@ -63,7 +63,7 @@ function LoadingBar({ isLoading }) {
 
 // ---------------- Fetch Campaigns ----------------
 const fetchCampaigns = async ({ pageParam = null, queryKey }) => {
-  const [_key, { search, sortBy, sortOrder, companyId }] = queryKey;
+  const [_key, { search, sortBy, sortOrder, companyId }] = await queryKey;
 
   if (!companyId) return { data: [], nextCursor: null };
 
