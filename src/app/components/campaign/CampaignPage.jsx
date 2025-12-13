@@ -155,7 +155,7 @@ export default function CampaignPage({ campaignId }) {
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showActions, setShowActions] = useState(false);
-
+  
   useEffect(() => {
     const tab = searchParams.get('tab') || 'overview';
     setActiveTab(tab);
