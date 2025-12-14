@@ -93,9 +93,14 @@ model Company {
   flowchains       FlowChain[]
   permissionCombos PermissionCombo[]
   videoCollections VideoCollection[]
-  lateProfile      LateProfile?    // ONE-TO-ONE relationship
-  socialAccounts   SocialAccount[] // Direct access to all social accounts
-  socialPosts      SocialPost[]    // Direct access to all posts (history + scheduled)
+  lateProfile      LateProfile?    
+  socialAccounts   SocialAccount[] 
+  socialPosts      SocialPost[]    
+  notificationPreference NotificationPreference?
+  slackIntegration       SlackIntegration?
+  teamsIntegration       TeamsIntegration?
+  emailIntegration       EmailIntegration?
+
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -983,4 +988,56 @@ model ConnectionToken {
   
   @@index([token])
   @@index([companyId])
+}
+
+model NotificationPreference {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+
+  emailEnabled Boolean @default(true)
+  slackEnabled Boolean @default(false)
+  teamsEnabled Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+model SlackIntegration {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+
+  slackTeamId String   @db.VarChar(50)
+  botToken    String   @db.Text          // ENCRYPTED
+  channelId   String   @db.VarChar(50)    // Where notifications go
+  channelName String?  @db.VarChar(255)
+
+  installedAt DateTime @default(now()) @db.Timestamptz(3)
+  isActive    Boolean  @default(true)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([slackTeamId])
+}
+model TeamsIntegration {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+
+  webhookUrl  String   @db.Text     // ENCRYPTED
+  channelName String?  @db.VarChar(255)
+
+  installedAt DateTime @default(now()) @db.Timestamptz(3)
+  isActive    Boolean  @default(true)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+model EmailIntegration {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+
+  fromEmail   String   @db.VarChar(255)
+  replyTo     String?  @db.VarChar(255)
+  isActive    Boolean  @default(true)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
