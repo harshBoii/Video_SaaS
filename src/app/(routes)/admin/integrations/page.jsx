@@ -8,7 +8,7 @@ import {
   HiMail, 
   HiCheckCircle, 
   HiArrowRight,
-  HiSparkles
+  HiBell
 } from 'react-icons/hi';
 import { BsMicrosoft } from 'react-icons/bs';
 
@@ -145,7 +145,7 @@ export default function IntegrationsPage() {
               transition={{ duration: 0.3, delay: 0.1, type: "spring" }}
               className="p-2.5 bg-gradient-to-br from-zinc-900 to-zinc-700 rounded-xl shadow-lg"
             >
-              <HiSparkles className="w-6 h-6 text-white" />
+              <HiBell className="w-6 h-6 text-white" />
             </motion.div>
             <h1 className="text-4xl font-bold text-zinc-900 tracking-tight relative inline-block">
               Notification Integrations
