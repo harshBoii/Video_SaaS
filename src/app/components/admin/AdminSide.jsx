@@ -49,8 +49,8 @@ const AdminSide = () => {
         <NavItem icon={<FiCodesandbox />} href="/admin/roles" label="Roles" />
         <NavItem icon={<FiBriefcase/>} href="/admin/employees" label="Employees"/>
         <NavItem icon={<FiGitBranch/>} href="/admin/hierarchy" label="Hierarchy"/>
-        <NavItem icon={<FiPlayCircle/>} href="/admin/ads" label="Ads"/>
-        <NavItem icon={<FiPlus/>} href="/admin/integration" label="Integration"/>
+        <NavItem icon={<FiPlayCircle/>} href="/admin/socials" label="Social Media"/>
+        <NavItem icon={<FiPlus/>} href="/admin/integrations" label="Integration"/>
         <NavItem icon={<FiList/>} href="/admin/posts" label="Posts"/>
 
 

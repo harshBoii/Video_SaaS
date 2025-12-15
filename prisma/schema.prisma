@@ -96,10 +96,13 @@ model Company {
   lateProfile      LateProfile?    
   socialAccounts   SocialAccount[] 
   socialPosts      SocialPost[]    
+
   notificationPreference NotificationPreference?
   slackIntegration       SlackIntegration?
   teamsIntegration       TeamsIntegration?
   emailIntegration       EmailIntegration?
+  notificationsLog       NotificationLog[]
+
 
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -990,6 +993,9 @@ model ConnectionToken {
   @@index([companyId])
 }
 
+// ===================== Notifications Model =====================
+
+
 model NotificationPreference {
   id          String   @id @default(cuid())
   companyId   String   @unique
@@ -1040,4 +1046,22 @@ model EmailIntegration {
   isActive    Boolean  @default(true)
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model NotificationLog {
+  id               String   @id @default(cuid())
+  companyId        String
+  notificationType String   @db.VarChar(100)
+  channels         String   @db.VarChar(255) // comma-separated
+  success          Boolean
+  error            String?  @db.Text
+  metadata         Json?
+  
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([companyId])
+  @@index([notificationType])
+  @@index([createdAt(sort: Desc)])
 }
