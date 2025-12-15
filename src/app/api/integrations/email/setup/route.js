@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { sendEmailNotification } from '@/lib/integrations/email-handler';
+import { prisma } from '@/app/lib/prisma';
+import { sendEmailNotification } from '@/app/lib/integrations/email-handler';
 
 /**
  * Setup Email Integration
