@@ -43,12 +43,14 @@ export async function GET(req) {
             mobile: true 
           },
         },
-      },
+      }, 
     });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    console.log("User is : ", user)
 
     const permissions = user.role?.permissions.map(rp => rp.permission) || [];
     const permissionNames = permissions.map(p => 
@@ -67,7 +69,7 @@ export async function GET(req) {
         lastName: user.lastName,
         email: user.email,
         companyId: user.companyId,
-        is_admin: user.is_admin,
+        is_admin: user.isAdmin,
         status: user.status,
         role: user.role,
         permissionNames: permissionNames,
