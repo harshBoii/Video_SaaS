@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect,useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -12,7 +12,11 @@ import {
   Edit,
   Trash2,
   Share2,
-  Video
+  Video,
+  Image,
+  FileText,
+  ChevronDown,
+  FolderOpen
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import CampaignOverview from '@/app/components/campaign/CampaignOverview';
@@ -21,6 +25,8 @@ import CampaignFlows from '@/app/components/campaign/CampaignFlows';
 import CampaignCalendar from '@/app/components/campaign/CampaignCalendar';
 import CampaignSettings from '@/app/components/campaign/CampaignSettings';
 import CampaignVideo from '@/app/components/campaign/CampaignVideo';
+import CampaignImages from '@/app/components/campaign/CampaignImages';
+import CampaignScripts from '@/app/components/campaign/CampaignScripts';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 
 const ALL_TABS = [
@@ -29,7 +35,13 @@ const ALL_TABS = [
   { id: 'flows',    label: 'Flows',    icon: GitBranch, requiredPermission: 'Manage Workflow' },
   { id: 'calendar', label: 'Calendar', icon: CalendarIcon, requiredPermission: null },
   { id: 'settings', label: 'Settings', icon: Settings, requiredPermission: null },
-  { id: 'videos',   label: 'Videos',   icon: Video, requiredPermission: null }
+  { id: 'assets',   label: 'Assets',   icon: FolderOpen, requiredPermission: null }
+];
+
+const ASSET_TYPES = [
+  { id: 'videos', label: 'Videos', icon: Video },
+  { id: 'images', label: 'Images', icon: Image },
+  { id: 'scripts', label: 'Scripts', icon: FileText }
 ];
 
 // Skeleton Components
@@ -151,14 +163,19 @@ export default function CampaignPage({ campaignId }) {
   const searchParams = useSearchParams();
   const [permissions, setPermissions] = useState(null);
   const tabFromUrl = searchParams.get('tab') || 'overview';
+  const assetFromUrl = searchParams.get('asset') || 'videos';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
+  const [assetType, setAssetType] = useState(assetFromUrl);
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showActions, setShowActions] = useState(false);
+  const [showAssetDropdown, setShowAssetDropdown] = useState(false);
   
   useEffect(() => {
     const tab = searchParams.get('tab') || 'overview';
+    const asset = searchParams.get('asset') || 'videos';
     setActiveTab(tab);
+    setAssetType(asset);
   }, [searchParams]);
 
   useEffect(() => {
@@ -168,10 +185,10 @@ export default function CampaignPage({ campaignId }) {
   const loadCampaignData = async () => {
     setLoading(true);
     try {
-      const [response,permissionsRes] =await Promise.all([
-      fetch(`/api/admin/campaigns/${campaignId}`, { credentials: 'include' }),
-      fetch(`/api/auth/campaign?campaignId=${campaignId}`, { credentials: 'include' })
-    ]);
+      const [response, permissionsRes] = await Promise.all([
+        fetch(`/api/admin/campaigns/${campaignId}`, { credentials: 'include' }),
+        fetch(`/api/auth/campaign?campaignId=${campaignId}`, { credentials: 'include' })
+      ]);
 
       if (!response.ok) {
         throw new Error('Failed to load campaign');
@@ -186,7 +203,6 @@ export default function CampaignPage({ campaignId }) {
       } else {
         setPermissions({ permissions: [], isAdmin: false, role: null });
       }
-
     } 
     catch (error) {
       console.error('Error loading campaign:', error);
@@ -198,28 +214,40 @@ export default function CampaignPage({ campaignId }) {
   };
 
   const allowedTabs = useMemo(() => {
-  if (!permissions) return ALL_TABS.filter(tab => !tab.requiredPermission);
-  
-  const { isAdmin, permissions: userPermissions } = permissions;
-
-
-  if (isAdmin) return ALL_TABS;
-
-  // Filter based on permissions
-  return ALL_TABS.filter(tab => {
-    // Tabs with null permission are always visible
-    if (!tab.requiredPermission) return true;
+    if (!permissions) return ALL_TABS.filter(tab => !tab.requiredPermission);
     
-    // Check if user has the required permission
-    return userPermissions.includes(tab.requiredPermission);
-  });
-}, [permissions]);
+    const { isAdmin, permissions: userPermissions } = permissions;
 
+    if (isAdmin) return ALL_TABS;
+
+    // Filter based on permissions
+    return ALL_TABS.filter(tab => {
+      // Tabs with null permission are always visible
+      if (!tab.requiredPermission) return true;
+      
+      // Check if user has the required permission
+      return userPermissions.includes(tab.requiredPermission);
+    });
+  }, [permissions]);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tabId);
+    
+    // Reset to default asset type when switching to assets tab
+    if (tabId === 'assets' && !searchParams.get('asset')) {
+      params.set('asset', 'videos');
+    }
+    
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleAssetTypeChange = (type) => {
+    setAssetType(type);
+    setShowAssetDropdown(false);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('asset', type);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -237,6 +265,11 @@ export default function CampaignPage({ campaignId }) {
     }
   };
 
+  const getBackRoute = () => {
+    if (permissions?.isAdmin) return '/admin';
+    return '/employee';
+  };
+
   // Loading State
   if (loading) {
     return (
@@ -248,10 +281,6 @@ export default function CampaignPage({ campaignId }) {
       </div>
     );
   }
-  const getBackRoute = () => {
-    if (permissions?.isAdmin) return '/admin';
-    return '/employee';
-  };
 
   // Not Found State
   if (!campaign) {
@@ -271,7 +300,7 @@ export default function CampaignPage({ campaignId }) {
             onClick={() => router.push(getBackRoute())}
             className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Go back to DashBoard
+            Go back to Dashboard
           </button>
         </motion.div>
       </div>
@@ -372,10 +401,10 @@ export default function CampaignPage({ campaignId }) {
                 </div>
               )}
               {permissions && (
-                  <div className="px-2 sticky right-0 py-1 bg-black text-white border-2 border-yellow-500 text-xs font-semibold rounded-2xl">
-                    Your Role : {permissions.isAdmin ? 'Admin' : permissions.role}
-                  </div>
-                )}
+                <div className="px-2 sticky right-0 py-1 bg-black text-white border-2 border-yellow-500 text-xs font-semibold rounded-2xl">
+                  Your Role : {permissions.isAdmin ? 'Admin' : permissions.role}
+                </div>
+              )}
             </div>
           </div>
 
@@ -445,6 +474,76 @@ export default function CampaignPage({ campaignId }) {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
 
+              // Special handling for Assets tab with dropdown
+              if (tab.id === 'assets') {
+                const currentAssetType = ASSET_TYPES.find(a => a.id === assetType);
+                const AssetIcon = currentAssetType?.icon || FolderOpen;
+                
+                return (
+                  <div key={tab.id} className="flex-1 relative">
+                    <button
+                      onClick={() => handleTabChange(tab.id)}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                        isActive
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <AssetIcon className="w-4 h-4" />
+                      <span>{currentAssetType?.label || 'Assets'}</span>
+                      {isActive && (
+                        <ChevronDown 
+                          className={`w-4 h-4 ml-1 cursor-pointer transition-transform ${
+                            showAssetDropdown ? 'rotate-180' : ''
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAssetDropdown(!showAssetDropdown);
+                          }}
+                        />
+                      )}
+                    </button>
+
+                    {/* Asset Dropdown */}
+                    <AnimatePresence>
+                      {isActive && showAssetDropdown && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setShowAssetDropdown(false)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+                          >
+                            {ASSET_TYPES.map((asset) => {
+                              const AssetTypeIcon = asset.icon;
+                              return (
+                                <button
+                                  key={asset.id}
+                                  onClick={() => handleAssetTypeChange(asset.id)}
+                                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                                    assetType === asset.id
+                                      ? 'bg-blue-50 text-blue-700 font-medium'
+                                      : 'text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <AssetTypeIcon className="w-4 h-4" />
+                                  {asset.label}
+                                </button>
+                              );
+                            })}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+
+              // Regular tabs
               return (
                 <button
                   key={tab.id}
@@ -468,7 +567,7 @@ export default function CampaignPage({ campaignId }) {
       <div className="max-w-7xl mx-auto px-6 py-6">
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeTab}
+            key={activeTab + assetType}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -489,8 +588,18 @@ export default function CampaignPage({ campaignId }) {
             {activeTab === 'settings' && (
               <CampaignSettings campaign={campaign} onUpdate={loadCampaignData} />
             )}
-            {activeTab === 'videos' && (
-              <CampaignVideo campaign={campaign} onUpdate={loadCampaignData} campaignId={campaignId} />
+            {activeTab === 'assets' && (
+              <>
+                {assetType === 'videos' && (
+                  <CampaignVideo campaign={campaign} onUpdate={loadCampaignData} campaignId={campaignId} />
+                )}
+                {assetType === 'images' && (
+                  <CampaignImages campaign={campaign} onUpdate={loadCampaignData} campaignId={campaignId} />
+                )}
+                {assetType === 'scripts' && (
+                  <CampaignScripts campaign={campaign} onUpdate={loadCampaignData} campaignId={campaignId} />
+                )}
+              </>
             )}
           </motion.div>
         </AnimatePresence>
