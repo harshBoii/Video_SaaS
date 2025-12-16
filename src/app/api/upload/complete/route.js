@@ -703,7 +703,7 @@ async function processNewDocumentUpload({
     // 1. Create document record
       const getDocumentType = (assetType, fileName) => {
         // Get file extension
-        const ext = fileName.split('.').pop()?.toLowerCase();
+      const ext = uploadSession.fileName.split('.').pop()?.toLowerCase();
         
         // Images
         if (assetType === 'image' || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
