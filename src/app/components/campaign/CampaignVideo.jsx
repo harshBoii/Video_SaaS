@@ -519,23 +519,6 @@ const getVideoDuration = (file) => {
   });
 };
 
-
-  const viewVideoDetails = async (videoId) => {
-    try {
-      const response = await fetch(`/api/videos/${videoId}/details`, {
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setSelectedVideo(data.video);
-        setShowVideoModal(true);
-      }
-    } catch (error) {
-      await showError('Failed to load video details');
-    }
-  };
-
   const downloadVideo = async (videoId, title) => {
     try {
       const response = await fetch(`/api/videos/${videoId}/raw?expiresIn=3600`, {
