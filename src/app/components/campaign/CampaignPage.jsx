@@ -16,7 +16,7 @@ import {
   Image,
   FileText,
   ChevronDown,
-  FolderOpen
+  BoxIcon
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import CampaignOverview from '@/app/components/campaign/CampaignOverview';
@@ -28,14 +28,14 @@ import CampaignVideo from '@/app/components/campaign/CampaignVideo';
 import CampaignImages from '@/app/components/campaign/CampaignImages';
 import CampaignScripts from '@/app/components/campaign/CampaignScripts';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
-
+import { BoxIcon } from 'lucide-react';
 const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: TrendingUp, requiredPermission: null },
   { id: 'team',     label: 'Team',     icon: Users, requiredPermission: 'Assign Team' },
   { id: 'flows',    label: 'Flows',    icon: GitBranch, requiredPermission: 'Manage Workflow' },
   { id: 'calendar', label: 'Calendar', icon: CalendarIcon, requiredPermission: null },
   { id: 'settings', label: 'Settings', icon: Settings, requiredPermission: null },
-  { id: 'assets',   label: 'Assets',   icon: FolderOpen, requiredPermission: null }
+  { id: 'assets',   label: 'Assets',   icon: BoxIcon, requiredPermission: null }
 ];
 
 const ASSET_TYPES = [
@@ -477,7 +477,7 @@ export default function CampaignPage({ campaignId }) {
               // Special handling for Assets tab with dropdown
               if (tab.id === 'assets') {
                 const currentAssetType = ASSET_TYPES.find(a => a.id === assetType);
-                const AssetIcon = currentAssetType?.icon || FolderOpen;
+                const AssetIcon = currentAssetType?.icon || BoxIcon;
                 
                 return (
                   <div key={tab.id} className="flex-1 relative">
@@ -493,7 +493,7 @@ export default function CampaignPage({ campaignId }) {
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      <FolderOpen className="w-4 h-4" />
+                      <BoxIcon className="w-4 h-4" />
                       <span>Assets</span>
                       <span>{currentAssetType?.label || 'Assets'}</span>
                       {(
