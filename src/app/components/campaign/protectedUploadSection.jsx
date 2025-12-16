@@ -24,10 +24,13 @@ function toTitleCase(str = '') {
 export function ProtectedUploadSection({ 
   campaign, 
   loading, 
-  uploadQueue = [], // Array of upload items
+  uploadQueue = [], 
   onFileUpload, 
   onClearQueue,
-  onRemoveFromQueue 
+  onRemoveFromQueue ,
+  acceptedFileTypes = "video/*",  // Customizable: "image/*", ".pdf,.doc,.docx", etc.
+  uploadButtonText = "Upload Videos", // Customizable button text
+  assetType = "video"  // 'video', 'image', or 'document'
 }) {
   const { permissionsData, loading: permissionsLoading } = useCampaignPermissions();
   const MAX_FILES = 5;
@@ -62,6 +65,37 @@ export function ProtectedUploadSection({
 
   const allowed = isAdmin || isSuperAdmin || hasSuperAdminPermission || hasPermission;
 
+  const getAssetConfig = () => {
+    switch(assetType) {
+      case 'image':
+        return {
+          icon: <ImageIcon className="w-12 h-12 text-blue-500 mx-auto mb-3" />,
+          fileIcon: <ImageIcon className="w-10 h-10 text-gray-400 flex-shrink-0 mt-0.5" />,
+          title: 'Upload Images',
+          description: 'JPG, PNG, GIF, WEBP, SVG up to 50MB',
+          types: 'images'
+        };
+      case 'document':
+        return {
+          icon: <FileText className="w-12 h-12 text-blue-500 mx-auto mb-3" />,
+          fileIcon: <FileText className="w-10 h-10 text-gray-400 flex-shrink-0 mt-0.5" />,
+          title: 'Upload Documents',
+          description: 'PDF, DOC, DOCX, XLS, XLSX, PPT, TXT, CSV up to 100MB',
+          types: 'documents'
+        };
+      default: // video
+        return {
+          icon: <FileVideo className="w-12 h-12 text-blue-500 mx-auto mb-3" />,
+          fileIcon: <FileVideo className="w-10 h-10 text-gray-400 flex-shrink-0 mt-0.5" />,
+          title: 'Upload Videos',
+          description: 'MP4, MOV, AVI, MKV, WEBM up to 100GB',
+          types: 'videos'
+        };
+    }
+  };
+
+  const assetConfig = getAssetConfig();
+
   // If no permission, show restricted message
   if (!allowed) {
     return (
@@ -74,7 +108,7 @@ export function ProtectedUploadSection({
             Upload Restricted
           </p>
           <p className="text-sm text-gray-500">
-            You don't have permission to upload videos to this campaign
+            You don't have permission to upload {assetConfig.types} to this campaign
           </p>
         </div>
       </div>
@@ -92,7 +126,7 @@ export function ProtectedUploadSection({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Upload New Video</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Upload New {assetConfig.title}</h3>
         {hasFiles && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">
@@ -114,26 +148,26 @@ export function ProtectedUploadSection({
       {!hasFiles && (
         <div className="border-2 border-dashed border-blue-300 rounded-xl p-8 text-center hover:border-blue-500 transition-colors bg-blue-50/50">
           <label className="cursor-pointer block">
-            <Upload className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+            {assetConfig.icon}
             <p className="text-lg font-medium text-gray-900 mb-1">
               Click to upload or drag and drop
             </p>
             <p className="text-sm text-gray-600 mb-2">
-              MP4, MOV, AVI, MKV, WEBM up to 100GB
+             {assetConfig.description}
             </p>
             <p className="text-xs text-gray-500 mb-4">
-              Upload multiple videos at once
+              Upload multiple files at once
             </p>
             <input
               type="file"
-              accept="video/*"
+              accept={acceptedFileTypes}
               multiple
               onChange={onFileUpload}
               className="hidden"
               disabled={loading}
             />
             <div className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Select Video Files
+              {uploadButtonText}
             </div>
           </label>
         </div>
@@ -170,7 +204,7 @@ export function ProtectedUploadSection({
               <label className="cursor-pointer">
                 <input
                   type="file"
-                  accept="video/*"
+                  accept={acceptedFileTypes}
                   multiple
                   onChange={onFileUpload}
                   className="hidden"
@@ -191,6 +225,7 @@ export function ProtectedUploadSection({
               item={item}
               onRemove={onRemoveFromQueue}
               disabled={item.status === 'uploading'}
+              icon={assetConfig.fileIcon}
             />
           ))}
         </div>
@@ -223,7 +258,7 @@ export function UploadQueueItem({ item, onRemove, disabled }) {
     <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <FileVideo className="w-10 h-10 text-gray-400 flex-shrink-0 mt-0.5" />
+         {icon || <FileVideo className="w-10 h-10 text-gray-400 flex-shrink-0 mt-0.5" />}
           
           <div className="flex-1 min-w-0">
             <p className="font-medium text-gray-900 truncate" title={item.file.name}>

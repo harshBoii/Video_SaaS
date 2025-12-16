@@ -673,6 +673,7 @@ export default function CampaignImages({ campaign, onUpdate, campaignId }) {
           onRemoveFromQueue={handleRemoveFromQueue}
           acceptedFileTypes="image/*"
           uploadButtonText="Upload Images"
+          assetType="image"  
         />
 
         {/* Filters and Search */}

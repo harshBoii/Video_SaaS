@@ -733,6 +733,7 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
           onRemoveFromQueue={handleRemoveFromQueue}
           acceptedFileTypes=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md"
           uploadButtonText="Upload Documents"
+          assetType="document"  
         />
 
         {/* Filters and Search */}
