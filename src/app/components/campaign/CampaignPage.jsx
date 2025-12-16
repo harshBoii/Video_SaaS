@@ -482,16 +482,21 @@ export default function CampaignPage({ campaignId }) {
                 return (
                   <div key={tab.id} className="flex-1 relative">
                     <button
-                      onClick={() => handleTabChange(tab.id)}
+                      onClick={() => {
+                                      handleTabChange('assets');
+                                      setShowAssetDropdown(prev => !prev);
+                                    }}
+
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
                         isActive
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      <AssetIcon className="w-4 h-4" />
+                      <FolderOpen className="w-4 h-4" />
+                      <span>Assets</span>
                       <span>{currentAssetType?.label || 'Assets'}</span>
-                      {isActive && (
+                      {(
                         <ChevronDown 
                           className={`w-4 h-4 ml-1 cursor-pointer transition-transform ${
                             showAssetDropdown ? 'rotate-180' : ''
@@ -547,7 +552,10 @@ export default function CampaignPage({ campaignId }) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
+                  onClick={() => {
+                                    handleTabChange('assets');
+                                    setShowAssetDropdown(prev => !prev);
+                                  }}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
                     isActive
                       ? 'bg-white text-gray-900 shadow-sm'
