@@ -24,7 +24,7 @@ import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 import ProtectedButton from '../general/protectedButton';
 import { CampaignPermissionsProvider } from '@/app/context/permissionContext';
 import { ProtectedUploadSection } from './protectedUploadSection';
-import AssetViewerModal from '../assets/AssetViewerModal';
+import AssetViewerModal from '../nonVideoAssets/AssetViewer';
 
 // Helper function
 function toTitleCase(str = '') {
