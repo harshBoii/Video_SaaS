@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Clock,
   Plus,
-  X
+  X,
+  Image as ImageIcon,  
+  FileText                
 } from 'lucide-react';
 import { useCampaignPermissions } from '@/app/context/permissionContext';
 
@@ -38,7 +40,7 @@ export function ProtectedUploadSection({
   if (permissionsLoading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New </h3>
         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
@@ -100,7 +102,7 @@ export function ProtectedUploadSection({
   if (!allowed) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload New Video</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{assetConfig.title}</h3>
         
         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
           <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -126,7 +128,7 @@ export function ProtectedUploadSection({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Upload New {assetConfig.title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{assetConfig.title}</h3>
         {hasFiles && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">
@@ -235,7 +237,7 @@ export function ProtectedUploadSection({
 }
 
 // Individual Upload Item Component
-export function UploadQueueItem({ item, onRemove, disabled }) {
+export function UploadQueueItem({ item, onRemove, disabled,icon }) {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800 border-green-200';
