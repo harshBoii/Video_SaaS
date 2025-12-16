@@ -701,6 +701,24 @@ async function processNewDocumentUpload({
 }) {
   return await prisma.$transaction(async (tx) => {
     // 1. Create document record
+    const getDocumentType = (assetType) => {
+      switch(assetType) {
+        case 'image':
+          return 'IMAGE';
+        case 'document':
+          // Check file extension to determine specific document type
+          const ext = uploadSession.fileName.split('.').pop()?.toLowerCase();
+          if (ext === 'pdf') return 'PDF';
+          if (['doc', 'docx'].includes(ext)) return 'DOC';
+          if (['xls', 'xlsx'].includes(ext)) return 'SPREADSHEET';
+          if (['ppt', 'pptx'].includes(ext)) return 'PRESENTATION';
+          if (['txt', 'md'].includes(ext)) return 'TEXT';
+          return 'OTHER';
+        default:
+          return 'OTHER';
+      }
+    };
+
     const document = await tx.document.create({
       data: {
         title: uploadSession.fileName.replace(/\.[^/.]+$/, ""),
@@ -711,6 +729,7 @@ async function processNewDocumentUpload({
         r2Key: key,
         r2Bucket: process.env.R2_BUCKET_NAME,
         campaignId: uploadSession.campaignId,
+        documentType: getDocumentType(assetType),
         uploadedBy: user.id,
         currentVersion: 1,
         metadata: {
@@ -767,6 +786,7 @@ async function processNewDocumentUpload({
         status: document.status,
         r2Key: document.r2Key,
         r2ETag: r2Response.ETag,
+        documentType: getDocumentType(assetType),
         assetType: assetType,
         campaign: {
           id: uploadSession.campaign.id,
