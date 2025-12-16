@@ -28,7 +28,7 @@ import CampaignVideo from '@/app/components/campaign/CampaignVideo';
 import CampaignImages from '@/app/components/campaign/CampaignImages';
 import CampaignScripts from '@/app/components/campaign/CampaignScripts';
 import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
-import { BoxIcon } from 'lucide-react';
+
 const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: TrendingUp, requiredPermission: null },
   { id: 'team',     label: 'Team',     icon: Users, requiredPermission: 'Assign Team' },
