@@ -73,6 +73,16 @@ enum PostStatus {
   DELETED        // Deleted from platform (history kept)
 }
 
+enum DocumentType {
+  PDF
+  IMAGE       // PNG, JPG, JPEG, GIF, WEBP
+  DOCUMENT    // DOCX, DOC, ODT
+  SPREADSHEET // XLSX, XLS, CSV
+  TEXT        // TXT, MD
+  PRESENTATION // PPTX, PPT
+  OTHER
+}
+
 
 // ===================== CORE MODELS =====================
 
@@ -90,6 +100,7 @@ model Company {
   roles            Role[]
   teams            Team[]
   campaigns        Campaign[]
+
   flowchains       FlowChain[]
   permissionCombos PermissionCombo[]
   videoCollections VideoCollection[]
@@ -230,6 +241,11 @@ model Employee {
   manager      Employee?    @relation("EmployeeHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
   subordinates Employee[]   @relation("EmployeeHierarchy")
   createdCollections VideoCollection[] @relation("CollectionCreator")
+  
+  uploadedDocuments      Document[]           @relation("DocumentUploader")
+  documentVersions       DocumentVersion[]    @relation("DocumentVersionUploader")
+  documentComments       DocumentComment[]    @relation("DocumentComments")
+  resolvedDocumentComments DocumentComment[]  @relation("DocumentCommentResolver")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -347,7 +363,8 @@ model Campaign {
   assignments CampaignAssignment[]
   flows       CampaignFlow[]
   schedules   CampaignSchedule[]
-  videos      Video[]  // <-- ADD THIS
+  videos      Video[]  
+  documents   Document[]
   videoCollections VideoCollection[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -595,7 +612,10 @@ model UploadSession {
   // Video Link (after completion)
   videoId     String?   @unique
   video       Video?    @relation(fields: [videoId], references: [id], onDelete: SetNull)
-  
+
+  documentId  String?   @unique
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
   // Timestamps
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
@@ -1065,3 +1085,125 @@ model NotificationLog {
   @@index([notificationType])
   @@index([createdAt(sort: Desc)])
 }
+
+model Document {
+  id              String   @id @default(cuid())
+  title           String   @db.VarChar(500)
+  filename        String   @db.VarChar(255)
+  fileSize        BigInt
+
+  documentType    DocumentType // High-level category
+  mimeType        String   @db.VarChar(100) // application/pdf, image/png, text/plain, etc.
+  
+  // Document-specific
+  pageCount       Int?     // For PDFs
+  
+  status          String   @default("ready") @db.VarChar(50) // ready, archived, deleted
+  
+  // R2 Storage
+  r2Key           String   @db.VarChar(500)
+  r2Bucket        String   @db.VarChar(255)
+  
+  // Preview/Thumbnail
+  thumbnailUrl    String?  @db.Text
+  
+  tags            String[] @default([])
+  metadata        Json     @default("{}")
+  
+  // Relations
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  uploadedBy      String
+  uploader        Employee @relation("DocumentUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  
+  uploadSession   UploadSession?
+  comments        DocumentComment[]
+  shareSettings   DocumentShare?
+  versions        DocumentVersion[]
+  
+  currentVersion  Int      @default(1)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([campaignId])
+  @@index([uploadedBy])
+  @@index([status])
+  @@index([mimeType])
+  @@index([campaignId, status]) 
+  @@index([documentType])  
+  @@index([campaignId, documentType])
+  @@index([createdAt(sort: Desc)])
+}
+
+model DocumentVersion {
+  id              String   @id @default(cuid())
+  documentId      String
+  version         Int
+  
+  // File info
+  r2Key           String   @db.VarChar(500)
+  fileSize        BigInt
+  status          String   @db.VarChar(50) // ready, archived, deleted
+  
+  // Version metadata
+  versionNote     String?  @db.Text
+  isActive        Boolean  @default(false)
+  
+  // Who created this version
+  uploadedBy      String
+  uploader        Employee @relation("DocumentVersionUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([documentId])
+  @@index([documentId, version])
+  @@index([documentId, isActive])
+  @@unique([documentId, version])
+}
+model DocumentComment {
+  id          String        @id @default(cuid())
+  documentId  String
+  employeeId  String?
+  content     String        @db.Text
+  status      CommentStatus @default(OPEN)
+  parentId    String?       // For replies
+  
+  // Relations
+  document    Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  employee    Employee?     @relation("DocumentComments", fields: [employeeId], references: [id], onDelete: Restrict)
+  parent      DocumentComment? @relation("DocumentCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     DocumentComment[] @relation("DocumentCommentReplies")
+  
+  versionNumber Int?
+  priority    CommentPriority @default(NONE)
+  guestName   String?   
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+  resolvedAt  DateTime?     @db.Timestamptz(3)
+  resolvedBy  String?
+  resolver    Employee?     @relation("DocumentCommentResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  
+  @@index([documentId])
+  @@index([employeeId])
+  @@index([parentId])
+  @@index([documentId, status])
+  @@index([documentId, createdAt(sort: Desc)])
+}
+model DocumentShare {
+  id            String     @id @default(uuid()) // This UUID is the unique link token
+  documentId    String     @unique
+  document      Document   @relation(fields: [documentId], references: [id], onDelete: Cascade) 
+  
+  accessType    AccessType @default(PUBLIC)
+  passwordHash  String?    
+  
+  allowComments Boolean    @default(true)
+  allowDownload Boolean    @default(true) // Documents typically allow download
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
