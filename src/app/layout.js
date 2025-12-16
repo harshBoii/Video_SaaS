@@ -6,7 +6,7 @@ export const metadata = {
   title: 'CreateOs',
   description: 'Your app description',
 };
-
+import GoogleAuthProviderWrapper from './context/GoogleOauthProvider';
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -28,11 +28,13 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <GoogleAuthProviderWrapper>
         <Providers>
           <MainNav/>
           {children}
           <ChatWidget/>
         </Providers>
+        </GoogleAuthProviderWrapper>
       </body>
     </html>
   );

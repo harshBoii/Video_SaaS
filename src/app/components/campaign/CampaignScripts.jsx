@@ -33,49 +33,37 @@ function toTitleCase(str = '') {
     .replace(/[-_]+(.)/g, (_, c) => ' ' + c.toUpperCase());
 }
 
-// Get file icon based on extension
-function getFileIcon(filename) {
-  const extension = filename?.split('.').pop()?.toLowerCase();
-  
-  switch(extension) {
-    case 'pdf':
+// Get file icon based on documentType or mimeType
+function getFileIcon(documentType, mimeType) {
+  // Use documentType from enum first
+  switch(documentType) {
+    case 'PDF':
       return <FileText className="w-8 h-8 text-red-500" />;
-    case 'doc':
-    case 'docx':
+    case 'DOCUMENT':
       return <FileText className="w-8 h-8 text-blue-500" />;
-    case 'xls':
-    case 'xlsx':
-    case 'csv':
+    case 'SPREADSHEET':
       return <FileSpreadsheet className="w-8 h-8 text-green-500" />;
-    case 'txt':
-    case 'md':
+    case 'TEXT':
       return <FileCode className="w-8 h-8 text-gray-500" />;
-    case 'ppt':
-    case 'pptx':
+    case 'PRESENTATION':
       return <FileText className="w-8 h-8 text-orange-500" />;
     default:
       return <File className="w-8 h-8 text-gray-400" />;
   }
 }
 
-// Get file type badge color
-function getFileTypeBadge(filename) {
-  const extension = filename?.split('.').pop()?.toUpperCase();
-  
+// Get file type badge color based on documentType
+function getFileTypeBadge(documentType) {
   const colors = {
     'PDF': 'bg-red-100 text-red-800 border-red-200',
-    'DOC': 'bg-blue-100 text-blue-800 border-blue-200',
-    'DOCX': 'bg-blue-100 text-blue-800 border-blue-200',
-    'XLS': 'bg-green-100 text-green-800 border-green-200',
-    'XLSX': 'bg-green-100 text-green-800 border-green-200',
-    'CSV': 'bg-green-100 text-green-800 border-green-200',
-    'TXT': 'bg-gray-100 text-gray-800 border-gray-200',
-    'MD': 'bg-purple-100 text-purple-800 border-purple-200',
-    'PPT': 'bg-orange-100 text-orange-800 border-orange-200',
-    'PPTX': 'bg-orange-100 text-orange-800 border-orange-200',
+    'DOCUMENT': 'bg-blue-100 text-blue-800 border-blue-200',
+    'SPREADSHEET': 'bg-green-100 text-green-800 border-green-200',
+    'TEXT': 'bg-gray-100 text-gray-800 border-gray-200',
+    'PRESENTATION': 'bg-orange-100 text-orange-800 border-orange-200',
+    'OTHER': 'bg-purple-100 text-purple-800 border-purple-200',
   };
   
-  return colors[extension] || 'bg-gray-100 text-gray-800 border-gray-200';
+  return colors[documentType] || 'bg-gray-100 text-gray-800 border-gray-200';
 }
 
 // Loading Skeleton Component
@@ -130,19 +118,24 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
   const [uploadingFile, setUploadingFile] = useState(null);
   const [stats, setStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [fileTypeFilter, setFileTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ready'); // ✅ Default to 'ready'
+  const [documentTypeFilter, setDocumentTypeFilter] = useState(''); // ✅ Filter by DocumentType enum
   const [viewingDocument, setViewingDocument] = useState(null);
   const [currentDocumentIndex, setCurrentDocumentIndex] = useState(0);
   const [versionUploadModal, setVersionUploadModal] = useState(null);
   const [versionNote, setVersionNote] = useState('');
   const [showVersionModal, setShowVersionModal] = useState(false);
+  const [page, setPage] = useState(1); // ✅ NEW: Pagination
+  const [pagination, setPagination] = useState(null); // ✅ NEW: Pagination data
   const MAX_CONCURRENT_UPLOADS = 2;
   const MAX_FILES = 5;
   const [uploadQueue, setUploadQueue] = useState([]);
 
   useEffect(() => {
     fetchDocuments();
+  }, [campaign.id, page, statusFilter, documentTypeFilter, searchQuery]); // ✅ Added dependencies
+
+  useEffect(() => {
     fetchStats();
   }, [campaign.id]);
 
@@ -151,6 +144,324 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
     setShowVersionModal(true);
   };
 
+  // ✅ UPDATED: Fetch documents using new API - EXCLUDE IMAGES
+  const fetchDocuments = async () => {
+    setFetchingDocuments(true);
+    try {
+      // Build query params - fetch all non-IMAGE document types
+      const params = new URLSearchParams({
+        campaignId: campaign.id,
+        page: page.toString(),
+        limit: '20',
+        status: statusFilter,
+      });
+
+      if (searchQuery) params.append('search', searchQuery);
+      if (documentTypeFilter) params.append('documentType', documentTypeFilter);
+
+      const response = await fetch(
+        `/api/documents?${params.toString()}`,
+        { credentials: 'include' }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // ✅ Filter out IMAGE types on client side as extra safety
+        const nonImageDocs = data.data.filter(doc => doc.documentType !== 'IMAGE');
+        setDocuments(nonImageDocs);
+        setPagination(data.pagination);
+      } else {
+        await showError('Fetch Failed', data.error || 'Failed to load documents');
+      }
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+      await showError('Fetch Failed', error.message);
+    } finally {
+      setFetchingDocuments(false);
+    }
+  };
+
+  // ✅ UPDATED: Fetch stats for all non-IMAGE documents
+  const fetchStats = async () => {
+    try {
+      // Aggregate stats for all document types except IMAGE
+      const documentTypes = ['PDF', 'DOCUMENT', 'SPREADSHEET', 'TEXT', 'PRESENTATION', 'OTHER'];
+      
+      const statsPromises = documentTypes.map(type =>
+        fetch(
+          `/api/documents?campaignId=${campaign.id}&documentType=${type}&limit=1`,
+          { credentials: 'include' }
+        ).then(res => res.json())
+      );
+
+      const results = await Promise.all(statsPromises);
+      
+      // Aggregate totals
+      const totalDocuments = results.reduce((sum, result) => 
+        sum + (result.success ? result.pagination.total : 0), 0
+      );
+
+      setStats({
+        totalDocuments,
+        totalSizeFormatted: '0 MB', // Calculate if needed
+        statusBreakdown: {
+          ready: totalDocuments, // Simplified
+          uploading: 0,
+          error: 0,
+        }
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    const currentQueueLength = uploadQueue.length;
+    const availableSlots = MAX_FILES - currentQueueLength;
+    
+    if (files.length > availableSlots) {
+      await showError(
+        'Too Many Files', 
+        `You can only upload ${MAX_FILES} documents at once. You have ${availableSlots} slot(s) remaining.`
+      );
+      return;
+    }
+
+    // Initialize queue with all selected files
+    const newQueue = files.map((file, index) => ({
+      id: `${Date.now()}-${index}`,
+      file,
+      progress: 0,
+      status: 'pending',
+      error: null,
+      documentId: null, // ✅ Changed from imageId
+    }));
+
+    setUploadQueue(prev => [...prev, ...newQueue]);
+    
+    // Start processing queue
+    processUploadQueue(newQueue);
+  };
+
+  const handleClearQueue = () => {
+    setUploadQueue(prev => 
+      prev.filter(item => item.status === 'uploading')
+    );
+  };
+
+  const handleRemoveFromQueue = (id) => {
+    setUploadQueue(prev => prev.filter(item => item.id !== id));
+  };
+
+  const processUploadQueue = async (queue) => {
+    const chunks = [];
+    for (let i = 0; i < queue.length; i += MAX_CONCURRENT_UPLOADS) {
+      chunks.push(queue.slice(i, i + MAX_CONCURRENT_UPLOADS));
+    }
+
+    for (const chunk of chunks) {
+      await Promise.allSettled(
+        chunk.map(item => uploadSingleFile(item))
+      );
+    }
+
+    fetchDocuments();
+    fetchStats();
+    if (onUpdate) onUpdate();
+  };
+
+  const uploadSingleFile = async (queueItem) => {
+    const { id, file } = queueItem;
+
+    try {
+      updateQueueItem(id, { status: 'uploading' });
+
+      console.log(`[UPLOAD] Starting upload for: ${file.name}`);
+
+      const startRes = await fetch('/api/upload/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          campaignId: campaign.id,
+          metadata: {
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            description: `Uploaded to ${campaign.name}`,
+          }
+        })
+      });
+
+      if (!startRes.ok) {
+        const errorData = await startRes.json();
+        throw new Error(errorData.error || 'Failed to start upload');
+      }
+
+      const startData = await startRes.json();
+      const { upload, urls } = startData;
+
+      const partSize = upload.partSize;
+      const uploadedParts = [];
+
+      for (let i = 0; i < urls.length; i++) {
+        const start = i * partSize;
+        const end = Math.min(start + partSize, file.size);
+        const chunk = file.slice(start, end);
+
+        let retries = 3;
+        let uploadRes;
+
+        while (retries > 0) {
+          try {
+            uploadRes = await fetch(urls[i].url, {
+              method: 'PUT',
+              body: chunk,
+              headers: { 'Content-Type': file.type },
+            });
+
+            if (uploadRes.ok) break;
+
+            retries--;
+            if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (fetchError) {
+            retries--;
+            if (retries === 0) throw fetchError;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        const etag = uploadRes.headers.get('ETag');
+        if (!etag) throw new Error(`Part ${i + 1} uploaded but no ETag received`);
+
+        uploadedParts.push({
+          PartNumber: urls[i].partNumber,
+          ETag: etag.replace(/"/g, ''),
+        });
+
+        const progress = Math.round(((i + 1) / urls.length) * 100);
+        updateQueueItem(id, { progress });
+      }
+
+      const completeRes = await fetch('/api/upload/complete', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uploadId: upload.uploadId,
+          key: upload.key,
+          parts: uploadedParts,
+        })
+      });
+
+      if (!completeRes.ok) {
+        const errorData = await completeRes.json();
+        throw new Error(errorData.error || 'Failed to complete upload');
+      }
+
+      const result = await completeRes.json();
+
+      updateQueueItem(id, {
+        status: 'completed',
+        progress: 100,
+        documentId: result.document?.id,
+      });
+
+      console.log(`[UPLOAD] ✅ Completed: ${file.name}`);
+
+    } catch (error) {
+      console.error(`[UPLOAD ERROR] ${file.name}:`, error);
+      updateQueueItem(id, {
+        status: 'failed',
+        error: error.message,
+      });
+    }
+  };
+
+  const updateQueueItem = (id, updates) => {
+    setUploadQueue(prev =>
+      prev.map(item => item.id === id ? { ...item, ...updates } : item)
+    );
+  };
+
+  // ✅ UPDATED: Download using new API
+  const downloadDocument = async (documentId, title) => {
+    try {
+      const response = await fetch(
+        `/api/documents/${documentId}/download`,
+        { credentials: 'include' }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        window.open(data.data.url, '_blank');
+        await showSuccess('Download Started', `Downloading ${title}`);
+      } else {
+        await showError('Download Failed', data.error || 'Failed to generate download link');
+      }
+    } catch (error) {
+      await showError('Download Failed', error.message);
+    }
+  };
+
+  const viewDocument = (document, index) => {
+    setViewingDocument(document);
+    setCurrentDocumentIndex(index);
+  };
+
+  const handleNextDocument = () => {
+    if (currentDocumentIndex < documents.length - 1) {
+      const nextIndex = currentDocumentIndex + 1;
+      setCurrentDocumentIndex(nextIndex);
+      setViewingDocument(documents[nextIndex]);
+    }
+  };
+
+  const handlePrevDocument = () => {
+    if (currentDocumentIndex > 0) {
+      const prevIndex = currentDocumentIndex - 1;
+      setCurrentDocumentIndex(prevIndex);
+      setViewingDocument(documents[prevIndex]);
+    }
+  };
+
+  // ✅ UPDATED: Delete using new API
+  const deleteDocument = async (documentId, title) => {
+    const result = await showConfirm(
+      'Delete Document?',
+      `Are you sure you want to delete "${title}"? This will remove it from R2 storage.`,
+      'Yes, Delete',
+      'Cancel'
+    );
+
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/documents/${documentId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          await showSuccess('Document Deleted', 'Document removed successfully');
+          fetchDocuments();
+          fetchStats();
+          if (onUpdate) onUpdate();
+        } else {
+          await showError('Delete Failed', data.error || 'Failed to delete document');
+        }
+      } catch (error) {
+        await showError('Delete Failed', error.message);
+      }
+    }
+  };
+
+  // ✅ UPDATED: Version upload - keep using old API for now
   const handleVersionUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -174,6 +485,7 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
     try {
       console.log('[VERSION UPLOAD] Starting upload for:', file.name);
 
+      // ✅ TODO: Create /api/documents/[id]/versions endpoint
       const startRes = await fetch(`/api/statics/${documentId}/versions?filetype=doc`, {
         method: 'POST',
         credentials: 'include',
@@ -290,295 +602,12 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
     }
   };
 
-  const fetchDocuments = async () => {
-    setFetchingDocuments(true);
-    try {
-      const response = await fetch(
-        `/api/statics/list?projectId=${campaign.id}&filetype=doc&limit=50`,
-        { credentials: 'include' }
-      );
-
-      const data = await response.json();
-      if (data.success) {
-        setDocuments(data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch documents:', error);
-    } finally {
-      setFetchingDocuments(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch(
-        `/api/statics/list?projectId=${campaign.id}&filetype=doc&limit=1`,
-        { credentials: 'include' }
-      );
-
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.stats);
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  };
-
-  const handleFileUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-    
-    const currentQueueLength = uploadQueue.length;
-    const availableSlots = MAX_FILES - currentQueueLength;
-    
-    if (files.length > availableSlots) {
-      await showError(
-        'Too Many Files', 
-        `You can only upload ${MAX_FILES} documents at once. You have ${availableSlots} slot(s) remaining.`
-      );
-      return;
-    }
-
-    // Initialize queue with all selected files
-    const newQueue = files.map((file, index) => ({
-      id: `${Date.now()}-${index}`,
-      file,
-      progress: 0,
-      status: 'pending',
-      error: null,
-      documentId: null,
-    }));
-
-    setUploadQueue(prev => [...prev, ...newQueue]);
-    
-    // Start processing queue
-    processUploadQueue(newQueue);
-  };
-
-  const handleClearQueue = () => {
-    // Only clear completed/failed items, not uploading ones
-    setUploadQueue(prev => 
-      prev.filter(item => item.status === 'uploading')
-    );
-  };
-
-  const handleRemoveFromQueue = (id) => {
-    setUploadQueue(prev => prev.filter(item => item.id !== id));
-  };
-
-  const processUploadQueue = async (queue) => {
-    // Process uploads with concurrency limit
-    const chunks = [];
-    for (let i = 0; i < queue.length; i += MAX_CONCURRENT_UPLOADS) {
-      chunks.push(queue.slice(i, i + MAX_CONCURRENT_UPLOADS));
-    }
-
-    for (const chunk of chunks) {
-      await Promise.allSettled(
-        chunk.map(item => uploadSingleFile(item))
-      );
-    }
-
-    fetchDocuments();
-    fetchStats();
-    if (onUpdate) onUpdate();
-  };
-
-  const uploadSingleFile = async (queueItem) => {
-    const { id, file } = queueItem;
-
-    try {
-      // Update status to uploading
-      updateQueueItem(id, { status: 'uploading' });
-
-      console.log(`[UPLOAD] Starting upload for: ${file.name}`);
-
-      // Start upload
-      const startRes = await fetch('/api/upload/start', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-          campaignId: campaign.id,
-          metadata: {
-            title: file.name.replace(/\.[^/.]+$/, ''),
-            description: `Uploaded to ${campaign.name}`,
-          }
-        })
-      });
-
-      if (!startRes.ok) {
-        const errorData = await startRes.json();
-        throw new Error(errorData.error || 'Failed to start upload');
-      }
-
-      const startData = await startRes.json();
-      const { upload, urls } = startData;
-
-      // Upload parts
-      const partSize = upload.partSize;
-      const uploadedParts = [];
-
-      for (let i = 0; i < urls.length; i++) {
-        const start = i * partSize;
-        const end = Math.min(start + partSize, file.size);
-        const chunk = file.slice(start, end);
-
-        let retries = 3;
-        let uploadRes;
-
-        while (retries > 0) {
-          try {
-            uploadRes = await fetch(urls[i].url, {
-              method: 'PUT',
-              body: chunk,
-              headers: { 'Content-Type': file.type },
-            });
-
-            if (uploadRes.ok) break;
-
-            retries--;
-            if (retries === 0) throw new Error(`Failed to upload part ${i + 1}`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (fetchError) {
-            retries--;
-            if (retries === 0) throw fetchError;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-
-        const etag = uploadRes.headers.get('ETag');
-        if (!etag) throw new Error(`Part ${i + 1} uploaded but no ETag received`);
-
-        uploadedParts.push({
-          PartNumber: urls[i].partNumber,
-          ETag: etag.replace(/"/g, ''),
-        });
-
-        // Update progress for this specific file
-        const progress = Math.round(((i + 1) / urls.length) * 100);
-        updateQueueItem(id, { progress });
-      }
-
-      // Complete upload
-      const completeRes = await fetch('/api/upload/complete', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uploadId: upload.uploadId,
-          key: upload.key,
-          parts: uploadedParts,
-        })
-      });
-
-      if (!completeRes.ok) {
-        const errorData = await completeRes.json();
-        throw new Error(errorData.error || 'Failed to complete upload');
-      }
-
-      const result = await completeRes.json();
-
-      // Mark as completed
-      updateQueueItem(id, {
-        status: 'completed',
-        progress: 100,
-        documentId: result.document?.id,
-      });
-
-      console.log(`[UPLOAD] ✅ Completed: ${file.name}`);
-
-    } catch (error) {
-      console.error(`[UPLOAD ERROR] ${file.name}:`, error);
-      updateQueueItem(id, {
-        status: 'failed',
-        error: error.message,
-      });
-    }
-  };
-
-  // Helper to update individual queue item
-  const updateQueueItem = (id, updates) => {
-    setUploadQueue(prev =>
-      prev.map(item => item.id === id ? { ...item, ...updates } : item)
-    );
-  };
-
-  const downloadDocument = async (documentId, title) => {
-    try {
-      const response = await fetch(`/api/statics/${documentId}/raw?filetype=doc&expiresIn=3600`, {
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        window.open(data.download.url, '_blank');
-        await showSuccess('Download Started', `Downloading ${title}`);
-      }
-    } catch (error) {
-      await showError('Download Failed', error.message);
-    }
-  };
-
-  const viewDocument = (document, index) => {
-    setViewingDocument(document);
-    setCurrentDocumentIndex(index);
-  };
-
-  const handleNextDocument = () => {
-    const filteredList = getFilteredDocuments();
-    if (currentDocumentIndex < filteredList.length - 1) {
-      const nextIndex = currentDocumentIndex + 1;
-      setCurrentDocumentIndex(nextIndex);
-      setViewingDocument(filteredList[nextIndex]);
-    }
-  };
-
-  const handlePrevDocument = () => {
-    if (currentDocumentIndex > 0) {
-      const filteredList = getFilteredDocuments();
-      const prevIndex = currentDocumentIndex - 1;
-      setCurrentDocumentIndex(prevIndex);
-      setViewingDocument(filteredList[prevIndex]);
-    }
-  };
-
-  const deleteDocument = async (documentId, title) => {
-    const result = await showConfirm(
-      'Delete Document?',
-      `Are you sure you want to delete "${title}"? This will remove it from R2 storage.`,
-      'Yes, Delete',
-      'Cancel'
-    );
-
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`/api/statics/${documentId}/delete?filetype=doc`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          await showSuccess('Document Deleted', 'Document removed successfully');
-          fetchDocuments();
-          fetchStats();
-          if (onUpdate) onUpdate();
-        }
-      } catch (error) {
-        await showError('Delete Failed', error.message);
-      }
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'ready': return 'bg-green-100 text-green-800 border-green-200';
       case 'uploading': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'processing': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'archived': return 'bg-gray-100 text-gray-800 border-gray-200';
       case 'error': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -588,33 +617,14 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
     switch (status) {
       case 'ready': return <CheckCircle className="w-4 h-4" />;
       case 'uploading': return <Upload className="w-4 h-4" />;
+      case 'processing': return <RefreshCw className="w-4 h-4 animate-spin" />;
       case 'error': return <XCircle className="w-4 h-4" />;
       default: return <CheckCircle className="w-4 h-4" />;
     }
   };
 
-  const getFilteredDocuments = () => {
-    return documents.filter(doc => {
-      const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           doc.filename.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = !statusFilter || doc.status === statusFilter;
-      
-      let matchesFileType = true;
-      if (fileTypeFilter) {
-        const extension = doc.filename?.split('.').pop()?.toLowerCase();
-        matchesFileType = extension === fileTypeFilter.toLowerCase();
-      }
-      
-      return matchesSearch && matchesStatus && matchesFileType;
-    });
-  };
-
-  const filteredDocuments = getFilteredDocuments();
-
-  // Get unique file types from documents
-  const fileTypes = [...new Set(documents.map(doc => 
-    doc.filename?.split('.').pop()?.toUpperCase()
-  ))].filter(Boolean);
+  // ✅ Available DocumentType enum values (excluding IMAGE)
+  const documentTypes = ['PDF', 'DOCUMENT', 'SPREADSHEET', 'TEXT', 'PRESENTATION', 'OTHER'];
 
   return (
     <CampaignPermissionsProvider campaignId={campaignId}>
@@ -745,30 +755,41 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
                 type="text"
                 placeholder="Search documents..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1); // ✅ Reset to page 1 on search
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
+            {/* ✅ Filter by DocumentType enum */}
             <select
-              value={fileTypeFilter}
-              onChange={(e) => setFileTypeFilter(e.target.value)}
+              value={documentTypeFilter}
+              onChange={(e) => {
+                setDocumentTypeFilter(e.target.value);
+                setPage(1);
+              }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Types</option>
-              {fileTypes.map(type => (
+              {documentTypes.map(type => (
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Status</option>
               <option value="ready">Ready</option>
-              <option value="uploading">Uploading</option>
+              <option value="processing">Processing</option>
+              <option value="archived">Archived</option>
               <option value="error">Error</option>
             </select>
 
@@ -818,23 +839,23 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
               <tbody className="divide-y divide-gray-200">
                 {fetchingDocuments ? (
                   <DocumentTableSkeleton />
-                ) : filteredDocuments.length === 0 ? (
+                ) : documents.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="px-6 py-12 text-center">
                       <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-gray-600 font-medium mb-1">
-                        {searchQuery || statusFilter || fileTypeFilter
+                        {searchQuery || statusFilter || documentTypeFilter
                           ? 'No documents match your filters'
                           : 'No documents uploaded yet'
                         }
                       </p>
                       <p className="text-sm text-gray-500">
-                        {!(searchQuery || statusFilter || fileTypeFilter) && 'Upload your first document to get started!'}
+                        {!(searchQuery || statusFilter || documentTypeFilter) && 'Upload your first document to get started!'}
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  filteredDocuments.map((doc, index) => (
+                  documents.map((doc, index) => (
                     <motion.tr
                       key={doc.id}
                       initial={{ opacity: 0 }}
@@ -844,7 +865,8 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
-                            {getFileIcon(doc.filename)}
+                            {/* ✅ Use documentType and mimeType */}
+                            {getFileIcon(doc.documentType, doc.mimeType)}
                           </div>
                           <div className="max-w-xs">
                             <p className="font-medium text-gray-900 truncate">{doc.title}</p>
@@ -853,8 +875,9 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getFileTypeBadge(doc.filename)}`}>
-                          {doc.filename?.split('.').pop()?.toUpperCase()}
+                        {/* ✅ Use documentType from enum */}
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getFileTypeBadge(doc.documentType)}`}>
+                          {doc.documentType}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -870,7 +893,8 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
                           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg border border-purple-200">
                             <Layers className="w-3.5 h-3.5" />
                             <span className="text-xs font-semibold">
-                              {doc.versionCount || 1}
+                              {/* ✅ Use versionsCount from API */}
+                              {doc.versionsCount || 1}
                             </span>
                           </div>
                           {doc.currentVersion && (
@@ -884,6 +908,7 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
+                        {/* ✅ Use fileSizeFormatted from API */}
                         {doc.fileSizeFormatted}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
@@ -931,6 +956,31 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
               </tbody>
             </table>
           </div>
+
+          {/* ✅ NEW: Pagination */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} documents
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                  disabled={page === pagination.totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Version Upload Modal */}
@@ -1031,10 +1081,10 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
           onClose={() => setViewingDocument(null)}
           onDownload={(asset) => downloadDocument(asset.id, asset.title)}
           showDownload={true}
-          showNavigation={filteredDocuments.length > 1}
+          showNavigation={documents.length > 1}
           onNext={handleNextDocument}
           onPrev={handlePrevDocument}
-          hasNext={currentDocumentIndex < filteredDocuments.length - 1}
+          hasNext={currentDocumentIndex < documents.length - 1}
           hasPrev={currentDocumentIndex > 0}
         />
       </div>
