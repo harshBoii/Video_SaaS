@@ -724,7 +724,7 @@ async function processNewDocumentUpload({
         title: uploadSession.fileName.replace(/\.[^/.]+$/, ""),
         filename: uploadSession.fileName,
         fileSize: fileSize,
-        fileType: uploadSession.fileType,
+        mimeType: uploadSession.fileType,
         status: "ready", // Documents are ready immediately
         r2Key: key,
         r2Bucket: process.env.R2_BUCKET_NAME,
