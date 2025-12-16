@@ -701,23 +701,43 @@ async function processNewDocumentUpload({
 }) {
   return await prisma.$transaction(async (tx) => {
     // 1. Create document record
-    const getDocumentType = (assetType) => {
-      switch(assetType) {
-        case 'image':
+      const getDocumentType = (assetType, fileName) => {
+        // Get file extension
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        
+        // Images
+        if (assetType === 'image' || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
           return 'IMAGE';
-        case 'document':
-          // Check file extension to determine specific document type
-          const ext = uploadSession.fileName.split('.').pop()?.toLowerCase();
-          if (ext === 'pdf') return 'PDF';
-          if (['doc', 'docx'].includes(ext)) return 'DOC';
-          if (['xls', 'xlsx'].includes(ext)) return 'SPREADSHEET';
-          if (['ppt', 'pptx'].includes(ext)) return 'PRESENTATION';
-          if (['txt', 'md'].includes(ext)) return 'TEXT';
-          return 'OTHER';
-        default:
-          return 'OTHER';
-      }
-    };
+        }
+        
+        // PDF
+        if (ext === 'pdf') {
+          return 'PDF';
+        }
+        
+        // Documents (Word docs)
+        if (['doc', 'docx', 'odt'].includes(ext)) {
+          return 'DOCUMENT';
+        }
+        
+        // Spreadsheets
+        if (['xls', 'xlsx', 'csv'].includes(ext)) {
+          return 'SPREADSHEET';
+        }
+        
+        // Text files
+        if (['txt', 'md'].includes(ext)) {
+          return 'TEXT';
+        }
+        
+        // Presentations
+        if (['ppt', 'pptx'].includes(ext)) {
+          return 'PRESENTATION';
+        }
+        
+        // Everything else
+        return 'OTHER';
+      };
 
     const document = await tx.document.create({
       data: {
