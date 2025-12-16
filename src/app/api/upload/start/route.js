@@ -18,6 +18,7 @@ const startUploadSchema = z.object({
     description: z.string().optional(),
   }).optional(),
 });
+import { detectAssetType } from "@/app/lib/auth";
 
 export async function POST(request) {
   try {
@@ -54,6 +55,9 @@ export async function POST(request) {
 
     const { fileName, fileType, fileSize, campaignId, metadata } = validation.data;
 
+    const assetType = detectAssetType(fileType, fileName);
+    console.log(`[UPLOAD START] Asset Type: ${assetType}`);
+
     // ✅ 3. Verify campaign exists and user has access
     const campaign = await prisma.campaign.findFirst({
       where: { 
@@ -73,6 +77,7 @@ export async function POST(request) {
     // ✅ 4. Generate unique R2 key
     const timestamp = Date.now();
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+
     const key = `uploads/${campaignId}/${timestamp}-${sanitizedFileName}`;
 
     // ✅ 5. Calculate multipart upload parts
@@ -93,6 +98,7 @@ export async function POST(request) {
         campaignId: campaignId,
         uploaderId: currentUser.id,
         uploaderEmail: currentUser.email,
+        assetType: assetType,
         ...(metadata?.title && { title: sanitizeMetadata(metadata.title) }),
         ...(metadata?.description && { description: sanitizeMetadata(metadata.description) }),
       },
@@ -169,6 +175,7 @@ export async function POST(request) {
         partSize,
         totalParts,
         sessionId: uploadSession.id,
+        assetType,
       },
       urls,
       message: "Upload initialized successfully",

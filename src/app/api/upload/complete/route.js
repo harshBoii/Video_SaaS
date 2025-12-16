@@ -2,7 +2,7 @@ import { r2 } from "@/app/lib/r2";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
-import { verifyJWT } from "@/app/lib/auth";
+import { verifyJWT,detectAssetTypeFromKey } from "@/app/lib/auth";
 import { completeUploadSchema, formatZodError, COMPRESSION_THRESHOLD } from "@/app/lib/validation";
 
 export async function POST(request) {
@@ -79,6 +79,7 @@ export async function POST(request) {
           success: false,
           error: "Upload already completed",
           videoId: uploadSession.videoId,
+          documentId: uploadSession.documentId
         },
         { status: 400 }
       );
@@ -229,6 +230,9 @@ export async function POST(request) {
       );
     }
 
+    const assetType = detectAssetTypeFromKey(key, uploadSession.fileName);
+    console.log(`[ASSET TYPE] ${assetType}`);
+
     // ✅ 9. PROCESS UPLOAD BASED ON TYPE (VERSION vs NEW VIDEO)
     const fileSize = uploadSession.fileSize;
     const needsCompression = Number(fileSize) > COMPRESSION_THRESHOLD;
@@ -248,16 +252,18 @@ export async function POST(request) {
         needsCompression,
         user,
         r2Response,
+        assetType
       });
 
       responseData = result;
 
     } else {
       // ==========================================
-      // ✅ NEW VIDEO UPLOAD PATH
+      // FRESH UPLOAD PATH
       // ==========================================
-      console.log(`[NEW VIDEO UPLOAD] Processing`);
 
+      if (assetType === 'video'){      
+      console.log(`[NEW VIDEO UPLOAD] Processing`);
       const result = await processNewVideoUpload({
         uploadSession,
         key,
@@ -267,10 +273,26 @@ export async function POST(request) {
         user,
         r2Response,
       });
-
       responseData = result;
-    }
+        }
+      else if (assetType === 'image' || assetType === 'document') {
+        console.log(`[NEW ${assetType.toUpperCase()} UPLOAD] Processing`);
+        const result = await processNewDocumentUpload({
+          uploadSession,
+          key,
+          fileSize,
+          user,
+          r2Response,
+          assetType,
+        });
 
+        responseData = result;
+        
+      } 
+      else {
+        throw new Error(`Unsupported asset type: ${assetType}`);
+      }
+    }
     return NextResponse.json(responseData);
 
   } catch (error) {
@@ -347,10 +369,12 @@ async function processVersionUpload({
   needsCompression,
   user,
   r2Response,
+  assetType
 }) {
   return await prisma.$transaction(async (tx) => {
-    // 1. Get version and verify it exists
-    const version = await tx.videoVersion.findUnique({
+    let version, isVideo = false;
+
+    version = await tx.videoVersion.findUnique({
       where: { id: versionId },
       include: {
         video: {
@@ -363,21 +387,52 @@ async function processVersionUpload({
         }
       }
     });
-
+    if (version) {
+      isVideo = true;
+    }
+    else {
+      version = await tx.documentVersion.findUnique({
+        where: { id: versionId },
+        include: {
+          document: {
+            select: {
+              id: true,
+              title: true,
+              campaignId: true,
+              currentVersion: true,
+            }
+          }
+        }
+      });
+    }
+    
     if (!version) {
       throw new Error(`Version ${versionId} not found`);
     }
 
     // 2. Update version status
-    await tx.videoVersion.update({
+    if (isVideo) {
+      await tx.videoVersion.update({
       where: { id: versionId },
       data: {
         status: needsCompression ? 'processing' : 'ready',
         r2Key: key, // Ensure R2 key is saved
       }
     });
+    }
+    else {
+      await tx.documentVersion.update({
+        where: { id: versionId },
+        data: {
+          status: 'ready', 
+          r2Key: key,
+        }
+      });
+    }
 
     let processingInfo = {};
+    const parentId = isVideo ? version.videoId : version.documentId;
+    const parentTitle = isVideo ? version.video.title : version.document.title;
 
     if (needsCompression) {
       // 3a. Queue for compression
@@ -412,7 +467,7 @@ async function processVersionUpload({
       };
 
       console.log(`[COMPRESSION QUEUED] Version: ${versionId} | Job: ${compressionJob.id}`);
-    } else {
+    } else if (isVideo) {
       // 3b. Queue for Cloudflare Stream
       await tx.streamQueue.upsert({
         where: { videoId: version.videoId },
@@ -438,6 +493,13 @@ async function processVersionUpload({
 
       console.log(`[STREAM QUEUED] Version: ${versionId} | Video: ${version.videoId}`);
     }
+    else {
+      // Documents are ready immediately
+      processingInfo = {
+        requiresCompression: false,
+        ready: true,
+      };
+    }
 
     // 4. Update upload session (NO videoId for versions)
     await tx.uploadSession.update({
@@ -445,40 +507,51 @@ async function processVersionUpload({
       data: {
         status: "COMPLETED",
         completedAt: new Date(),
+        ...(isVideo && { videoId: parentId }),
+        ...(! isVideo && { documentId: parentId }),
+
         metadata: JSON.stringify({
           versionId: versionId,
           r2ETag: r2Response.ETag,
           completedAt: new Date().toISOString(),
+          assetType: isVideo ? 'video' : 'document'
         })
       },
     });
 
-    console.log(`✅ [VERSION COMPLETE] Version: ${versionId} | Video: ${version.videoId}`);
+    console.log(`✅ [VERSION COMPLETE] Version: ${versionId} | ${isVideo ? 'Video' : 'Document'}: ${parentId}`);
 
     return {
       success: true,
       message: "Version upload completed successfully",
       version: {
         id: versionId,
-        videoId: version.videoId,
-        videoTitle: version.video.title,
+
+        ...(isVideo ? {
+          videoId: version.videoId,
+          videoTitle: version.video.title,
+        } : {
+          documentId: version.documentId,
+          documentTitle: version.document.title,
+        }),
         versionNumber: version.version,
         size: Number(fileSize),
         sizeFormatted: formatBytes(fileSize),
-        status: needsCompression ? "processing" : "ready",
+        status: (isVideo && needsCompression) ? "processing" : "ready",
         r2Key: key,
         r2ETag: r2Response.ETag,
+        assetType: isVideo ? 'video' : 'document',
       },
       processing: processingInfo,
     };
   }, {
     maxWait: 5000, // 5 seconds
-    timeout: 10000, // 10 seconds
+    timeout: 15000, // 15 seconds
   });
 }
 
 // ==========================================
-// HELPER: PROCESS NEW VIDEO UPLOAD
+// HELPERS
 // ==========================================
 async function processNewVideoUpload({
   uploadSession,
@@ -618,6 +691,99 @@ async function processNewVideoUpload({
     timeout: 10000, // 10 seconds
   });
 }
+async function processNewDocumentUpload({
+  uploadSession,
+  key,
+  fileSize,
+  user,
+  r2Response,
+  assetType,
+}) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Create document record
+    const document = await tx.document.create({
+      data: {
+        title: uploadSession.fileName.replace(/\.[^/.]+$/, ""),
+        filename: uploadSession.fileName,
+        fileSize: fileSize,
+        fileType: uploadSession.fileType,
+        status: "ready", // Documents are ready immediately
+        r2Key: key,
+        r2Bucket: process.env.R2_BUCKET_NAME,
+        campaignId: uploadSession.campaignId,
+        uploadedBy: user.id,
+        currentVersion: 1,
+        metadata: {
+          r2ETag: r2Response.ETag,
+          uploadedAt: new Date().toISOString(),
+          assetType: assetType,
+        },
+        tags: [],
+      },
+    });
+
+    console.log(`[DOCUMENT CREATED] ID: ${document.id} | Title: ${document.title} | Type: ${assetType}`);
+
+    // 2. Create initial version
+    await tx.documentVersion.create({
+      data: {
+        documentId: document.id,
+        version: 1,
+        r2Key: key,
+        fileSize: fileSize,
+        status: "ready",
+        isActive: true,
+        versionNote: "Initial upload",
+        uploadedBy: user.id,
+      },
+    });
+
+    // 3. Update upload session with documentId
+    await tx.uploadSession.update({
+      where: { id: uploadSession.id },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        documentId: document.id,
+        metadata: JSON.stringify({
+          r2ETag: r2Response.ETag,
+          completedAt: new Date().toISOString(),
+          assetType: assetType,
+        })
+      },
+    });
+
+    console.log(`✅ [UPLOAD COMPLETE] Document: ${document.id} | Type: ${assetType} | User: ${user.email}`);
+
+    return {
+      success: true,
+      message: `${assetType === 'image' ? 'Image' : 'Document'} upload completed successfully`,
+      document: {
+        id: document.id,
+        title: document.title,
+        filename: document.filename,
+        size: Number(document.fileSize),
+        sizeFormatted: formatBytes(document.fileSize),
+        status: document.status,
+        r2Key: document.r2Key,
+        r2ETag: r2Response.ETag,
+        assetType: assetType,
+        campaign: {
+          id: uploadSession.campaign.id,
+          name: uploadSession.campaign.name,
+        },
+      },
+      processing: {
+        requiresCompression: false,
+        ready: true,
+      },
+    };
+  }, {
+    maxWait: 5000,
+    timeout: 10000,
+  });
+}
+
 
 // ==========================================
 // UTILITY FUNCTIONS

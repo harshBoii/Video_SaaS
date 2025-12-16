@@ -579,3 +579,43 @@ export async function getCompanyFromToken(request) {
     return null;
   }
 }
+
+export function detectAssetType(fileType, fileName) {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  
+  // Video types
+  if (fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
+    return 'video';
+  }
+  
+  // Image types
+  if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension)) {
+    return 'image';
+  }
+  
+  // Document types
+  if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'md'].includes(extension)) {
+    return 'document';
+  }
+  
+  return 'unknown';
+}
+
+export function detectAssetTypeFromKey(key, fileName) {
+  const extension = fileName?.split('.').pop()?.toLowerCase();
+  
+  if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
+    return 'video';
+  }
+  
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension)) {
+    return 'image';
+  }
+  
+  if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'md'].includes(extension)) {
+    return 'document';
+  }
+  
+  return 'unknown';
+}
+
