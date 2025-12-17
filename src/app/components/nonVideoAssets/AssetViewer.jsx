@@ -21,7 +21,16 @@ import {
   FileSpreadsheet,
   Presentation,
   FileCode,
-  Edit3
+  Edit3,
+  ChevronDown,
+  Check,
+  Eye,
+  Star,
+  Clock,
+  User,
+  Columns2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import GoogleEditorIntegration from './editors/GoogleEditorIntegration';
@@ -43,9 +52,9 @@ const DocViewer = dynamic(
 );
 
 /**
- * Universal Asset Viewer Modal
+ * Universal Asset Viewer Modal with Version Management
  * Supports: Images, Videos, PDFs, DOCX, XLSX, TXT, PPT, etc.
- * With Google Drive editing integration
+ * Features: Version selection, activation, multi-version comparison
  */
 export default function AssetViewerModal({ 
   asset, 
@@ -57,7 +66,8 @@ export default function AssetViewerModal({
   onNext,
   onPrev,
   hasNext = false,
-  hasPrev = false
+  hasPrev = false,
+  onVersionChange // ✅ Callback when version changes
 }) {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
@@ -66,7 +76,122 @@ export default function AssetViewerModal({
   const [loading, setLoading] = useState(true);
   const [docViewerReady, setDocViewerReady] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showEditor, setShowEditor] = useState(false); // ✅ NEW: Toggle editor view
+  const [showEditor, setShowEditor] = useState(false);
+
+  // ✅ NEW: Version Management States
+  const [versions, setVersions] = useState([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [showVersionDropdown, setShowVersionDropdown] = useState(false);
+  const [selectedVersions, setSelectedVersions] = useState([]); // For multi-select
+  const [compareMode, setCompareMode] = useState(false);
+  const [activatingVersion, setActivatingVersion] = useState(null);
+
+  // ✅ Fetch versions when asset changes
+  useEffect(() => {
+    if (asset?.id) {
+      fetchVersions();
+    }
+  }, [asset?.id]);
+
+  const fetchVersions = async () => {
+    if (!asset?.id) return;
+    
+    setLoadingVersions(true);
+    try {
+      const response = await fetch(`/api/documents/${asset.id}/versions`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch versions');
+
+      const data = await response.json();
+      if (data.success) {
+        setVersions(data.data || []);
+        // Set current version as selected by default
+        const activeVersion = data.data.find(v => v.isActive);
+        if (activeVersion && selectedVersions.length === 0) {
+          setSelectedVersions([activeVersion.version]);
+        }
+      }
+    } catch (error) {
+      console.error('[FETCH VERSIONS ERROR]', error);
+    } finally {
+      setLoadingVersions(false);
+    }
+  };
+
+  // ✅ Activate a version
+  const handleActivateVersion = async (versionNumber) => {
+    setActivatingVersion(versionNumber);
+    try {
+      const response = await fetch(`/api/documents/${asset.id}/versions/activate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: versionNumber }),
+      });
+
+      if (!response.ok) throw new Error('Failed to activate version');
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh versions and asset data
+        await fetchVersions();
+        if (onVersionChange) {
+          onVersionChange(versionNumber);
+        }
+        
+        // Show success feedback
+        showSuccess('Version Activated', `Version ${versionNumber} is now active`);
+      }
+    } catch (error) {
+      console.error('[ACTIVATE VERSION ERROR]', error);
+      showError('Failed to activate version');
+    } finally {
+      setActivatingVersion(null);
+    }
+  };
+
+  // ✅ Toggle version selection for comparison
+  const toggleVersionSelection = (versionNumber) => {
+    setSelectedVersions(prev => {
+      if (prev.includes(versionNumber)) {
+        return prev.filter(v => v !== versionNumber);
+      } else {
+        // Limit to 3 versions for comparison
+        if (prev.length >= 3) {
+          return [...prev.slice(1), versionNumber];
+        }
+        return [...prev, versionNumber];
+      }
+    });
+  };
+
+  // ✅ Enter comparison mode
+  const enterCompareMode = () => {
+    if (selectedVersions.length < 2) {
+      showError('Select at least 2 versions to compare');
+      return;
+    }
+    setCompareMode(true);
+    setShowVersionDropdown(false);
+  };
+
+  // ✅ Get version details
+  const getVersionDetails = (versionNumber) => {
+    return versions.find(v => v.version === versionNumber);
+  };
+
+  // Simple notification helpers (you can replace with your existing toast system)
+  const showSuccess = (title, message) => {
+    // Implement your success notification
+    console.log('✅', title, message);
+  };
+
+  const showError = (message) => {
+    // Implement your error notification
+    console.error('❌', message);
+  };
 
   // Reset states when asset changes
   useEffect(() => {
@@ -75,7 +200,9 @@ export default function AssetViewerModal({
       setRotation(0);
       setError(null);
       setLoading(true);
-      setShowEditor(false); // ✅ Reset editor view
+      setShowEditor(false);
+      setCompareMode(false);
+      setSelectedVersions([]);
     }
   }, [asset?.id]);
 
@@ -96,39 +223,45 @@ export default function AssetViewerModal({
     const handleKeyPress = (e) => {
       switch(e.key) {
         case 'Escape':
-          if (showEditor) {
+          if (compareMode) {
+            setCompareMode(false);
+          } else if (showEditor) {
             setShowEditor(false);
           } else {
             onClose?.();
           }
           break;
         case 'ArrowLeft':
-          if (!showEditor && hasPrev && onPrev) onPrev();
+          if (!showEditor && !compareMode && hasPrev && onPrev) onPrev();
           break;
         case 'ArrowRight':
-          if (!showEditor && hasNext && onNext) onNext();
+          if (!showEditor && !compareMode && hasNext && onNext) onNext();
           break;
         case '+':
         case '=':
-          if (!showEditor) handleZoomIn();
+          if (!showEditor && !compareMode) handleZoomIn();
           break;
         case '-':
-          if (!showEditor) handleZoomOut();
+          if (!showEditor && !compareMode) handleZoomOut();
           break;
         case 'r':
         case 'R':
-          if (!showEditor) handleRotate();
+          if (!showEditor && !compareMode) handleRotate();
           break;
         case 'e':
         case 'E':
-          if (isEditable()) setShowEditor(!showEditor);
+          if (isEditable() && !compareMode) setShowEditor(!showEditor);
+          break;
+        case 'c':
+        case 'C':
+          if (selectedVersions.length >= 2) enterCompareMode();
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen, hasNext, hasPrev, onNext, onPrev, showEditor]);
+  }, [isOpen, hasNext, hasPrev, onNext, onPrev, showEditor, compareMode, selectedVersions]);
 
   // ✅ Load DocViewer after component mounts
   useEffect(() => {
@@ -145,24 +278,20 @@ export default function AssetViewerModal({
     const extension = asset.filename?.split('.').pop()?.toLowerCase();
     const mimeType = asset.fileType || asset.mimeType || '';
 
-    // Images
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension) || 
         mimeType.startsWith('image/')) {
       return 'image';
     }
 
-    // Videos
     if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(extension) || 
         mimeType.startsWith('video/')) {
       return 'video';
     }
 
-    // PDFs
     if (extension === 'pdf' || mimeType === 'application/pdf') {
       return 'pdf';
     }
 
-    // Documents
     if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'md', 'rtf'].includes(extension)) {
       return 'document';
     }
@@ -284,6 +413,26 @@ export default function AssetViewerModal({
     }
   };
 
+  // ✅ Format date helper
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // ✅ Format file size helper
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -296,8 +445,163 @@ export default function AssetViewerModal({
         {/* Header Controls */}
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between text-white">
-            {/* File Info */}
+            {/* ✅ LEFT: Version Selector */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
+              {/* Version Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowVersionDropdown(!showVersionDropdown);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
+                  title="Version History"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    v{asset.currentVersion || 1}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showVersionDropdown ? 'rotate-180' : ''}`} />
+                  {versions.length > 0 && (
+                    <span className="text-xs text-white/60">
+                      ({versions.length})
+                    </span>
+                  )}
+                </button>
+
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                  {showVersionDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 mt-2 w-96 bg-slate-900 border border-white/20 rounded-lg shadow-2xl overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Dropdown Header */}
+                      <div className="px-4 py-3 border-b border-white/10 bg-slate-800/50">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-sm">Version History</h3>
+                          {selectedVersions.length >= 2 && (
+                            <button
+                              onClick={enterCompareMode}
+                              className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                              title="Compare Selected (C)"
+                            >
+                              <Columns2 className="w-3.5 h-3.5" />
+                              Compare ({selectedVersions.length})
+                            </button>
+                          )}
+                        </div>
+                        {selectedVersions.length > 0 && selectedVersions.length < 2 && (
+                          <p className="text-xs text-white/50 mt-1">
+                            Select at least 2 versions to compare
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Version List */}
+                      <div className="max-h-96 overflow-y-auto">
+                        {loadingVersions ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                          </div>
+                        ) : versions.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-white/50 text-sm">
+                            <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p>No version history available</p>
+                          </div>
+                        ) : (
+                          versions.map((version) => (
+                            <div
+                              key={version.id}
+                              className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
+                                version.isActive ? 'bg-blue-500/10' : ''
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                {/* Checkbox for multi-select */}
+                                <input
+                                  type="checkbox"
+                                  checked={selectedVersions.includes(version.version)}
+                                  onChange={() => toggleVersionSelection(version.version)}
+                                  className="mt-1 w-4 h-4 rounded border-white/20 bg-white/10 text-blue-600 focus:ring-blue-500"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+
+                                {/* Version Info */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-semibold text-sm">
+                                      Version {version.version}
+                                    </span>
+                                    {version.isActive && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
+                                        <Star className="w-3 h-3 fill-current" />
+                                        Active
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {version.versionNote && (
+                                    <p className="text-xs text-white/70 mb-2 line-clamp-2">
+                                      {version.versionNote}
+                                    </p>
+                                  )}
+
+                                  <div className="flex items-center gap-3 text-xs text-white/50">
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {version.uploader?.name || 'Unknown'}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{formatFileSize(version.fileSize)}</span>
+                                    <span>•</span>
+                                    <span>{formatDate(version.createdAt)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      // Preview this version
+                                      setSelectedVersions([version.version]);
+                                      setShowVersionDropdown(false);
+                                    }}
+                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                    title="Preview"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+
+                                  {!version.isActive && (
+                                    <button
+                                      onClick={() => handleActivateVersion(version.version)}
+                                      disabled={activatingVersion === version.version}
+                                      className="p-1.5 hover:bg-green-500/20 text-green-400 rounded transition-colors disabled:opacity-50"
+                                      title="Set as Active"
+                                    >
+                                      {activatingVersion === version.version ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : (
+                                        <Check className="w-4 h-4" />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* File Info */}
               <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
                 {getFileIcon()}
               </div>
@@ -307,10 +611,29 @@ export default function AssetViewerModal({
               </div>
             </div>
 
-            {/* Controls */}
+            {/* RIGHT: Controls */}
             <div className="flex items-center gap-2 ml-4">
-              {/* ✅ Edit Button for editable documents */}
-              {isEditable() && !showEditor && (
+              {/* Compare Mode Badge */}
+              {compareMode && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 rounded-lg">
+                  <Columns2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    Comparing {selectedVersions.length} Versions
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCompareMode(false);
+                    }}
+                    className="ml-2 hover:bg-white/20 rounded p-0.5 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Edit Button */}
+              {isEditable() && !showEditor && !compareMode && (
                 <button
                   onClick={(e) => { 
                     e.stopPropagation(); 
@@ -324,12 +647,13 @@ export default function AssetViewerModal({
                 </button>
               )}
 
-              {/* ✅ Back to Preview button when in editor */}
-              {showEditor && (
+              {/* Back to Preview */}
+              {(showEditor || compareMode) && (
                 <button
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    setShowEditor(false); 
+                    setShowEditor(false);
+                    setCompareMode(false);
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg backdrop-blur-sm transition-colors text-sm font-medium flex items-center gap-2"
                   title="Back to Preview"
@@ -339,8 +663,8 @@ export default function AssetViewerModal({
                 </button>
               )}
 
-              {/* Image-specific controls */}
-              {fileType === 'image' && !showEditor && (
+              {/* Image Controls */}
+              {fileType === 'image' && !showEditor && !compareMode && (
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
@@ -401,14 +725,15 @@ export default function AssetViewerModal({
               <button
                 onClick={(e) => { 
                   e.stopPropagation(); 
-                  if (showEditor) {
+                  if (showEditor || compareMode) {
                     setShowEditor(false);
+                    setCompareMode(false);
                   } else {
                     onClose();
                   }
                 }}
                 className="p-2 bg-white/10 hover:bg-red-500/80 rounded-lg backdrop-blur-sm transition-colors"
-                title={showEditor ? "Back to Preview (Esc)" : "Close (Esc)"}
+                title={showEditor || compareMode ? "Back to Preview (Esc)" : "Close (Esc)"}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -422,8 +747,8 @@ export default function AssetViewerModal({
           className="w-full h-full flex items-center justify-center p-4"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Navigation Buttons - Hide in editor mode */}
-          {showNavigation && !showEditor && (
+          {/* Navigation Buttons */}
+          {showNavigation && !showEditor && !compareMode && (
             <>
               {hasPrev && (
                 <button
@@ -448,263 +773,341 @@ export default function AssetViewerModal({
 
           {/* Content Renderer */}
           <div className="max-w-7xl max-h-[calc(100vh-8rem)] w-full h-full flex items-center justify-center">
-            {/* ===== IMAGE VIEWER ===== */}
-            {fileType === 'image' && (
-              <motion.img
-                key={asset.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                src={viewUrl}
-                alt={asset.title}
-                className="max-w-full max-h-full object-contain transition-transform duration-300"
-                style={{
-                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                }}
-                onLoad={() => setLoading(false)}
-                onError={() => {
-                  setError('Failed to load image');
-                  setLoading(false);
-                }}
-              />
-            )}
+            {/* ✅ COMPARISON MODE */}
+            {compareMode && selectedVersions.length >= 2 ? (
+              <div className="w-full h-full grid grid-cols-2 lg:grid-cols-3 gap-4 overflow-auto p-4">
+                {selectedVersions.map((versionNum) => {
+                  const version = getVersionDetails(versionNum);
+                  if (!version) return null;
 
-            {/* ===== VIDEO VIEWER ===== */}
-            {fileType === 'video' && (
-              <div className="w-full h-full max-w-5xl max-h-[80vh]">
-                <video
-                  key={asset.id}
-                  controls
-                  autoPlay
-                  className="w-full h-full rounded-lg"
-                  onLoadedData={() => setLoading(false)}
-                  onError={() => {
-                    setError('Failed to load video');
-                    setLoading(false);
-                  }}
-                >
-                  <source src={viewUrl} type={asset.mimeType || 'video/mp4'} />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            )}
-
-            {/* ===== DOCUMENT/PDF VIEWER with EDITOR ===== */}
-            {(fileType === 'pdf' || fileType === 'document') && (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                {/* ✅ SHOW EDITOR if showEditor is true and file is editable */}
-                {showEditor && isEditable() ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="w-full max-w-2xl"
-                  >
-                    <GoogleEditorIntegration
-                      document={asset}
-                      onSave={() => {
-                        setShowEditor(false);
-                        // Optionally refresh the asset data
-                        window.location.reload();
-                      }}
-                      onClose={() => setShowEditor(false)}
-                    />
-                  </motion.div>
-                ) : (
-                  /* ✅ SHOW PREVIEW MODE */
-                  <>
-                    {/* Document Card Panel */}
+                  return (
                     <motion.div
-                      key={asset.id}
-                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                      className={`w-full max-w-6xl h-[75vh] bg-gradient-to-br ${docConfig.bgGradient} rounded-2xl border ${docConfig.borderColor} shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl`}
+                      key={version.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-slate-900/50 rounded-lg border border-white/10 overflow-hidden flex flex-col"
                     >
-                      {/* Document Header Bar */}
-                      <div className={`flex items-center justify-between px-5 py-3 border-b ${docConfig.borderColor} bg-slate-900/50 backdrop-blur-md`}>
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`p-2 rounded-lg bg-gradient-to-br ${docConfig.bgGradient} ${docConfig.borderColor} border`}>
-                            <DocIcon className={`w-5 h-5 ${docConfig.textColor}`} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-white truncate">
-                              {asset.title || asset.filename}
-                            </p>
-                            <p className="text-xs text-white/60 truncate">
-                              {asset.mimeType || docConfig.label}
-                            </p>
-                          </div>
+                      {/* Version Header */}
+                      <div className="px-3 py-2 bg-slate-800/50 border-b border-white/10">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm">Version {version.version}</span>
+                          {version.isActive && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                              <Star className="w-3 h-3 fill-current" />
+                              Active
+                            </span>
+                          )}
                         </div>
-
-                        {/* Quick Meta Info */}
-                        <div className="flex items-center gap-4 text-xs text-white/70">
-                          {asset.pageCount && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5">
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>{asset.pageCount} {asset.pageCount === 1 ? 'page' : 'pages'}</span>
-                            </div>
-                          )}
-                          {asset.fileSizeFormatted && (
-                            <div className="px-2.5 py-1 rounded-md bg-white/5">
-                              {asset.fileSizeFormatted}
-                            </div>
-                          )}
-                          {asset.currentVersion && (
-                            <div className="px-2.5 py-1 rounded-md bg-white/5">
-                              v{asset.currentVersion}
-                            </div>
-                          )}
+                        {version.versionNote && (
+                          <p className="text-xs text-white/60 truncate">{version.versionNote}</p>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-white/50 mt-1">
+                          <span>{formatFileSize(version.fileSize)}</span>
+                          <span>•</span>
+                          <span>{formatDate(version.createdAt)}</span>
                         </div>
                       </div>
 
-                      {/* DocViewer Container */}
-                      <div className="flex-1 bg-slate-950/60 relative overflow-hidden">
-                        {docViewerReady ? (
-                          <DocViewer
-                            documents={[{
-                              uri: viewUrl,
-                              fileType: asset.mimeType || 'application/pdf',
-                              fileName: asset.filename
-                            }]}
-                            config={{
-                              header: {
-                                disableHeader: false,
-                                disableFileName: true,
-                                retainURLParams: false
-                              }
-                            }}
-                            className="h-full"
-                            style={{ width: '100%', height: '100%' }}
-                            onDocumentLoadSuccess={() => setLoading(false)}
+                      {/* Version Preview */}
+                      <div className="flex-1 bg-slate-950/60 p-2 flex items-center justify-center">
+                        {fileType === 'image' ? (
+                          <img
+                            src={version.viewUrl || viewUrl}
+                            alt={`Version ${version.version}`}
+                            className="max-w-full max-h-full object-contain rounded"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div className="text-center">
-                              <div className={`w-12 h-12 border-4 border-${docConfig.color}-500/20 border-t-${docConfig.color}-500 rounded-full animate-spin mx-auto mb-4`} />
-                              <p className="text-white/70 text-sm">Preparing document viewer...</p>
-                            </div>
+                          <div className="text-center text-white/50 text-sm">
+                            <DocIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>Version {version.version}</p>
+                            <p className="text-xs mt-1">{formatFileSize(version.fileSize)}</p>
                           </div>
                         )}
                       </div>
 
-                      {/* Document Action Bar */}
-                      <div className={`flex items-center justify-between px-5 py-3 border-t ${docConfig.borderColor} bg-slate-900/50 backdrop-blur-md`}>
-                        <div className="flex items-center gap-2">
-                          {/* ✅ Edit button in action bar */}
-                          {isEditable() && (
-                            <button
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                setShowEditor(true); 
-                              }}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all text-xs font-medium text-green-300`}
-                              title="Edit with Google Drive"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              <span>Edit Document</span>
-                            </button>
-                          )}
-
+                      {/* Version Actions */}
+                      <div className="px-3 py-2 bg-slate-800/50 border-t border-white/10 flex items-center justify-between">
+                        <button
+                          onClick={() => {
+                            setSelectedVersions([version.version]);
+                            setCompareMode(false);
+                          }}
+                          className="text-xs px-2 py-1 bg-white/5 hover:bg-white/10 rounded transition-colors"
+                        >
+                          <Eye className="w-3 h-3 inline mr-1" />
+                          View
+                        </button>
+                        {!version.isActive && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenInNewTab(); }}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
-                            title="Open in new tab"
+                            onClick={() => handleActivateVersion(version.version)}
+                            disabled={activatingVersion === version.version}
+                            className="text-xs px-2 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors disabled:opacity-50"
                           >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            <span>Open in Tab</span>
-                          </button>
-
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
-                            title="Copy link"
-                          >
-                            {copied ? (
-                              <>
-                                <span className="text-green-400">✓</span>
-                                <span className="text-green-400">Copied!</span>
-                              </>
+                            {activatingVersion === version.version ? (
+                              <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />
                             ) : (
-                              <>
-                                <LinkIcon className="w-3.5 h-3.5" />
-                                <span>Copy Link</span>
-                              </>
+                              <Check className="w-3 h-3 inline mr-1" />
                             )}
+                            Activate
                           </button>
-
-                          {showDownload && onDownload && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onDownload(asset); }}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-${docConfig.color}-500/20 hover:bg-${docConfig.color}-500/30 border ${docConfig.borderColor} transition-all text-xs font-medium ${docConfig.textColor}`}
-                              title="Download"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Download</span>
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="text-xs text-white/60">
-                          {asset.uploader && (
-                            <span>Uploaded by {asset.uploader.name || asset.uploader.email}</span>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                {/* ===== SINGLE VIEW (existing code) ===== */}
+                {/* IMAGE VIEWER */}
+                {fileType === 'image' && !showEditor && (
+                  <motion.img
+                    key={asset.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    src={viewUrl}
+                    alt={asset.title}
+                    className="max-w-full max-h-full object-contain transition-transform duration-300"
+                    style={{
+                      transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                    }}
+                    onLoad={() => setLoading(false)}
+                    onError={() => {
+                      setError('Failed to load image');
+                      setLoading(false);
+                    }}
+                  />
+                )}
 
-                    {/* Document Meta Footer */}
-                    <div className="flex items-center justify-between w-full max-w-6xl text-xs text-white/50 px-2">
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1.5 rounded-full bg-gradient-to-r ${docConfig.bgGradient} border ${docConfig.borderColor} ${docConfig.textColor} font-medium`}>
-                          {docConfig.label}
-                        </span>
-                        {isEditable() && (
-                          <span className="px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 font-medium">
-                            ✏️ Editable
-                          </span>
-                        )}
-                        {asset.tags && asset.tags.length > 0 && (
+                {/* VIDEO VIEWER */}
+                {fileType === 'video' && !showEditor && (
+                  <div className="w-full h-full max-w-5xl max-h-[80vh]">
+                    <video
+                      key={asset.id}
+                      controls
+                      autoPlay
+                      className="w-full h-full rounded-lg"
+                      onLoadedData={() => setLoading(false)}
+                      onError={() => {
+                        setError('Failed to load video');
+                        setLoading(false);
+                      }}
+                    >
+                      <source src={viewUrl} type={asset.mimeType || 'video/mp4'} />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                )}
+
+                {/* DOCUMENT/PDF VIEWER with EDITOR */}
+                {(fileType === 'pdf' || fileType === 'document') && (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                    {showEditor && isEditable() ? (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-full max-w-2xl"
+                      >
+                        <GoogleEditorIntegration
+                          document={asset}
+                          onSave={() => {
+                            setShowEditor(false);
+                            window.location.reload();
+                          }}
+                          onClose={() => setShowEditor(false)}
+                        />
+                      </motion.div>
+                    ) : (
+                      <>
+                        {/* Document Card Panel (existing code) */}
+                        <motion.div
+                          key={asset.id}
+                          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className={`w-full max-w-6xl h-[75vh] bg-gradient-to-br ${docConfig.bgGradient} rounded-2xl border ${docConfig.borderColor} shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl`}
+                        >
+                          {/* Document Header Bar */}
+                          <div className={`flex items-center justify-between px-5 py-3 border-b ${docConfig.borderColor} bg-slate-900/50 backdrop-blur-md`}>
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className={`p-2 rounded-lg bg-gradient-to-br ${docConfig.bgGradient} ${docConfig.borderColor} border`}>
+                                <DocIcon className={`w-5 h-5 ${docConfig.textColor}`} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-white truncate">
+                                  {asset.title || asset.filename}
+                                </p>
+                                <p className="text-xs text-white/60 truncate">
+                                  {asset.mimeType || docConfig.label}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Quick Meta Info */}
+                            <div className="flex items-center gap-4 text-xs text-white/70">
+                              {asset.pageCount && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5">
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>{asset.pageCount} {asset.pageCount === 1 ? 'page' : 'pages'}</span>
+                                </div>
+                              )}
+                              {asset.fileSizeFormatted && (
+                                <div className="px-2.5 py-1 rounded-md bg-white/5">
+                                  {asset.fileSizeFormatted}
+                                </div>
+                              )}
+                              {asset.currentVersion && (
+                                <div className="px-2.5 py-1 rounded-md bg-white/5">
+                                  v{asset.currentVersion}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* DocViewer Container */}
+                          <div className="flex-1 bg-slate-950/60 relative overflow-hidden">
+                            {docViewerReady ? (
+                              <DocViewer
+                                documents={[{
+                                  uri: viewUrl,
+                                  fileType: asset.mimeType || 'application/pdf',
+                                  fileName: asset.filename
+                                }]}
+                                config={{
+                                  header: {
+                                    disableHeader: false,
+                                    disableFileName: true,
+                                    retainURLParams: false
+                                  }
+                                }}
+                                className="h-full"
+                                style={{ width: '100%', height: '100%' }}
+                                onDocumentLoadSuccess={() => setLoading(false)}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <div className="text-center">
+                                  <div className={`w-12 h-12 border-4 border-${docConfig.color}-500/20 border-t-${docConfig.color}-500 rounded-full animate-spin mx-auto mb-4`} />
+                                  <p className="text-white/70 text-sm">Preparing document viewer...</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Document Action Bar */}
+                          <div className={`flex items-center justify-between px-5 py-3 border-t ${docConfig.borderColor} bg-slate-900/50 backdrop-blur-md`}>
+                            <div className="flex items-center gap-2">
+                              {isEditable() && (
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setShowEditor(true); 
+                                  }}
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all text-xs font-medium text-green-300`}
+                                  title="Edit with Google Drive"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <span>Edit Document</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleOpenInNewTab(); }}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
+                                title="Open in new tab"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Open in Tab</span>
+                              </button>
+
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
+                                title="Copy link"
+                              >
+                                {copied ? (
+                                  <>
+                                    <span className="text-green-400">✓</span>
+                                    <span className="text-green-400">Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <LinkIcon className="w-3.5 h-3.5" />
+                                    <span>Copy Link</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {showDownload && onDownload && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onDownload(asset); }}
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-${docConfig.color}-500/20 hover:bg-${docConfig.color}-500/30 border ${docConfig.borderColor} transition-all text-xs font-medium ${docConfig.textColor}`}
+                                  title="Download"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Download</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="text-xs text-white/60">
+                              {asset.uploader && (
+                                <span>Uploaded by {asset.uploader.name || asset.uploader.email}</span>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+
+                        {/* Document Meta Footer */}
+                        <div className="flex items-center justify-between w-full max-w-6xl text-xs text-white/50 px-2">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1.5 rounded-full bg-gradient-to-r ${docConfig.bgGradient} border ${docConfig.borderColor} ${docConfig.textColor} font-medium`}>
+                              {docConfig.label}
+                            </span>
+                            {isEditable() && (
+                              <span className="px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 font-medium">
+                                ✏️ Editable
+                              </span>
+                            )}
+                            {asset.tags && asset.tags.length > 0 && (
+                              <span className="text-white/40">
+                                Tags: {asset.tags.join(', ')}
+                              </span>
+                            )}
+                          </div>
                           <span className="text-white/40">
-                            Tags: {asset.tags.join(', ')}
+                            Uploaded {formatDate(asset.createdAt)}
                           </span>
-                        )}
-                      </div>
-                      <span className="text-white/40">
-                        Uploaded {new Date(asset.createdAt).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                  </>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
-              </div>
+
+                {/* UNKNOWN FILE TYPE */}
+                {fileType === 'unknown' && (
+                  <div className="text-center text-white">
+                    <File className="w-16 h-16 mx-auto mb-4 text-white/50" />
+                    <p className="text-lg font-semibold mb-2">Preview Not Available</p>
+                    <p className="text-white/70 mb-4">
+                      This file type cannot be previewed in the browser
+                    </p>
+                    {showDownload && onDownload && (
+                      <button
+                        onClick={() => onDownload(asset)}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                      >
+                        <Download className="w-5 h-5" />
+                        Download File
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
-            {/* ===== UNKNOWN FILE TYPE ===== */}
-            {fileType === 'unknown' && (
-              <div className="text-center text-white">
-                <File className="w-16 h-16 mx-auto mb-4 text-white/50" />
-                <p className="text-lg font-semibold mb-2">Preview Not Available</p>
-                <p className="text-white/70 mb-4">
-                  This file type cannot be previewed in the browser
-                </p>
-                {showDownload && onDownload && (
-                  <button
-                    onClick={() => onDownload(asset)}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 mx-auto"
-                  >
-                    <Download className="w-5 h-5" />
-                    Download File
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* ===== LOADING STATE ===== */}
-            {loading && !error && fileType !== 'document' && fileType !== 'pdf' && !showEditor && (
+            {/* LOADING STATE */}
+            {loading && !error && fileType !== 'document' && fileType !== 'pdf' && !showEditor && !compareMode && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div className="text-center text-white">
                   <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
@@ -713,7 +1116,7 @@ export default function AssetViewerModal({
               </div>
             )}
 
-            {/* ===== ERROR STATE ===== */}
+            {/* ERROR STATE */}
             {error && (
               <div className="text-center text-white">
                 <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -726,8 +1129,8 @@ export default function AssetViewerModal({
           </div>
         </div>
 
-        {/* ===== BOTTOM INFO BAR (For Images/Videos only) ===== */}
-        {(fileType === 'image' || fileType === 'video') && !showEditor && (
+        {/* BOTTOM INFO BAR */}
+        {(fileType === 'image' || fileType === 'video') && !showEditor && !compareMode && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between text-white text-sm">
               <div className="flex items-center gap-4">
@@ -748,7 +1151,7 @@ export default function AssetViewerModal({
                 )}
               </div>
               <div className="text-white/70">
-                Uploaded: {new Date(asset.createdAt).toLocaleDateString()}
+                Uploaded: {formatDate(asset.createdAt)}
               </div>
             </div>
           </div>
