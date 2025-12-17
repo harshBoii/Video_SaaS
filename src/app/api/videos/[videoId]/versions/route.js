@@ -15,8 +15,8 @@ const s3Client = new S3Client({
   },
 });
 
-// ✅ GET - Fetch all versions
-// ✅ GET - Fetch all versions OR single version by number
+// GET - Fetch all versions
+// GET - Fetch all versions OR single version by number
 export async function GET(request, { params }) {
   try {
     const token = request.cookies.get('token')?.value;
@@ -27,7 +27,7 @@ export async function GET(request, { params }) {
     const decoded = verify(token, process.env.JWT_SECRET);
     const { videoId } = await params;
     
-    // ✅ Check for version query parameter
+    // Check for version query parameter
     const { searchParams } = new URL(request.url);
     const versionNumber = searchParams.get('version');
 
@@ -53,7 +53,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
 
-    // ✅ IF VERSION NUMBER PROVIDED - Return single version
+    // IF VERSION NUMBER PROVIDED - Return single version
     if (versionNumber) {
       const versionNum = parseInt(versionNumber, 10);
       
@@ -125,7 +125,7 @@ export async function GET(request, { params }) {
       });
     }
 
-    // ✅ OTHERWISE - Return all versions (existing logic)
+    // OTHERWISE - Return all versions (existing logic)
     const versions = await prisma.videoVersion.findMany({
       where: { videoId },
       include: {
@@ -180,7 +180,7 @@ export async function GET(request, { params }) {
   }
 }
 
-// ✅ POST - Create new version with upload URLs
+// POST - Create new version with upload URLs
 export async function POST(request, { params }) {
   try {
     const token = request.cookies.get('token')?.value;
@@ -276,11 +276,11 @@ export async function POST(request, { params }) {
       },
     });
 
-    // ✅ Calculate expiresAt (24 hours from now)
+    // Calculate expiresAt (24 hours from now)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // ✅ Create upload session with ALL required fields
+    // Create upload session with ALL required fields
     const uploadSession = await prisma.uploadSession.create({
       data: {
         uploadId: multipartUpload.UploadId,
@@ -288,13 +288,13 @@ export async function POST(request, { params }) {
         key: r2Key, // Note: schema uses 'key', not 'r2Key'
         fileName,
         fileSize: BigInt(fileSize),
-        fileType: fileType || 'video/mp4', // ✅ Required field
+        fileType: fileType || 'video/mp4',
         totalParts,
-        uploadedParts: [], // ✅ Json array (empty initially)
-        status: 'IN_PROGRESS', // ✅ Match schema default
+        uploadedParts: [], // Json array (empty initially)
+        status: 'IN_PROGRESS', // Match schema default
         uploadedBy: decoded.id,
-        expiresAt, // ✅ Required field
-        metadata: JSON.stringify({ // ✅ Convert to string if schema expects String
+        expiresAt, // Required field
+        metadata: JSON.stringify({ // Convert to string if schema expects String
           versionId: version.id,
           versionNumber: newVersionNumber,
           isVersion: true,

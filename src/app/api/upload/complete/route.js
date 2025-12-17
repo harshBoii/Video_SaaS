@@ -501,14 +501,14 @@ async function processVersionUpload({
       };
     }
 
-    // 4. Update upload session (NO videoId for versions)
+    // 4. Update upload session (Do not give videoId or documentId for versions)
     await tx.uploadSession.update({
       where: { id: uploadSession.id },
       data: {
         status: "COMPLETED",
         completedAt: new Date(),
-        ...(isVideo && { videoId: parentId }),
-        ...(! isVideo && { documentId: parentId }),
+        ...(isVideo && { videoId: null }),
+        ...(! isVideo && { documentId: null }),
 
         metadata: JSON.stringify({
           versionId: versionId,

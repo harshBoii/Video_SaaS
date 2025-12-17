@@ -449,9 +449,8 @@ const fetchStats = async () => {
     try {
       console.log('[VERSION UPLOAD] Starting upload for:', file.name);
 
-      // ✅ NOTE: You need to create this endpoint: /api/documents/[id]/versions
-      // For now, keeping your existing version upload logic
-      const startRes = await fetch(`/api/statics/${documentId}/versions?filetype=img`, {
+
+      const startRes = await fetch(`/api/documents/${documentId}/versions?filetype=img`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

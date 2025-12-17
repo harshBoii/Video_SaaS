@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { verifyJWT } from "@/app/lib/auth";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { r2 } from "@/app/lib/r2";
+import { S3Client, CreateMultipartUploadCommand, UploadPartCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const s3Client = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
 
 export async function GET(request, { params }) {
   try {
@@ -11,7 +20,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: authError }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const versions = await prisma.documentVersion.findMany({
       where: { documentId: id },
@@ -60,6 +69,7 @@ export async function GET(request, { params }) {
     );
   }
 }
+
 export async function POST(request, { params }) {
   try {
     const { employee: user, error: authError } = await verifyJWT(request);
@@ -67,35 +77,73 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: authError }, { status: 401 });
     }
 
-    const { id } = params;
-    const formData = await request.formData();
-    const file = formData.get('file');
+    const { id } = await params;
+    const body = await request.json(); 
 
-    if (!file) {
-      return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
+    const { versionNote, fileSize, fileName, fileType } = body;
+
+    if (!versionNote || !fileSize || !fileName) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing required fields",
+          required: ["versionNote", "fileSize", "fileName"],
+        },
+        { status: 400 }
+      );
     }
 
-    // Get document
     const document = await prisma.document.findUnique({
       where: { id },
-      include: { versions: { orderBy: { version: 'desc' }, take: 1 } }
+      include: { 
+        versions: { orderBy: { version: "desc" }, take: 1 },
+      },
     });
 
     if (!document) {
-      return NextResponse.json({ success: false, error: 'Document not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false, 
+        error: "Document not found" 
+      }, { status: 404 });
     }
 
     const nextVersion = (document.versions[0]?.version || 0) + 1;
-    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Upload to R2
-    const r2Key = `documents/${id}/v${nextVersion}-${file.name}`;
-    await r2.send(new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: r2Key,
-      Body: buffer,
-      ContentType: file.type,
-    }));
+    // Generate R2 key
+    const timestamp = Date.now();
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const r2Key = `documents/${id}/v${nextVersion}-${timestamp}-${sanitizedFileName}`;
+
+    console.log(`[VERSION CREATE] Creating version ${nextVersion} for document ${id}`);
+
+    // Create multipart upload
+    const multipartUpload = await s3Client.send(
+      new CreateMultipartUploadCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: r2Key,
+        ContentType: fileType || "application/octet-stream",
+      })
+    );
+
+    // Generate presigned URLs
+    const partSize = 100 * 1024 * 1024; // 100MB
+    const totalParts = Math.ceil(fileSize / partSize);
+
+    const uploadUrls = [];
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const presignedUrl = await getSignedUrl(
+        s3Client,
+        new UploadPartCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: r2Key,
+          PartNumber: partNumber,
+          UploadId: multipartUpload.UploadId,
+        }),
+        { expiresIn: 3600 }
+      );
+
+      uploadUrls.push({ partNumber, url: presignedUrl });
+    }
 
     // Create version record
     const version = await prisma.documentVersion.create({
@@ -103,37 +151,75 @@ export async function POST(request, { params }) {
         documentId: id,
         version: nextVersion,
         r2Key,
-        r2Bucket: process.env.R2_BUCKET_NAME,
-        fileSize: buffer.length,
-        uploaderId: user.id,
-        versionNote: 'Edited via Google Drive',
-      }
+        fileSize: BigInt(fileSize),
+        uploadedBy: user.id,
+        versionNote,
+        status: "uploading",
+      },
     });
 
-    // Update document current version
-    await prisma.document.update({
-      where: { id },
-      data: { currentVersion: nextVersion }
+    // Create upload session
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    await prisma.uploadSession.create({
+      data: {
+        uploadId: multipartUpload.UploadId,
+        campaignId: document.campaignId, 
+        key: r2Key,
+        fileName,
+        fileSize: BigInt(fileSize),
+        fileType: fileType || "application/octet-stream",
+        totalParts,
+        uploadedParts: [],
+        status: "IN_PROGRESS",
+        uploadedBy: user.id,
+        expiresAt,
+        metadata: JSON.stringify({
+          versionId: version.id,
+          versionNumber: nextVersion,
+          isDocumentVersion: true,
+          documentId: id,
+        }),
+      },
     });
 
+    console.log(`✅ [VERSION CREATE] Version ${nextVersion} created: ${version.id}`);
+
+    // ✅ Return flat structure (not nested under "data")
     return NextResponse.json({
       success: true,
-      data: { version }
+      version: {
+        id: version.id,
+        version: version.version,
+        versionNote: version.versionNote,
+        fileSize: version.fileSize.toString(),
+        status: version.status,
+      },
+      upload: {
+        uploadId: multipartUpload.UploadId,
+        key: r2Key,
+        partSize,
+        totalParts,
+      },
+      urls: uploadUrls,
     });
 
   } catch (error) {
     console.error("❌ [VERSION CREATE ERROR]", error);
     return NextResponse.json(
-      { success: false, error: "Failed to create version" },
+      { 
+        success: false, 
+        error: error.message || "Failed to create version" 
+      },
       { status: 500 }
     );
   }
 }
 
-
 function formatBytes(bytes) {
   if (bytes === 0 || bytes === 0n) return "0 Bytes";
-  const numBytes = typeof bytes === 'bigint' ? Number(bytes) : bytes;
+  const numBytes = typeof bytes === "bigint" ? Number(bytes) : bytes;
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(numBytes) / Math.log(k));

@@ -485,8 +485,8 @@ export default function CampaignScripts({ campaign, onUpdate, campaignId }) {
     try {
       console.log('[VERSION UPLOAD] Starting upload for:', file.name);
 
-      // ✅ TODO: Create /api/documents/[id]/versions endpoint
-      const startRes = await fetch(`/api/statics/${documentId}/versions?filetype=doc`, {
+
+      const startRes = await fetch(`/api/documents/${documentId}/versions?filetype=doc`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
