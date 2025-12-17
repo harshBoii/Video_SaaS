@@ -10,7 +10,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: authError }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { version: versionNumber } = body;
 

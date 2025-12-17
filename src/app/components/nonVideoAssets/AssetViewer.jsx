@@ -67,7 +67,7 @@ export default function AssetViewerModal({
   onPrev,
   hasNext = false,
   hasPrev = false,
-  onVersionChange // ✅ Callback when version changes
+  onVersionChange
 }) {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
@@ -78,13 +78,14 @@ export default function AssetViewerModal({
   const [copied, setCopied] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
 
-  // ✅ NEW: Version Management States
+  // ✅ Version Management States
   const [versions, setVersions] = useState([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [showVersionDropdown, setShowVersionDropdown] = useState(false);
-  const [selectedVersions, setSelectedVersions] = useState([]); // For multi-select
+  const [selectedVersions, setSelectedVersions] = useState([]);
   const [compareMode, setCompareMode] = useState(false);
   const [activatingVersion, setActivatingVersion] = useState(null);
+  const [previewingVersion, setPreviewingVersion] = useState(null);
 
   // ✅ Fetch versions when asset changes
   useEffect(() => {
@@ -107,11 +108,6 @@ export default function AssetViewerModal({
       const data = await response.json();
       if (data.success) {
         setVersions(data.data || []);
-        // Set current version as selected by default
-        const activeVersion = data.data.find(v => v.isActive);
-        if (activeVersion && selectedVersions.length === 0) {
-          setSelectedVersions([activeVersion.version]);
-        }
       }
     } catch (error) {
       console.error('[FETCH VERSIONS ERROR]', error);
@@ -135,13 +131,10 @@ export default function AssetViewerModal({
 
       const data = await response.json();
       if (data.success) {
-        // Refresh versions and asset data
         await fetchVersions();
         if (onVersionChange) {
           onVersionChange(versionNumber);
         }
-        
-        // Show success feedback
         showSuccess('Version Activated', `Version ${versionNumber} is now active`);
       }
     } catch (error) {
@@ -158,7 +151,6 @@ export default function AssetViewerModal({
       if (prev.includes(versionNumber)) {
         return prev.filter(v => v !== versionNumber);
       } else {
-        // Limit to 3 versions for comparison
         if (prev.length >= 3) {
           return [...prev.slice(1), versionNumber];
         }
@@ -174,6 +166,7 @@ export default function AssetViewerModal({
       return;
     }
     setCompareMode(true);
+    setPreviewingVersion(null);
     setShowVersionDropdown(false);
   };
 
@@ -182,14 +175,12 @@ export default function AssetViewerModal({
     return versions.find(v => v.version === versionNumber);
   };
 
-  // Simple notification helpers (you can replace with your existing toast system)
+  // Simple notification helpers
   const showSuccess = (title, message) => {
-    // Implement your success notification
     console.log('✅', title, message);
   };
 
   const showError = (message) => {
-    // Implement your error notification
     console.error('❌', message);
   };
 
@@ -203,6 +194,7 @@ export default function AssetViewerModal({
       setShowEditor(false);
       setCompareMode(false);
       setSelectedVersions([]);
+      setPreviewingVersion(null);
     }
   }, [asset?.id]);
 
@@ -227,6 +219,8 @@ export default function AssetViewerModal({
             setCompareMode(false);
           } else if (showEditor) {
             setShowEditor(false);
+          } else if (previewingVersion) {
+            setPreviewingVersion(null);
           } else {
             onClose?.();
           }
@@ -261,7 +255,7 @@ export default function AssetViewerModal({
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen, hasNext, hasPrev, onNext, onPrev, showEditor, compareMode, selectedVersions]);
+  }, [isOpen, hasNext, hasPrev, onNext, onPrev, showEditor, compareMode, selectedVersions, previewingVersion]);
 
   // ✅ Load DocViewer after component mounts
   useEffect(() => {
@@ -273,7 +267,9 @@ export default function AssetViewerModal({
   // Early return AFTER all hooks
   if (!isOpen || !asset) return null;
 
-  // Determine file type
+  // ===== ✅ FIXED: Declare variables in correct order =====
+  
+  // 1. File type detection
   const getFileType = () => {
     const extension = asset.filename?.split('.').pop()?.toLowerCase();
     const mimeType = asset.fileType || asset.mimeType || '';
@@ -300,15 +296,27 @@ export default function AssetViewerModal({
   };
 
   const fileType = getFileType();
+  
+  // 2. ✅ viewUrl MUST be declared BEFORE getDisplayUrl uses it
   const viewUrl = asset.viewUrl || asset.thumbnailUrl || asset.playbackUrl || asset.url;
 
-  // ✅ Check if file is editable via Google Drive
+  // 3. ✅ Now getDisplayUrl can safely use viewUrl
+  const getDisplayUrl = () => {
+    if (previewingVersion) {
+      const version = getVersionDetails(previewingVersion);
+      return version?.viewUrl || viewUrl;
+    }
+    return viewUrl;
+  };
+
+  const displayUrl = getDisplayUrl();
+
+  // 4. Other helper functions
   const isEditable = () => {
     const extension = asset.filename?.split('.').pop()?.toLowerCase();
     return ['docx', 'doc', 'txt', 'rtf', 'xlsx', 'xls', 'csv', 'pptx', 'ppt'].includes(extension);
   };
 
-  // ✅ Get document type specific styling
   const getDocumentTypeConfig = () => {
     const docType = asset.documentType || 'OTHER';
     
@@ -353,6 +361,14 @@ export default function AssetViewerModal({
         textColor: 'text-purple-300',
         label: 'Text File'
       },
+      IMAGE: {
+        icon: ImageIcon,
+        color: 'pink',
+        bgGradient: 'from-pink-500/10 to-pink-600/5',
+        borderColor: 'border-pink-500/20',
+        textColor: 'text-pink-300',
+        label: 'Image'
+      },
       OTHER: {
         icon: File,
         color: 'slate',
@@ -389,12 +405,12 @@ export default function AssetViewerModal({
 
   // Document Actions
   const handleOpenInNewTab = () => {
-    window.open(viewUrl, '_blank');
+    window.open(displayUrl, '_blank');
   };
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(viewUrl);
+      await navigator.clipboard.writeText(displayUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -413,7 +429,7 @@ export default function AssetViewerModal({
     }
   };
 
-  // ✅ Format date helper
+  // Format date helper
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -424,7 +440,7 @@ export default function AssetViewerModal({
     });
   };
 
-  // ✅ Format file size helper
+  // Format file size helper
   const formatFileSize = (bytes) => {
     if (!bytes) return '0 B';
     const k = 1024;
@@ -445,7 +461,7 @@ export default function AssetViewerModal({
         {/* Header Controls */}
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between text-white">
-            {/* ✅ LEFT: Version Selector */}
+            {/* LEFT: Version Selector */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Version Dropdown */}
               <div className="relative">
@@ -459,7 +475,7 @@ export default function AssetViewerModal({
                 >
                   <Clock className="w-4 h-4" />
                   <span className="text-sm font-medium">
-                    v{asset.currentVersion || 1}
+                    v{previewingVersion || asset.currentVersion || 1}
                   </span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${showVersionDropdown ? 'rotate-180' : ''}`} />
                   {versions.length > 0 && (
@@ -518,7 +534,7 @@ export default function AssetViewerModal({
                               key={version.id}
                               className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
                                 version.isActive ? 'bg-blue-500/10' : ''
-                              }`}
+                              } ${previewingVersion === version.version ? 'bg-green-500/10' : ''}`}
                             >
                               <div className="flex items-start justify-between gap-3">
                                 {/* Checkbox for multi-select */}
@@ -540,6 +556,12 @@ export default function AssetViewerModal({
                                       <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
                                         <Star className="w-3 h-3 fill-current" />
                                         Active
+                                      </span>
+                                    )}
+                                    {previewingVersion === version.version && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">
+                                        <Eye className="w-3 h-3" />
+                                        Viewing
                                       </span>
                                     )}
                                   </div>
@@ -566,9 +588,10 @@ export default function AssetViewerModal({
                                 <div className="flex items-center gap-1">
                                   <button
                                     onClick={() => {
-                                      // Preview this version
+                                      setPreviewingVersion(version.version);
                                       setSelectedVersions([version.version]);
                                       setShowVersionDropdown(false);
+                                      setCompareMode(false);
                                     }}
                                     className="p-1.5 hover:bg-white/10 rounded transition-colors"
                                     title="Preview"
@@ -728,18 +751,47 @@ export default function AssetViewerModal({
                   if (showEditor || compareMode) {
                     setShowEditor(false);
                     setCompareMode(false);
+                  } else if (previewingVersion) {
+                    setPreviewingVersion(null);
                   } else {
                     onClose();
                   }
                 }}
                 className="p-2 bg-white/10 hover:bg-red-500/80 rounded-lg backdrop-blur-sm transition-colors"
-                title={showEditor || compareMode ? "Back to Preview (Esc)" : "Close (Esc)"}
+                title={showEditor || compareMode ? "Back to Preview (Esc)" : previewingVersion ? "Exit Preview (Esc)" : "Close (Esc)"}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
+
+        {/* Version Preview Indicator Badge */}
+        {previewingVersion && !compareMode && !showEditor && (
+          <div className="absolute top-20 left-4 z-20">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-lg shadow-lg backdrop-blur-sm"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                Previewing Version {previewingVersion}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewingVersion(null);
+                }}
+                className="ml-2 hover:bg-white/20 rounded p-0.5 transition-colors"
+                title="Back to current version"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
 
         {/* Main Content */}
         <div 
@@ -773,7 +825,7 @@ export default function AssetViewerModal({
 
           {/* Content Renderer */}
           <div className="max-w-7xl max-h-[calc(100vh-8rem)] w-full h-full flex items-center justify-center">
-            {/* ✅ COMPARISON MODE */}
+            {/* COMPARISON MODE */}
             {compareMode && selectedVersions.length >= 2 ? (
               <div className="w-full h-full grid grid-cols-2 lg:grid-cols-3 gap-4 overflow-auto p-4">
                 {selectedVersions.map((versionNum) => {
@@ -812,9 +864,12 @@ export default function AssetViewerModal({
                       <div className="flex-1 bg-slate-950/60 p-2 flex items-center justify-center">
                         {fileType === 'image' ? (
                           <img
-                            src={version.viewUrl || viewUrl}
+                            src={version.viewUrl}
                             alt={`Version ${version.version}`}
                             className="max-w-full max-h-full object-contain rounded"
+                            onError={(e) => {
+                              console.error(`Failed to load version ${version.version}`);
+                            }}
                           />
                         ) : (
                           <div className="text-center text-white/50 text-sm">
@@ -829,6 +884,7 @@ export default function AssetViewerModal({
                       <div className="px-3 py-2 bg-slate-800/50 border-t border-white/10 flex items-center justify-between">
                         <button
                           onClick={() => {
+                            setPreviewingVersion(version.version);
                             setSelectedVersions([version.version]);
                             setCompareMode(false);
                           }}
@@ -858,15 +914,15 @@ export default function AssetViewerModal({
               </div>
             ) : (
               <>
-                {/* ===== SINGLE VIEW (existing code) ===== */}
+                {/* SINGLE VIEW */}
                 {/* IMAGE VIEWER */}
                 {fileType === 'image' && !showEditor && (
                   <motion.img
-                    key={asset.id}
+                    key={previewingVersion || asset.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    src={viewUrl}
-                    alt={asset.title}
+                    src={displayUrl}
+                    alt={previewingVersion ? `Version ${previewingVersion}` : asset.title}
                     className="max-w-full max-h-full object-contain transition-transform duration-300"
                     style={{
                       transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
@@ -883,7 +939,7 @@ export default function AssetViewerModal({
                 {fileType === 'video' && !showEditor && (
                   <div className="w-full h-full max-w-5xl max-h-[80vh]">
                     <video
-                      key={asset.id}
+                      key={previewingVersion || asset.id}
                       controls
                       autoPlay
                       className="w-full h-full rounded-lg"
@@ -893,7 +949,7 @@ export default function AssetViewerModal({
                         setLoading(false);
                       }}
                     >
-                      <source src={viewUrl} type={asset.mimeType || 'video/mp4'} />
+                      <source src={displayUrl} type={asset.mimeType || 'video/mp4'} />
                       Your browser does not support the video tag.
                     </video>
                   </div>
@@ -919,9 +975,9 @@ export default function AssetViewerModal({
                       </motion.div>
                     ) : (
                       <>
-                        {/* Document Card Panel (existing code) */}
+                        {/* Document Card Panel */}
                         <motion.div
-                          key={asset.id}
+                          key={previewingVersion || asset.id}
                           initial={{ opacity: 0, y: 20, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           transition={{ duration: 0.3, ease: "easeOut" }}
@@ -956,9 +1012,9 @@ export default function AssetViewerModal({
                                   {asset.fileSizeFormatted}
                                 </div>
                               )}
-                              {asset.currentVersion && (
+                              {(previewingVersion || asset.currentVersion) && (
                                 <div className="px-2.5 py-1 rounded-md bg-white/5">
-                                  v{asset.currentVersion}
+                                  v{previewingVersion || asset.currentVersion}
                                 </div>
                               )}
                             </div>
@@ -968,10 +1024,13 @@ export default function AssetViewerModal({
                           <div className="flex-1 bg-slate-950/60 relative overflow-hidden">
                             {docViewerReady ? (
                               <DocViewer
+                                key={previewingVersion || asset.id}
                                 documents={[{
-                                  uri: viewUrl,
+                                  uri: displayUrl,
                                   fileType: asset.mimeType || 'application/pdf',
-                                  fileName: asset.filename
+                                  fileName: previewingVersion 
+                                    ? `v${previewingVersion}-${asset.filename}` 
+                                    : asset.filename
                                 }]}
                                 config={{
                                   header: {
@@ -987,7 +1046,7 @@ export default function AssetViewerModal({
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <div className="text-center">
-                                  <div className={`w-12 h-12 border-4 border-${docConfig.color}-500/20 border-t-${docConfig.color}-500 rounded-full animate-spin mx-auto mb-4`} />
+                                  <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
                                   <p className="text-white/70 text-sm">Preparing document viewer...</p>
                                 </div>
                               </div>
@@ -1003,7 +1062,7 @@ export default function AssetViewerModal({
                                     e.stopPropagation(); 
                                     setShowEditor(true); 
                                   }}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all text-xs font-medium text-green-300`}
+                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all text-xs font-medium text-green-300"
                                   title="Edit with Google Drive"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />

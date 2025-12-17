@@ -13,6 +13,7 @@ const s3Client = new S3Client({
   },
 });
 
+// app/api/documents/[id]/versions/route.js
 export async function GET(request, { params }) {
   try {
     const { employee: user, error: authError } = await verifyJWT(request);
@@ -47,6 +48,8 @@ export async function GET(request, { params }) {
       isActive: v.isActive,
       versionNote: v.versionNote,
       r2Key: v.r2Key,
+      // ✅ Use proxy URL for each version
+      viewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/documents/${id}/versions/${v.version}/proxy`,
       uploader: {
         id: v.uploader.id,
         name: `${v.uploader.firstName} ${v.uploader.lastName}`,
@@ -56,11 +59,12 @@ export async function GET(request, { params }) {
       createdAt: v.createdAt,
     }));
 
+    console.log("Response :",formattedVersions)
+
     return NextResponse.json({
       success: true,
       data: formattedVersions,
     });
-
   } catch (error) {
     console.error("❌ [VERSIONS GET ERROR]", error);
     return NextResponse.json(
@@ -69,6 +73,7 @@ export async function GET(request, { params }) {
     );
   }
 }
+
 
 export async function POST(request, { params }) {
   try {
