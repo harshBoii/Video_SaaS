@@ -553,8 +553,8 @@ export default function CampaignPage({ campaignId }) {
                 <button
                   key={tab.id}
                   onClick={() => {
-                                    handleTabChange('assets');
-                                    setShowAssetDropdown(prev => !prev);
+                                    handleTabChange(`${tab.id}`);
+                                    // setShowAssetDropdown(prev => !prev);
                                   }}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
                     isActive
