@@ -4,6 +4,7 @@ import prisma from './prisma';
 import { ApiResponse } from './api-response';
 import { NextResponse } from "next/server";
 import { verify } from 'jsonwebtoken';
+
 /**
  * Verify and decode JWT token from cookies
  * @returns {Promise<Object|null>} Decoded token or null

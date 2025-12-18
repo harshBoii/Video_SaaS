@@ -36,7 +36,7 @@ export async function POST(request) {
     const { uploadId, key, parts, duration, versionId } = body;
 
     // ✅ 3. VERIFY UPLOAD SESSION EXISTS
-    uploadSession = await prisma.uploadSession.findUnique({
+    const uploadSession = await prisma.uploadSession.findUnique({
       where: { uploadId },
       include: {
         campaign: {
@@ -48,7 +48,7 @@ export async function POST(request) {
         },
       },
     });
-
+    var companyId = uploadSession.campaign.campaignId
     if (!uploadSession) {
       return NextResponse.json(
         {
@@ -581,6 +581,7 @@ async function processNewVideoUpload({
           uploadedAt: new Date().toISOString(),
         },
         tags: [],
+        companyId:uploadSession.campaign.companyId
       },
     });
 
@@ -758,6 +759,7 @@ async function processNewDocumentUpload({
           assetType: assetType,
         },
         tags: [],
+        companyId:uploadSession.campaign.companyId
       },
     });
 

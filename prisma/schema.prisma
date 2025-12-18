@@ -83,36 +83,49 @@ enum DocumentType {
   OTHER
 }
 
+enum AssetType {
+  VIDEO
+  DOCUMENT
+}
+
+enum VisibilityScope {
+  ROLE      // Visible to specific roles
+  EMPLOYEE  // Visible to specific employees
+  COMPANY   // Visible to entire company
+}
+
 
 // ===================== CORE MODELS =====================
 
-model Company {
-  id          String       @id @default(cuid())
-  name        String       @db.VarChar(255)
-  domain      String?      @unique @db.VarChar(255)
-  description String?      @db.Text
-  email       String?      @db.VarChar(255)
-  mobile      String?      @db.VarChar(50)
-  logoUrl     String?
-  // Relations
-  employees        Employee[]
-  departments      Department[]
-  roles            Role[]
-  teams            Team[]
-  campaigns        Campaign[]
+model Company { 
+  id                      String       @id @default(cuid())
+  name                    String       @db.VarChar(255)
+  domain                  String?      @unique @db.VarChar(255)
+  description             String?      @db.Text
+  email                   String?      @db.VarChar(255)
+  mobile                  String?      @db.VarChar(50)
+  logoUrl                 String?
 
-  flowchains       FlowChain[]
-  permissionCombos PermissionCombo[]
-  videoCollections VideoCollection[]
-  lateProfile      LateProfile?    
-  socialAccounts   SocialAccount[] 
-  socialPosts      SocialPost[]    
+  employees               Employee[]
+  departments             Department[]
+  roles                   Role[]
+  teams                   Team[]
+  campaigns               Campaign[]
 
-  notificationPreference NotificationPreference?
-  slackIntegration       SlackIntegration?
-  teamsIntegration       TeamsIntegration?
-  emailIntegration       EmailIntegration?
-  notificationsLog       NotificationLog[]
+  flowchains              FlowChain[]
+  permissionCombos        PermissionCombo[]
+  videoCollections        VideoCollection[]
+  lateProfile             LateProfile?    
+  socialAccounts          SocialAccount[] 
+  socialPosts             SocialPost[]    
+  assetVisibility         AssetVisibility[]
+  notificationPreference  NotificationPreference?
+  slackIntegration        SlackIntegration?
+  teamsIntegration        TeamsIntegration?
+  emailIntegration        EmailIntegration?
+  notificationsLog        NotificationLog[]
+  videos                  Video[]
+  documents               Document[]
 
 
 
@@ -166,7 +179,8 @@ model Role {
   FlowStep            FlowStep[]
   campaignAssignments CampaignAssignment[]
   campaignSchedules   CampaignSchedule[]
-  
+  assetVisibility     AssetVisibility[]
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -211,42 +225,42 @@ model RolePermission {
 }
 
 model Employee {
-  id           String         @id @default(cuid())
-  firstName    String         @db.VarChar(255)
-  lastName     String         @db.VarChar(255)
-  email        String         @unique @db.VarChar(255)
-  passwordHash String         @db.VarChar(255)
-  status       EmployeeStatus @default(ACTIVE)
-  isAdmin      Boolean        @default(false) @map("is_admin")
-  lastLogin    DateTime?      @db.Timestamptz(3)
-  companyId    String
-  roleId       String?
-  departmentId String?
-  avatarUrl    String?
+  id                        String         @id @default(cuid())
+  firstName                 String         @db.VarChar(255)
+  lastName                  String         @db.VarChar(255)
+  email                     String         @unique @db.VarChar(255)
+  passwordHash              String         @db.VarChar(255)
+  status                    EmployeeStatus @default(ACTIVE)
+  isAdmin                   Boolean        @default(false) @map("is_admin")
+  lastLogin                 DateTime?      @db.Timestamptz(3)
+  companyId                 String
+  roleId                    String?
+  departmentId              String?
+  avatarUrl                 String?
   // Relations
-  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  role                Role?                @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  department          Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  campaigns           Campaign[]
-  teams               Team[]               @relation("TeamMembers")
-  ownedTeams          Team[]               @relation("AdminTeams")
-  campaignAssignments CampaignAssignment[]
-  uploadedVideos      Video[]              @relation("VideoUploader")
-  videoVersions       VideoVersion[]       @relation("VersionUploader")
-  uploadSessions      UploadSession[]      @relation("UploadSessions")
-  compressionJobs     CompressionJob[]     @relation("CompressionRequests")
-  videoComments    Comment[]  @relation("VideoComments")
-  resolvedComments Comment[]  @relation("CommentResolver")
-  managerId    String?
-  manager      Employee?    @relation("EmployeeHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
-  subordinates Employee[]   @relation("EmployeeHierarchy")
-  createdCollections VideoCollection[] @relation("CollectionCreator")
+  company                   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role                      Role?                @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  department                Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  campaigns                 Campaign[]
+  teams                     Team[]               @relation("TeamMembers")
+  ownedTeams                Team[]               @relation("AdminTeams")
+  campaignAssignments       CampaignAssignment[]
+  uploadedVideos            Video[]              @relation("VideoUploader")
+  videoVersions             VideoVersion[]       @relation("VersionUploader")
+  uploadSessions            UploadSession[]      @relation("UploadSessions")
+  compressionJobs           CompressionJob[]     @relation("CompressionRequests")
+  videoComments             Comment[]  @relation("VideoComments")
+  resolvedComments          Comment[]  @relation("CommentResolver")
+  managerId                 String?
+  manager                   Employee?    @relation("EmployeeHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates              Employee[]   @relation("EmployeeHierarchy")
+  createdCollections        VideoCollection[] @relation("CollectionCreator")
+  assetVisibility           AssetVisibility[]
+  uploadedDocuments         Document[]           @relation("DocumentUploader")
+  documentVersions          DocumentVersion[]    @relation("DocumentVersionUploader")
+  documentComments          DocumentComment[]    @relation("DocumentComments")
+  resolvedDocumentComments  DocumentComment[]  @relation("DocumentCommentResolver")
   
-  uploadedDocuments      Document[]           @relation("DocumentUploader")
-  documentVersions       DocumentVersion[]    @relation("DocumentVersionUploader")
-  documentComments       DocumentComment[]    @relation("DocumentComments")
-  resolvedDocumentComments DocumentComment[]  @relation("DocumentCommentResolver")
-
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -475,8 +489,8 @@ model Video {
   metadata        Json     @default("{}")
   
   // Relations - Using Campaign as Project
-  campaignId      String   // <-- Links to Campaign (your "project")
-  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId      String?   // <-- Links to Campaign (your "project")
+  campaign        Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   uploadSession   UploadSession?
   streamQueue     StreamQueue?
   compressionJobs CompressionJob[]
@@ -490,6 +504,8 @@ model Video {
   uploader        Employee @relation("VideoUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
   collections     VideoCollectionItem[]
   socialPosts     SocialPost[]
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   // Versions
   currentVersion  Int      @default(1)
@@ -504,6 +520,9 @@ model Video {
   @@index([campaignId, status])
   @@index([streamId])
   @@index([createdAt(sort: Desc)])
+  @@index([companyId])
+  @@index([companyId, campaignId])
+
 }
 
 
@@ -1111,9 +1130,12 @@ model Document {
   metadata        Json     @default("{}")
   
   // Relations
-  campaignId      String
-  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  
+  campaignId      String?
+  campaign        Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   uploadedBy      String
   uploader        Employee @relation("DocumentUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
   
@@ -1133,6 +1155,10 @@ model Document {
   @@index([campaignId, status]) 
   @@index([documentType])  
   @@index([campaignId, documentType])
+  @@index([companyId])
+  @@index([companyId, campaignId])
+  @@index([companyId, status])
+
   @@index([createdAt(sort: Desc)])
 }
 
@@ -1208,3 +1234,33 @@ model DocumentShare {
   updatedAt     DateTime   @updatedAt
 }
 
+//  model for granular access control on campaign-less assets
+model AssetVisibility {
+  id          String          @id @default(cuid())
+  
+  // Polymorphic asset reference
+  assetId     String
+  assetType   AssetType
+  
+  scope       VisibilityScope
+  
+  // Relations (optional based on scope)
+  roleId      String?
+  role        Role?     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  
+  @@index([assetId, assetType])
+  @@index([companyId])
+  @@index([roleId])
+  @@index([employeeId])
+  @@index([companyId, scope])
+  @@unique([assetId, assetType, roleId, employeeId])
+}
