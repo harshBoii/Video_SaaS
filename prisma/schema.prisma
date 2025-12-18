@@ -1179,7 +1179,8 @@ model DocumentComment {
   
   versionNumber Int?
   priority    CommentPriority @default(NONE)
-  guestName   String?   
+  guestName   String?
+  resolution  String?   
   createdAt   DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
   resolvedAt  DateTime?     @db.Timestamptz(3)

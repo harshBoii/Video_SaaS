@@ -3,11 +3,17 @@ import prisma from "@/app/lib/prisma";
 import { verifyJWT } from "@/app/lib/auth";
 
 // GET - List all comments
+// ✅ FIXED VERSION
 export async function GET(request, { params }) {
   try {
-    // Allow both authenticated and guest access for shared documents
     const { searchParams } = new URL(request.url);
     const shareId = searchParams.get("shareId");
+    
+
+    const sort = searchParams.get('sort') || 'desc';
+    const priority = searchParams.get('priority');
+    const status = searchParams.get('status');
+    const version = searchParams.get('version');
     
     let user = null;
     if (!shareId) {
@@ -18,14 +24,21 @@ export async function GET(request, { params }) {
       user = employee;
     }
 
-    const { id } = params;
+    const { id } = await params;
+
+
+    const where = {
+      documentId: id,
+      parentId: null,
+    };
+
+    if (priority && priority !== 'ALL') where.priority = priority;
+    if (status && status !== 'ALL') where.status = status;
+    if (version && version !== 'ALL') where.versionNumber = parseInt(version, 10);
 
     const comments = await prisma.documentComment.findMany({
-      where: {
-        documentId: id,
-        parentId: null, // Top-level comments only
-      },
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy: { createdAt: sort }, 
       include: {
         employee: {
           select: {
@@ -68,13 +81,13 @@ export async function GET(request, { params }) {
       priority: comment.priority,
       versionNumber: comment.versionNumber,
       guestName: comment.guestName,
-      employee: comment.employee ? {
+      author: comment.employee ? { 
         id: comment.employee.id,
         name: `${comment.employee.firstName} ${comment.employee.lastName}`,
         email: comment.employee.email,
         avatarUrl: comment.employee.avatarUrl,
       } : null,
-      resolver: comment.resolver ? {
+      resolvedBy: comment.resolver ? {
         id: comment.resolver.id,
         name: `${comment.resolver.firstName} ${comment.resolver.lastName}`,
       } : null,
@@ -85,7 +98,7 @@ export async function GET(request, { params }) {
         id: reply.id,
         content: reply.content,
         guestName: reply.guestName,
-        employee: reply.employee ? {
+        author: reply.employee ? { 
           id: reply.employee.id,
           name: `${reply.employee.firstName} ${reply.employee.lastName}`,
           email: reply.employee.email,
@@ -97,7 +110,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      data: formattedComments,
+      comments: formattedComments,
     });
 
   } catch (error) {
@@ -128,7 +141,7 @@ export async function POST(request, { params }) {
       isGuest = true;
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Validate required fields
@@ -151,12 +164,13 @@ export async function POST(request, { params }) {
     const comment = await prisma.documentComment.create({
       data: {
         documentId: id,
-        content: body.content,
-        employeeId: user?.id,
+        content: body.content.trim(), 
+        employeeId: user?.id || null, 
         guestName: isGuest ? body.guestName : null,
-        versionNumber: body.versionNumber,
+        versionNumber: body.versionNumber || null, 
         priority: body.priority || "NONE",
-        parentId: body.parentId,
+        status: "OPEN", 
+        parentId: body.parentId || null, 
       },
       include: {
         employee: {
@@ -174,14 +188,14 @@ export async function POST(request, { params }) {
     return NextResponse.json({
       success: true,
       message: "Comment added successfully",
-      data: {
+      comment: { 
         id: comment.id,
         content: comment.content,
         status: comment.status,
         priority: comment.priority,
         versionNumber: comment.versionNumber,
         guestName: comment.guestName,
-        employee: comment.employee ? {
+        author: comment.employee ? { 
           id: comment.employee.id,
           name: `${comment.employee.firstName} ${comment.employee.lastName}`,
           email: comment.employee.email,

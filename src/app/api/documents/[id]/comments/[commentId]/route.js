@@ -3,6 +3,7 @@ import prisma from "@/app/lib/prisma";
 import { verifyJWT } from "@/app/lib/auth";
 
 // PATCH - Update comment
+
 export async function PATCH(request, { params }) {
   try {
     const { employee: user, error: authError } = await verifyJWT(request);
@@ -10,13 +11,16 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ success: false, error: authError }, { status: 401 });
     }
 
-    const { commentId } = params;
+    const { commentId } = await params;
     const body = await request.json();
 
     // Get existing comment
     const existingComment = await prisma.documentComment.findUnique({
       where: { id: commentId },
-      select: { employeeId: true },
+      select: { 
+        employeeId: true,
+        documentId: true, 
+      },
     });
 
     if (!existingComment) {
@@ -26,18 +30,29 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Allow update for comment owner or for resolving
+    
     const updateData = {};
 
+    
     if (body.content && existingComment.employeeId === user.id) {
-      updateData.content = body.content;
+      updateData.content = body.content.trim();
     }
 
+   
     if (body.status) {
       updateData.status = body.status;
       if (body.status === "RESOLVED") {
         updateData.resolvedBy = user.id;
         updateData.resolvedAt = new Date();
+        
+        if (body.resolution) {
+          updateData.resolution = body.resolution.trim();
+        }
+      } else if (body.status === "OPEN") {
+        
+        updateData.resolvedBy = null;
+        updateData.resolvedAt = null;
+        updateData.resolution = null;
       }
     }
 
@@ -48,12 +63,41 @@ export async function PATCH(request, { params }) {
     const updatedComment = await prisma.documentComment.update({
       where: { id: commentId },
       data: updateData,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        resolver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
       message: "Comment updated successfully",
-      data: updatedComment,
+      comment: { 
+        id: updatedComment.id,
+        content: updatedComment.content,
+        status: updatedComment.status,
+        priority: updatedComment.priority,
+        resolution: updatedComment.resolution, 
+        resolvedAt: updatedComment.resolvedAt,
+        resolvedBy: updatedComment.resolver ? {
+          id: updatedComment.resolver.id,
+          name: `${updatedComment.resolver.firstName} ${updatedComment.resolver.lastName}`,
+        } : null,
+      },
     });
 
   } catch (error) {
@@ -73,7 +117,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, error: authError }, { status: 401 });
     }
 
-    const { commentId } = params;
+    const { commentId } = await params;
 
     // Verify ownership
     const comment = await prisma.documentComment.findUnique({

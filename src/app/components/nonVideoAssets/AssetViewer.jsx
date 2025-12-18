@@ -17,7 +17,6 @@ import {
   File,
   ExternalLink,
   Link as LinkIcon,
-  Copy,
   FileSpreadsheet,
   Presentation,
   FileCode,
@@ -30,12 +29,14 @@ import {
   User,
   Columns2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import GoogleEditorIntegration from './editors/GoogleEditorIntegration';
+import DocumentCommentPanel from './DocumentCommentPanel';
 
-// ✅ Import DocViewer with proper loading state
+// Import DocViewer with proper loading state
 const DocViewer = dynamic(
   () => import('@cyntler/react-doc-viewer'),
   { 
@@ -52,9 +53,9 @@ const DocViewer = dynamic(
 );
 
 /**
- * Universal Asset Viewer Modal with Version Management
+ * Universal Asset Viewer Modal with Version Management & Comments
  * Supports: Images, Videos, PDFs, DOCX, XLSX, TXT, PPT, etc.
- * Features: Version selection, activation, multi-version comparison
+ * Features: Version selection, activation, multi-version comparison, comments
  */
 export default function AssetViewerModal({ 
   asset, 
@@ -69,6 +70,7 @@ export default function AssetViewerModal({
   hasPrev = false,
   onVersionChange
 }) {
+  // View states
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -77,8 +79,9 @@ export default function AssetViewerModal({
   const [docViewerReady, setDocViewerReady] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [showComments, setShowComments] = useState(true);
 
-  // ✅ Version Management States
+  // Version Management States
   const [versions, setVersions] = useState([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [showVersionDropdown, setShowVersionDropdown] = useState(false);
@@ -87,7 +90,7 @@ export default function AssetViewerModal({
   const [activatingVersion, setActivatingVersion] = useState(null);
   const [previewingVersion, setPreviewingVersion] = useState(null);
 
-  // ✅ Fetch versions when asset changes
+  // Fetch versions when asset changes
   useEffect(() => {
     if (asset?.id) {
       fetchVersions();
@@ -116,7 +119,7 @@ export default function AssetViewerModal({
     }
   };
 
-  // ✅ Activate a version
+  // Activate a version
   const handleActivateVersion = async (versionNumber) => {
     setActivatingVersion(versionNumber);
     try {
@@ -135,17 +138,15 @@ export default function AssetViewerModal({
         if (onVersionChange) {
           onVersionChange(versionNumber);
         }
-        showSuccess('Version Activated', `Version ${versionNumber} is now active`);
       }
     } catch (error) {
       console.error('[ACTIVATE VERSION ERROR]', error);
-      showError('Failed to activate version');
     } finally {
       setActivatingVersion(null);
     }
   };
 
-  // ✅ Toggle version selection for comparison
+  // Toggle version selection for comparison
   const toggleVersionSelection = (versionNumber) => {
     setSelectedVersions(prev => {
       if (prev.includes(versionNumber)) {
@@ -159,10 +160,9 @@ export default function AssetViewerModal({
     });
   };
 
-  // ✅ Enter comparison mode
+  // Enter comparison mode
   const enterCompareMode = () => {
     if (selectedVersions.length < 2) {
-      showError('Select at least 2 versions to compare');
       return;
     }
     setCompareMode(true);
@@ -170,18 +170,9 @@ export default function AssetViewerModal({
     setShowVersionDropdown(false);
   };
 
-  // ✅ Get version details
+  // Get version details
   const getVersionDetails = (versionNumber) => {
     return versions.find(v => v.version === versionNumber);
-  };
-
-  // Simple notification helpers
-  const showSuccess = (title, message) => {
-    console.log('✅', title, message);
-  };
-
-  const showError = (message) => {
-    console.error('❌', message);
   };
 
   // Reset states when asset changes
@@ -208,56 +199,7 @@ export default function AssetViewerModal({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyPress = (e) => {
-      switch(e.key) {
-        case 'Escape':
-          if (compareMode) {
-            setCompareMode(false);
-          } else if (showEditor) {
-            setShowEditor(false);
-          } else if (previewingVersion) {
-            setPreviewingVersion(null);
-          } else {
-            onClose?.();
-          }
-          break;
-        case 'ArrowLeft':
-          if (!showEditor && !compareMode && hasPrev && onPrev) onPrev();
-          break;
-        case 'ArrowRight':
-          if (!showEditor && !compareMode && hasNext && onNext) onNext();
-          break;
-        case '+':
-        case '=':
-          if (!showEditor && !compareMode) handleZoomIn();
-          break;
-        case '-':
-          if (!showEditor && !compareMode) handleZoomOut();
-          break;
-        case 'r':
-        case 'R':
-          if (!showEditor && !compareMode) handleRotate();
-          break;
-        case 'e':
-        case 'E':
-          if (isEditable() && !compareMode) setShowEditor(!showEditor);
-          break;
-        case 'c':
-        case 'C':
-          if (selectedVersions.length >= 2) enterCompareMode();
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen, hasNext, hasPrev, onNext, onPrev, showEditor, compareMode, selectedVersions, previewingVersion]);
-
-  // ✅ Load DocViewer after component mounts
+  // Load DocViewer after component mounts
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setDocViewerReady(true);
@@ -267,9 +209,7 @@ export default function AssetViewerModal({
   // Early return AFTER all hooks
   if (!isOpen || !asset) return null;
 
-  // ===== ✅ FIXED: Declare variables in correct order =====
-  
-  // 1. File type detection
+  // Determine file type
   const getFileType = () => {
     const extension = asset.filename?.split('.').pop()?.toLowerCase();
     const mimeType = asset.fileType || asset.mimeType || '';
@@ -296,11 +236,9 @@ export default function AssetViewerModal({
   };
 
   const fileType = getFileType();
-  
-  // 2. ✅ viewUrl MUST be declared BEFORE getDisplayUrl uses it
   const viewUrl = asset.viewUrl || asset.thumbnailUrl || asset.playbackUrl || asset.url;
 
-  // 3. ✅ Now getDisplayUrl can safely use viewUrl
+  // Get display URL (version or original)
   const getDisplayUrl = () => {
     if (previewingVersion) {
       const version = getVersionDetails(previewingVersion);
@@ -311,12 +249,13 @@ export default function AssetViewerModal({
 
   const displayUrl = getDisplayUrl();
 
-  // 4. Other helper functions
+  // Check if file is editable via Google Drive
   const isEditable = () => {
     const extension = asset.filename?.split('.').pop()?.toLowerCase();
     return ['docx', 'doc', 'txt', 'rtf', 'xlsx', 'xls', 'csv', 'pptx', 'ppt'].includes(extension);
   };
 
+  // Get document type specific styling
   const getDocumentTypeConfig = () => {
     const docType = asset.documentType || 'OTHER';
     
@@ -421,11 +360,11 @@ export default function AssetViewerModal({
   // Get file icon
   const getFileIcon = () => {
     switch(fileType) {
-      case 'image': return <ImageIcon className="w-6 h-6" />;
-      case 'video': return <Film className="w-6 h-6" />;
+      case 'image': return <ImageIcon className="w-5 h-5" />;
+      case 'video': return <Film className="w-5 h-5" />;
       case 'pdf': 
-      case 'document': return <DocIcon className="w-6 h-6" />;
-      default: return <File className="w-6 h-6" />;
+      case 'document': return <DocIcon className="w-5 h-5" />;
+      default: return <File className="w-5 h-5" />;
     }
   };
 
@@ -449,210 +388,235 @@ export default function AssetViewerModal({
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
   };
 
+  // Check if comments should be shown for this file type
+  const supportsComments = fileType === 'image' || fileType === 'pdf' || fileType === 'document';
+
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center"
+        className="fixed inset-0 bg-black/95 z-[100] flex flex-col"
         onClick={onClose}
       >
         {/* Header Controls */}
-        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between text-white">
-            {/* LEFT: Version Selector */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {/* Version Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowVersionDropdown(!showVersionDropdown);
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
-                  title="Version History"
-                >
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    v{previewingVersion || asset.currentVersion || 1}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showVersionDropdown ? 'rotate-180' : ''}`} />
-                  {versions.length > 0 && (
-                    <span className="text-xs text-white/60">
-                      ({versions.length})
-                    </span>
-                  )}
-                </button>
-
-                {/* Dropdown Menu */}
-                <AnimatePresence>
-                  {showVersionDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 mt-2 w-96 bg-slate-900 border border-white/20 rounded-lg shadow-2xl overflow-hidden"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {/* Dropdown Header */}
-                      <div className="px-4 py-3 border-b border-white/10 bg-slate-800/50">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-sm">Version History</h3>
-                          {selectedVersions.length >= 2 && (
-                            <button
-                              onClick={enterCompareMode}
-                              className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-                              title="Compare Selected (C)"
-                            >
-                              <Columns2 className="w-3.5 h-3.5" />
-                              Compare ({selectedVersions.length})
-                            </button>
-                          )}
-                        </div>
-                        {selectedVersions.length > 0 && selectedVersions.length < 2 && (
-                          <p className="text-xs text-white/50 mt-1">
-                            Select at least 2 versions to compare
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Version List */}
-                      <div className="max-h-96 overflow-y-auto">
-                        {loadingVersions ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                          </div>
-                        ) : versions.length === 0 ? (
-                          <div className="px-4 py-8 text-center text-white/50 text-sm">
-                            <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p>No version history available</p>
-                          </div>
-                        ) : (
-                          versions.map((version) => (
-                            <div
-                              key={version.id}
-                              className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
-                                version.isActive ? 'bg-blue-500/10' : ''
-                              } ${previewingVersion === version.version ? 'bg-green-500/10' : ''}`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                {/* Checkbox for multi-select */}
-                                <input
-                                  type="checkbox"
-                                  checked={selectedVersions.includes(version.version)}
-                                  onChange={() => toggleVersionSelection(version.version)}
-                                  className="mt-1 w-4 h-4 rounded border-white/20 bg-white/10 text-blue-600 focus:ring-blue-500"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-
-                                {/* Version Info */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-sm">
-                                      Version {version.version}
-                                    </span>
-                                    {version.isActive && (
-                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
-                                        <Star className="w-3 h-3 fill-current" />
-                                        Active
-                                      </span>
-                                    )}
-                                    {previewingVersion === version.version && (
-                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">
-                                        <Eye className="w-3 h-3" />
-                                        Viewing
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {version.versionNote && (
-                                    <p className="text-xs text-white/70 mb-2 line-clamp-2">
-                                      {version.versionNote}
-                                    </p>
-                                  )}
-
-                                  <div className="flex items-center gap-3 text-xs text-white/50">
-                                    <span className="flex items-center gap-1">
-                                      <User className="w-3 h-3" />
-                                      {version.uploader?.name || 'Unknown'}
-                                    </span>
-                                    <span>•</span>
-                                    <span>{formatFileSize(version.fileSize)}</span>
-                                    <span>•</span>
-                                    <span>{formatDate(version.createdAt)}</span>
-                                  </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => {
-                                      setPreviewingVersion(version.version);
-                                      setSelectedVersions([version.version]);
-                                      setShowVersionDropdown(false);
-                                      setCompareMode(false);
-                                    }}
-                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                                    title="Preview"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-
-                                  {!version.isActive && (
-                                    <button
-                                      onClick={() => handleActivateVersion(version.version)}
-                                      disabled={activatingVersion === version.version}
-                                      className="p-1.5 hover:bg-green-500/20 text-green-400 rounded transition-colors disabled:opacity-50"
-                                      title="Set as Active"
-                                    >
-                                      {activatingVersion === version.version ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                      ) : (
-                                        <Check className="w-4 h-4" />
-                                      )}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+        <div className="flex-shrink-0 bg-gradient-to-b from-black/90 to-transparent border-b border-white/5 p-3">
+          <div className="max-w-full mx-auto flex items-center justify-between text-white gap-3">
+            {/* LEFT: File Info & Version */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {/* File Icon */}
+              <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm flex-shrink-0">
+                {getFileIcon()}
               </div>
 
               {/* File Info */}
-              <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                {getFileIcon()}
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-sm truncate">{asset.title}</h3>
+                <p className="text-xs text-white/60 truncate">{asset.filename}</p>
               </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-lg truncate">{asset.title}</h3>
-                <p className="text-sm text-white/70 truncate">{asset.filename}</p>
-              </div>
+
+              {/* Version Dropdown */}
+              {versions.length > 0 && (
+                <div className="relative flex-shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowVersionDropdown(!showVersionDropdown);
+                    }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors text-xs"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="font-medium">
+                      v{previewingVersion || asset.currentVersion || 1}
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showVersionDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Version Dropdown Menu */}
+                  <AnimatePresence>
+                    {showVersionDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full left-0 mt-2 w-80 bg-slate-900 border border-white/20 rounded-lg shadow-2xl overflow-hidden z-50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Dropdown Header */}
+                        <div className="px-3 py-2 border-b border-white/10 bg-slate-800/50">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-xs">Version History</h3>
+                            {selectedVersions.length >= 2 && (
+                              <button
+                                onClick={enterCompareMode}
+                                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                              >
+                                <Columns2 className="w-3 h-3" />
+                                Compare ({selectedVersions.length})
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Version List */}
+                        <div className="max-h-80 overflow-y-auto">
+                          {loadingVersions ? (
+                            <div className="flex items-center justify-center py-6">
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            </div>
+                          ) : versions.length === 0 ? (
+                            <div className="px-3 py-6 text-center text-white/50 text-xs">
+                              <AlertCircle className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                              <p>No version history</p>
+                            </div>
+                          ) : (
+                            versions.map((version) => (
+                              <div
+                                key={version.id}
+                                className={`px-3 py-2 border-b border-white/5 hover:bg-white/5 transition-colors ${
+                                  version.isActive ? 'bg-blue-500/10' : ''
+                                } ${previewingVersion === version.version ? 'bg-green-500/10' : ''}`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  {/* Checkbox */}
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedVersions.includes(version.version)}
+                                    onChange={() => toggleVersionSelection(version.version)}
+                                    className="mt-0.5 w-3.5 h-3.5 rounded border-white/20 bg-white/10 text-blue-600"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+
+                                  {/* Version Info */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                      <span className="font-semibold text-xs">v{version.version}</span>
+                                      {version.isActive && (
+                                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                                          <Star className="w-2.5 h-2.5 fill-current" />
+                                          Active
+                                        </span>
+                                      )}
+                                      {previewingVersion === version.version && (
+                                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                                          <Eye className="w-2.5 h-2.5" />
+                                          Viewing
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {version.versionNote && (
+                                      <p className="text-xs text-white/60 mb-1 line-clamp-1">
+                                        {version.versionNote}
+                                      </p>
+                                    )}
+
+                                    <div className="flex items-center gap-2 text-xs text-white/40">
+                                      <span className="flex items-center gap-0.5">
+                                        <User className="w-2.5 h-2.5" />
+                                        {version.uploader?.name || 'Unknown'}
+                                      </span>
+                                      <span>•</span>
+                                      <span>{formatFileSize(version.fileSize)}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      onClick={() => {
+                                        setPreviewingVersion(version.version);
+                                        setSelectedVersions([version.version]);
+                                        setShowVersionDropdown(false);
+                                        setCompareMode(false);
+                                      }}
+                                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                                      title="Preview"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </button>
+
+                                    {!version.isActive && (
+                                      <button
+                                        onClick={() => handleActivateVersion(version.version)}
+                                        disabled={activatingVersion === version.version}
+                                        className="p-1 hover:bg-green-500/20 text-green-400 rounded transition-colors disabled:opacity-50"
+                                        title="Set as Active"
+                                      >
+                                        {activatingVersion === version.version ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <Check className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
 
-            {/* RIGHT: Controls */}
-            <div className="flex items-center gap-2 ml-4">
-              {/* Compare Mode Badge */}
+            {/* CENTER: Mode Badges */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {compareMode && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 rounded-lg">
-                  <Columns2 className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    Comparing {selectedVersions.length} Versions
-                  </span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 rounded-lg text-xs">
+                  <Columns2 className="w-3.5 h-3.5" />
+                  <span className="font-medium">Comparing {selectedVersions.length}</span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setCompareMode(false);
                     }}
-                    className="ml-2 hover:bg-white/20 rounded p-0.5 transition-colors"
+                    className="ml-1 hover:bg-white/20 rounded p-0.5 transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3 h-3" />
                   </button>
                 </div>
+              )}
+
+              {previewingVersion && !compareMode && !showEditor && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-600 rounded-lg text-xs">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="font-medium">Preview v{previewingVersion}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewingVersion(null);
+                    }}
+                    className="ml-1 hover:bg-white/20 rounded p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT: Action Buttons */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Comments Toggle */}
+              {supportsComments && !showEditor && !compareMode && (
+                <button
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setShowComments(!showComments); 
+                  }}
+                  className={`p-2 rounded-lg backdrop-blur-sm transition-colors ${
+                    showComments 
+                      ? 'bg-purple-600 hover:bg-purple-700' 
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
+                  title="Toggle Comments"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </button>
               )}
 
               {/* Edit Button */}
@@ -662,11 +626,10 @@ export default function AssetViewerModal({
                     e.stopPropagation(); 
                     setShowEditor(true); 
                   }}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg backdrop-blur-sm transition-colors text-sm font-medium flex items-center gap-2"
-                  title="Edit with Google Drive (E)"
+                  className="p-2 bg-green-600 hover:bg-green-700 rounded-lg backdrop-blur-sm transition-colors"
+                  title="Edit Document"
                 >
                   <Edit3 className="w-4 h-4" />
-                  Edit
                 </button>
               )}
 
@@ -678,11 +641,10 @@ export default function AssetViewerModal({
                     setShowEditor(false);
                     setCompareMode(false);
                   }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg backdrop-blur-sm transition-colors text-sm font-medium flex items-center gap-2"
+                  className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg backdrop-blur-sm transition-colors"
                   title="Back to Preview"
                 >
                   <FileText className="w-4 h-4" />
-                  Preview
                 </button>
               )}
 
@@ -692,30 +654,30 @@ export default function AssetViewerModal({
                   <button
                     onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
                     className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
-                    title="Zoom Out (-)"
+                    title="Zoom Out"
                   >
-                    <ZoomOut className="w-5 h-5" />
+                    <ZoomOut className="w-4 h-4" />
                   </button>
-                  <span className="px-3 py-1 bg-white/10 rounded-lg backdrop-blur-sm text-sm font-medium min-w-[60px] text-center">
+                  <span className="px-2.5 py-1 bg-white/10 rounded-lg backdrop-blur-sm text-xs font-medium min-w-[50px] text-center">
                     {zoom}%
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
                     className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
-                    title="Zoom In (+)"
+                    title="Zoom In"
                   >
-                    <ZoomIn className="w-5 h-5" />
+                    <ZoomIn className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleRotate(); }}
                     className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
-                    title="Rotate (R)"
+                    title="Rotate"
                   >
-                    <RotateCw className="w-5 h-5" />
+                    <RotateCw className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleReset(); }}
-                    className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors text-sm font-medium"
+                    className="px-2.5 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors text-xs font-medium"
                   >
                     Reset
                   </button>
@@ -729,7 +691,7 @@ export default function AssetViewerModal({
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
                   title="Fullscreen"
                 >
-                  {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
               )}
 
@@ -740,7 +702,7 @@ export default function AssetViewerModal({
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
                   title="Download"
                 >
-                  <Download className="w-5 h-5" />
+                  <Download className="w-4 h-4" />
                 </button>
               )}
 
@@ -758,263 +720,227 @@ export default function AssetViewerModal({
                   }
                 }}
                 className="p-2 bg-white/10 hover:bg-red-500/80 rounded-lg backdrop-blur-sm transition-colors"
-                title={showEditor || compareMode ? "Back to Preview (Esc)" : previewingVersion ? "Exit Preview (Esc)" : "Close (Esc)"}
+                title="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Version Preview Indicator Badge */}
-        {previewingVersion && !compareMode && !showEditor && (
-          <div className="absolute top-20 left-4 z-20">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-lg shadow-lg backdrop-blur-sm"
-            >
-              <Eye className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                Previewing Version {previewingVersion}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewingVersion(null);
-                }}
-                className="ml-2 hover:bg-white/20 rounded p-0.5 transition-colors"
-                title="Back to current version"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Main Content */}
+        {/* Main Content Area */}
         <div 
           id="asset-viewer-container"
-          className="w-full h-full flex items-center justify-center p-4"
+          className="flex-1 flex overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Navigation Buttons */}
-          {showNavigation && !showEditor && !compareMode && (
-            <>
-              {hasPrev && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onPrev(); }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-all z-10 group"
-                  title="Previous (←)"
-                >
-                  <ChevronLeft className="w-8 h-8 text-white" />
-                </button>
-              )}
-              {hasNext && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onNext(); }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-all z-10 group"
-                  title="Next (→)"
-                >
-                  <ChevronRight className="w-8 h-8 text-white" />
-                </button>
-              )}
-            </>
-          )}
-
-          {/* Content Renderer */}
-          <div className="max-w-7xl max-h-[calc(100vh-8rem)] w-full h-full flex items-center justify-center">
-            {/* COMPARISON MODE */}
-            {compareMode && selectedVersions.length >= 2 ? (
-              <div className="w-full h-full grid grid-cols-2 lg:grid-cols-3 gap-4 overflow-auto p-4">
-                {selectedVersions.map((versionNum) => {
-                  const version = getVersionDetails(versionNum);
-                  if (!version) return null;
-
-                  return (
-                    <motion.div
-                      key={version.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="bg-slate-900/50 rounded-lg border border-white/10 overflow-hidden flex flex-col"
-                    >
-                      {/* Version Header */}
-                      <div className="px-3 py-2 bg-slate-800/50 border-b border-white/10">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-sm">Version {version.version}</span>
-                          {version.isActive && (
-                            <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
-                              <Star className="w-3 h-3 fill-current" />
-                              Active
-                            </span>
-                          )}
-                        </div>
-                        {version.versionNote && (
-                          <p className="text-xs text-white/60 truncate">{version.versionNote}</p>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-white/50 mt-1">
-                          <span>{formatFileSize(version.fileSize)}</span>
-                          <span>•</span>
-                          <span>{formatDate(version.createdAt)}</span>
-                        </div>
-                      </div>
-
-                      {/* Version Preview */}
-                      <div className="flex-1 bg-slate-950/60 p-2 flex items-center justify-center">
-                        {fileType === 'image' ? (
-                          <img
-                            src={version.viewUrl}
-                            alt={`Version ${version.version}`}
-                            className="max-w-full max-h-full object-contain rounded"
-                            onError={(e) => {
-                              console.error(`Failed to load version ${version.version}`);
-                            }}
-                          />
-                        ) : (
-                          <div className="text-center text-white/50 text-sm">
-                            <DocIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                            <p>Version {version.version}</p>
-                            <p className="text-xs mt-1">{formatFileSize(version.fileSize)}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Version Actions */}
-                      <div className="px-3 py-2 bg-slate-800/50 border-t border-white/10 flex items-center justify-between">
-                        <button
-                          onClick={() => {
-                            setPreviewingVersion(version.version);
-                            setSelectedVersions([version.version]);
-                            setCompareMode(false);
-                          }}
-                          className="text-xs px-2 py-1 bg-white/5 hover:bg-white/10 rounded transition-colors"
-                        >
-                          <Eye className="w-3 h-3 inline mr-1" />
-                          View
-                        </button>
-                        {!version.isActive && (
-                          <button
-                            onClick={() => handleActivateVersion(version.version)}
-                            disabled={activatingVersion === version.version}
-                            className="text-xs px-2 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors disabled:opacity-50"
-                          >
-                            {activatingVersion === version.version ? (
-                              <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />
-                            ) : (
-                              <Check className="w-3 h-3 inline mr-1" />
-                            )}
-                            Activate
-                          </button>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            ) : (
+          {/* Asset Viewer Section */}
+          <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+            {/* Navigation Buttons */}
+            {showNavigation && !showEditor && !compareMode && (
               <>
-                {/* SINGLE VIEW */}
-                {/* IMAGE VIEWER */}
-                {fileType === 'image' && !showEditor && (
-                  <motion.img
-                    key={previewingVersion || asset.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    src={displayUrl}
-                    alt={previewingVersion ? `Version ${previewingVersion}` : asset.title}
-                    className="max-w-full max-h-full object-contain transition-transform duration-300"
-                    style={{
-                      transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                    }}
-                    onLoad={() => setLoading(false)}
-                    onError={() => {
-                      setError('Failed to load image');
-                      setLoading(false);
-                    }}
-                  />
+                {hasPrev && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onPrev(); }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-all z-20"
+                    title="Previous"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-white" />
+                  </button>
                 )}
-
-                {/* VIDEO VIEWER */}
-                {fileType === 'video' && !showEditor && (
-                  <div className="w-full h-full max-w-5xl max-h-[80vh]">
-                    <video
-                      key={previewingVersion || asset.id}
-                      controls
-                      autoPlay
-                      className="w-full h-full rounded-lg"
-                      onLoadedData={() => setLoading(false)}
-                      onError={() => {
-                        setError('Failed to load video');
-                        setLoading(false);
-                      }}
-                    >
-                      <source src={displayUrl} type={asset.mimeType || 'video/mp4'} />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
+                {hasNext && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onNext(); }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-all z-20"
+                    title="Next"
+                  >
+                    <ChevronRight className="w-6 h-6 text-white" />
+                  </button>
                 )}
+              </>
+            )}
 
-                {/* DOCUMENT/PDF VIEWER with EDITOR */}
-                {(fileType === 'pdf' || fileType === 'document') && (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                    {showEditor && isEditable() ? (
+            {/* Content Renderer */}
+            <div className="w-full h-full flex items-center justify-center p-4">
+              {/* COMPARISON MODE */}
+              {compareMode && selectedVersions.length >= 2 ? (
+                <div className="w-full h-full grid grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto">
+                  {selectedVersions.map((versionNum) => {
+                    const version = getVersionDetails(versionNum);
+                    if (!version) return null;
+
+                    return (
                       <motion.div
+                        key={version.id}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="w-full max-w-2xl"
+                        className="bg-slate-900/50 rounded-lg border border-white/10 overflow-hidden flex flex-col"
                       >
-                        <GoogleEditorIntegration
-                          document={asset}
-                          onSave={() => {
-                            setShowEditor(false);
-                            window.location.reload();
-                          }}
-                          onClose={() => setShowEditor(false)}
-                        />
+                        {/* Version Header */}
+                        <div className="px-3 py-2 bg-slate-800/50 border-b border-white/10">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-xs">Version {version.version}</span>
+                            {version.isActive && (
+                              <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                                <Star className="w-2.5 h-2.5 fill-current" />
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          {version.versionNote && (
+                            <p className="text-xs text-white/60 truncate">{version.versionNote}</p>
+                          )}
+                          <div className="flex items-center gap-1.5 text-xs text-white/40 mt-1">
+                            <span>{formatFileSize(version.fileSize)}</span>
+                            <span>•</span>
+                            <span>{formatDate(version.createdAt)}</span>
+                          </div>
+                        </div>
+
+                        {/* Version Preview */}
+                        <div className="flex-1 bg-slate-950/60 p-2 flex items-center justify-center min-h-0">
+                          {fileType === 'image' ? (
+                            <img
+                              src={version.viewUrl}
+                              alt={`Version ${version.version}`}
+                              className="max-w-full max-h-full object-contain rounded"
+                            />
+                          ) : (
+                            <div className="text-center text-white/50 text-xs">
+                              <DocIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                              <p>Version {version.version}</p>
+                              <p className="mt-1">{formatFileSize(version.fileSize)}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Version Actions */}
+                        <div className="px-3 py-2 bg-slate-800/50 border-t border-white/10 flex items-center justify-between">
+                          <button
+                            onClick={() => {
+                              setPreviewingVersion(version.version);
+                              setSelectedVersions([version.version]);
+                              setCompareMode(false);
+                            }}
+                            className="text-xs px-2 py-1 bg-white/5 hover:bg-white/10 rounded transition-colors"
+                          >
+                            <Eye className="w-3 h-3 inline mr-1" />
+                            View
+                          </button>
+                          {!version.isActive && (
+                            <button
+                              onClick={() => handleActivateVersion(version.version)}
+                              disabled={activatingVersion === version.version}
+                              className="text-xs px-2 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors disabled:opacity-50"
+                            >
+                              {activatingVersion === version.version ? (
+                                <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />
+                              ) : (
+                                <Check className="w-3 h-3 inline mr-1" />
+                              )}
+                              Activate
+                            </button>
+                          )}
+                        </div>
                       </motion.div>
-                    ) : (
-                      <>
-                        {/* Document Card Panel */}
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  {/* SINGLE VIEW */}
+                  {/* IMAGE VIEWER */}
+                  {fileType === 'image' && !showEditor && (
+                    <motion.img
+                      key={previewingVersion || asset.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      src={displayUrl}
+                      alt={previewingVersion ? `Version ${previewingVersion}` : asset.title}
+                      className="max-w-full max-h-full object-contain transition-transform duration-300"
+                      style={{
+                        transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                      }}
+                      onLoad={() => setLoading(false)}
+                      onError={() => {
+                        setError('Failed to load image');
+                        setLoading(false);
+                      }}
+                    />
+                  )}
+
+                  {/* VIDEO VIEWER */}
+                  {fileType === 'video' && !showEditor && (
+                    <div className="w-full h-full max-w-5xl max-h-[85vh]">
+                      <video
+                        key={previewingVersion || asset.id}
+                        controls
+                        autoPlay
+                        className="w-full h-full rounded-lg"
+                        onLoadedData={() => setLoading(false)}
+                        onError={() => {
+                          setError('Failed to load video');
+                          setLoading(false);
+                        }}
+                      >
+                        <source src={displayUrl} type={asset.mimeType || 'video/mp4'} />
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  )}
+
+                  {/* DOCUMENT/PDF VIEWER with EDITOR */}
+                  {(fileType === 'pdf' || fileType === 'document') && (
+                    <div className="w-full h-full flex flex-col items-center justify-center">
+                      {showEditor && isEditable() ? (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="w-full max-w-4xl h-full"
+                        >
+                          <GoogleEditorIntegration
+                            document={asset}
+                            onSave={() => {
+                              setShowEditor(false);
+                              window.location.reload();
+                            }}
+                            onClose={() => setShowEditor(false)}
+                          />
+                        </motion.div>
+                      ) : (
                         <motion.div
                           key={previewingVersion || asset.id}
-                          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          transition={{ duration: 0.3, ease: "easeOut" }}
-                          className={`w-full max-w-6xl h-[75vh] bg-gradient-to-br ${docConfig.bgGradient} rounded-2xl border ${docConfig.borderColor} shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl`}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`w-full ${showComments ? 'max-w-5xl' : 'max-w-6xl'} h-[85vh] bg-gradient-to-br ${docConfig.bgGradient} rounded-xl border ${docConfig.borderColor} shadow-2xl overflow-hidden flex flex-col`}
                         >
-                          {/* Document Header Bar */}
-                          <div className={`flex items-center justify-between px-5 py-3 border-b ${docConfig.borderColor} bg-slate-900/50 backdrop-blur-md`}>
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className={`p-2 rounded-lg bg-gradient-to-br ${docConfig.bgGradient} ${docConfig.borderColor} border`}>
-                                <DocIcon className={`w-5 h-5 ${docConfig.textColor}`} />
+                          {/* Document Header */}
+                          <div className={`flex items-center justify-between px-4 py-2.5 border-b ${docConfig.borderColor} bg-slate-900/50`}>
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <div className={`p-1.5 rounded-lg bg-gradient-to-br ${docConfig.bgGradient} border ${docConfig.borderColor}`}>
+                                <DocIcon className={`w-4 h-4 ${docConfig.textColor}`} />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-white truncate">
+                                <p className="text-xs font-semibold text-white truncate">
                                   {asset.title || asset.filename}
                                 </p>
-                                <p className="text-xs text-white/60 truncate">
+                                <p className="text-xs text-white/50 truncate">
                                   {asset.mimeType || docConfig.label}
                                 </p>
                               </div>
                             </div>
 
-                            {/* Quick Meta Info */}
-                            <div className="flex items-center gap-4 text-xs text-white/70">
+                            {/* Document Meta */}
+                            <div className="flex items-center gap-2 text-xs text-white/60">
                               {asset.pageCount && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5">
-                                  <FileText className="w-3.5 h-3.5" />
+                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5">
+                                  <FileText className="w-3 h-3" />
                                   <span>{asset.pageCount} {asset.pageCount === 1 ? 'page' : 'pages'}</span>
                                 </div>
                               )}
                               {asset.fileSizeFormatted && (
-                                <div className="px-2.5 py-1 rounded-md bg-white/5">
+                                <div className="px-2 py-0.5 rounded-md bg-white/5">
                                   {asset.fileSizeFormatted}
-                                </div>
-                              )}
-                              {(previewingVersion || asset.currentVersion) && (
-                                <div className="px-2.5 py-1 rounded-md bg-white/5">
-                                  v{previewingVersion || asset.currentVersion}
                                 </div>
                               )}
                             </div>
@@ -1046,171 +972,145 @@ export default function AssetViewerModal({
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <div className="text-center">
-                                  <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-                                  <p className="text-white/70 text-sm">Preparing document viewer...</p>
+                                  <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-3" />
+                                  <p className="text-white/70 text-xs">Loading document...</p>
                                 </div>
                               </div>
                             )}
                           </div>
 
-                          {/* Document Action Bar */}
-                          <div className={`flex items-center justify-between px-5 py-3 border-t ${docConfig.borderColor} bg-slate-900/50 backdrop-blur-md`}>
-                            <div className="flex items-center gap-2">
+                          {/* Document Actions */}
+                          <div className={`flex items-center justify-between px-4 py-2 border-t ${docConfig.borderColor} bg-slate-900/50`}>
+                            <div className="flex items-center gap-1.5">
                               {isEditable() && (
                                 <button
                                   onClick={(e) => { 
                                     e.stopPropagation(); 
                                     setShowEditor(true); 
                                   }}
-                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all text-xs font-medium text-green-300"
-                                  title="Edit with Google Drive"
+                                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all text-xs font-medium text-green-300"
                                 >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                  <span>Edit Document</span>
+                                  <Edit3 className="w-3 h-3" />
+                                  <span>Edit</span>
                                 </button>
                               )}
 
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleOpenInNewTab(); }}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
-                                title="Open in new tab"
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
                               >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                <span>Open in Tab</span>
+                                <ExternalLink className="w-3 h-3" />
+                                <span>Open</span>
                               </button>
 
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
-                                title="Copy link"
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border ${docConfig.borderColor} transition-all text-xs font-medium text-white/90`}
                               >
                                 {copied ? (
                                   <>
                                     <span className="text-green-400">✓</span>
-                                    <span className="text-green-400">Copied!</span>
+                                    <span className="text-green-400">Copied</span>
                                   </>
                                 ) : (
                                   <>
-                                    <LinkIcon className="w-3.5 h-3.5" />
-                                    <span>Copy Link</span>
+                                    <LinkIcon className="w-3 h-3" />
+                                    <span>Copy</span>
                                   </>
                                 )}
                               </button>
-
-                              {showDownload && onDownload && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); onDownload(asset); }}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-${docConfig.color}-500/20 hover:bg-${docConfig.color}-500/30 border ${docConfig.borderColor} transition-all text-xs font-medium ${docConfig.textColor}`}
-                                  title="Download"
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                  <span>Download</span>
-                                </button>
-                              )}
                             </div>
 
-                            <div className="text-xs text-white/60">
+                            <div className="text-xs text-white/50">
                               {asset.uploader && (
-                                <span>Uploaded by {asset.uploader.name || asset.uploader.email}</span>
+                                <span>By {asset.uploader.name || asset.uploader.email}</span>
                               )}
                             </div>
                           </div>
                         </motion.div>
+                      )}
+                    </div>
+                  )}
 
-                        {/* Document Meta Footer */}
-                        <div className="flex items-center justify-between w-full max-w-6xl text-xs text-white/50 px-2">
-                          <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1.5 rounded-full bg-gradient-to-r ${docConfig.bgGradient} border ${docConfig.borderColor} ${docConfig.textColor} font-medium`}>
-                              {docConfig.label}
-                            </span>
-                            {isEditable() && (
-                              <span className="px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 font-medium">
-                                ✏️ Editable
-                              </span>
-                            )}
-                            {asset.tags && asset.tags.length > 0 && (
-                              <span className="text-white/40">
-                                Tags: {asset.tags.join(', ')}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-white/40">
-                            Uploaded {formatDate(asset.createdAt)}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                  {/* UNKNOWN FILE TYPE */}
+                  {fileType === 'unknown' && (
+                    <div className="text-center text-white">
+                      <File className="w-16 h-16 mx-auto mb-3 text-white/50" />
+                      <p className="text-lg font-semibold mb-2">Preview Not Available</p>
+                      <p className="text-white/70 mb-4 text-sm">
+                        This file type cannot be previewed
+                      </p>
+                      {showDownload && onDownload && (
+                        <button
+                          onClick={() => onDownload(asset)}
+                          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 mx-auto text-sm"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download File
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
 
-                {/* UNKNOWN FILE TYPE */}
-                {fileType === 'unknown' && (
+              {/* LOADING STATE */}
+              {loading && !error && fileType !== 'document' && fileType !== 'pdf' && !showEditor && !compareMode && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <div className="text-center text-white">
-                    <File className="w-16 h-16 mx-auto mb-4 text-white/50" />
-                    <p className="text-lg font-semibold mb-2">Preview Not Available</p>
-                    <p className="text-white/70 mb-4">
-                      This file type cannot be previewed in the browser
-                    </p>
-                    {showDownload && onDownload && (
-                      <button
-                        onClick={() => onDownload(asset)}
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 mx-auto"
-                      >
-                        <Download className="w-5 h-5" />
-                        Download File
-                      </button>
-                    )}
+                    <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm font-medium">Loading {fileType}...</p>
                   </div>
-                )}
-              </>
-            )}
+                </div>
+              )}
 
-            {/* LOADING STATE */}
-            {loading && !error && fileType !== 'document' && fileType !== 'pdf' && !showEditor && !compareMode && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              {/* ERROR STATE */}
+              {error && (
                 <div className="text-center text-white">
-                  <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-lg font-semibold">Loading {fileType}...</p>
+                  <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <X className="w-7 h-7 text-red-500" />
+                  </div>
+                  <p className="text-lg font-semibold mb-2">Failed to Load</p>
+                  <p className="text-white/70 text-sm">{error}</p>
                 </div>
-              </div>
-            )}
-
-            {/* ERROR STATE */}
-            {error && (
-              <div className="text-center text-white">
-                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <X className="w-8 h-8 text-red-500" />
-                </div>
-                <p className="text-lg font-semibold mb-2">Failed to Load</p>
-                <p className="text-white/70">{error}</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Comment Panel */}
+          {showComments && supportsComments && !compareMode && !showEditor && (
+            <DocumentCommentPanel
+              documentId={asset.id}
+              currentVersion={previewingVersion || asset.currentVersion || 1}
+              fileType={fileType}
+              className="w-[400px] flex-shrink-0 border-l border-white/10"
+            />
+          )}
         </div>
 
-        {/* BOTTOM INFO BAR */}
+        {/* Bottom Info Bar - Only for Images/Videos */}
         {(fileType === 'image' || fileType === 'video') && !showEditor && !compareMode && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-            <div className="max-w-7xl mx-auto flex items-center justify-between text-white text-sm">
-              <div className="flex items-center gap-4">
+          <div className="flex-shrink-0 bg-gradient-to-t from-black/90 to-transparent border-t border-white/5 px-4 py-2">
+            <div className="flex items-center justify-between text-white text-xs">
+              <div className="flex items-center gap-3">
                 {asset.fileSizeFormatted && (
-                  <span className="text-white/70">
-                    Size: {asset.fileSizeFormatted}
+                  <span className="text-white/60">
+                    {asset.fileSizeFormatted}
                   </span>
                 )}
                 {asset.dimensions && (
-                  <span className="text-white/70">
+                  <span className="text-white/60">
                     {asset.dimensions}
                   </span>
                 )}
                 {asset.durationFormatted && (
-                  <span className="text-white/70">
-                    Duration: {asset.durationFormatted}
+                  <span className="text-white/60">
+                    {asset.durationFormatted}
                   </span>
                 )}
               </div>
-              <div className="text-white/70">
-                Uploaded: {formatDate(asset.createdAt)}
+              <div className="text-white/60">
+                Uploaded {formatDate(asset.createdAt)}
               </div>
             </div>
           </div>
