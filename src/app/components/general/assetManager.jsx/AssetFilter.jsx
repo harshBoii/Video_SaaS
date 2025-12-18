@@ -2,20 +2,35 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-export default function AssetFilters({ filters, onChange, userRole, companyId }) {
+export default function AssetFilters({ filters, onChange, userRole, companyId, userId }) {
   const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCampaigns();
   }, [companyId]);
 
   const fetchCampaigns = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`/api/campaigns?companyId=${companyId}`);
-      const data = await response.json();
-      setCampaigns(data.campaigns || []);
+      // ✅ Your API returns campaigns in data.campaigns format
+      const response = await fetch('/api/campaigns', {
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.data?.campaigns) {
+        setCampaigns(result.data.campaigns);
+      } else {
+        console.error('Failed to fetch campaigns');
+        setCampaigns([]);
+      }
     } catch (error) {
       console.error('Error fetching campaigns:', error);
+      setCampaigns([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,15 +113,22 @@ export default function AssetFilters({ filters, onChange, userRole, companyId })
             currentValue={filters.campaignId}
             onChange={(val) => onChange('campaignId', val)}
           />
-          {campaigns.map((campaign) => (
-            <FilterOption
-              key={campaign.id}
-              label={campaign.name}
-              value={campaign.id}
-              currentValue={filters.campaignId}
-              onChange={(val) => onChange('campaignId', val)}
-            />
-          ))}
+          
+          {loading ? (
+            <div className="p-2 text-sm text-slate-500">Loading campaigns...</div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-2 text-sm text-slate-500">No campaigns found</div>
+          ) : (
+            campaigns.map((campaign) => (
+              <FilterOption
+                key={campaign.id}
+                label={campaign.name}
+                value={campaign.id}
+                currentValue={filters.campaignId}
+                onChange={(val) => onChange('campaignId', val)}
+              />
+            ))
+          )}
         </div>
       </FilterSection>
 

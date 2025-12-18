@@ -12,13 +12,13 @@ import VisibilityModal from './VisibilityModal';
 export default function AssetLibrary({ userRole = 'employee', userId, companyId }) {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('grid'); // 'grid' or 'list'
+  const [view, setView] = useState('grid');
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showVisibilityModal, setShowVisibilityModal] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
-    assetType: 'all', // 'all', 'VIDEO', 'DOCUMENT'
+    assetType: 'all',
     campaignId: 'all',
     status: 'all',
     dateRange: 'all',
@@ -44,11 +44,22 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
         userRole
       });
 
-      const response = await fetch(`/api/assets?${queryParams}`);
+      const response = await fetch(`/api/assets?${queryParams}`, {
+        credentials: 'include' // ✅ Include cookies for JWT
+      });
+      
       const data = await response.json();
-      setAssets(data.assets || []);
+      
+      // ✅ Handle your API response format
+      if (data.success) {
+        setAssets(data.assets || []);
+      } else {
+        console.error('Failed to fetch assets:', data.error);
+        setAssets([]);
+      }
     } catch (error) {
       console.error('Error fetching assets:', error);
+      setAssets([]);
     } finally {
       setLoading(false);
     }
@@ -115,6 +126,7 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
               onChange={handleFilterChange}
               userRole={userRole}
               companyId={companyId}
+              userId={userId}
             />
           </motion.aside>
 

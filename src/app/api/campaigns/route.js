@@ -1,5 +1,5 @@
 //cacheable invalidate on post call
-
+//api/campaign
 import { NextResponse } from 'next/server';
 import { authenticateRequest } from '@/app/lib/auth';
 import prisma from '@/app/lib/prisma';
