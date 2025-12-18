@@ -1,7 +1,7 @@
 // app/api/assets/route.js
 import { NextResponse } from 'next/server';
-import { authenticateRequest } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { authenticateRequest } from '@/app/lib/auth';
+import prisma from '@/app/lib/prisma';
 
 export async function GET(request) {
   try {

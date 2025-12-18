@@ -1,8 +1,8 @@
 // components/asset-library/VisibilityModal.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Modal from '../ui/Modal';
-import Badge from '../ui/Badge';
+import Modal from './ui/button';
+import Badge from './ui/badge';
 
 export default function VisibilityModal({ asset, onClose, onSave }) {
   const [loading, setLoading] = useState(false);

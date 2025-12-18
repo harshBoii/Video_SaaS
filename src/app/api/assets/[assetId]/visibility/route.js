@@ -1,7 +1,7 @@
 // app/api/assets/[assetId]/visibility/route.js
 import { NextResponse } from 'next/server';
-import { authenticateRequest, isAdmin } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { authenticateRequest, isAdmin } from '@/app/lib/auth';
+import prisma from '@/app/lib/prisma';
 
 export async function GET(request, { params }) {
   try {
@@ -11,7 +11,7 @@ export async function GET(request, { params }) {
       return authResult.error;
     }
 
-    const { assetId } = params;
+    const { assetId } = await params;
 
     // Fetch visibility settings
     const visibility = await prisma.assetVisibility.findMany({

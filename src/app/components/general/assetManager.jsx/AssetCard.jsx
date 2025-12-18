@@ -1,7 +1,7 @@
 // components/asset-library/AssetCard.jsx
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import Badge from '../ui/Badge';
+import Badge from './ui/badge';
 
 export default function AssetCard({ asset, view, userRole, onVisibilityClick, onRefresh }) {
   const [showActions, setShowActions] = useState(false);

@@ -1,7 +1,7 @@
 // components/asset-library/AssetLibrary.jsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AssetFilters from './AssetFilters';
+import AssetFilters from './AssetFilter';
 import AssetSearch from './AssetSearch';
 import AssetSort from './AssetSort';
 import AssetGrid from './AssetGrid';
