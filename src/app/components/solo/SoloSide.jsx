@@ -212,4 +212,3 @@ const SoloSide = () => {
 };
 
 export default SoloSide;
-font-['DM_Sans']
