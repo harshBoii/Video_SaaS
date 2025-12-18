@@ -48,7 +48,7 @@ export async function GET(request, { params }) {
         });
 
         const presignedUrl = await getSignedUrl(r2, command, {
-          expiresIn: 31536000, // 365 days in seconds
+          expiresIn: 604800, // 365 days in seconds
         });
 
         // ✅ Update DB with the presigned URL
