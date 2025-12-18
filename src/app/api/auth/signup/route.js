@@ -21,6 +21,7 @@ function checkRateLimit(identifier, maxRequests = 5, windowMs = 60000) {
 }
 
 export async function POST(request) {
+  return null
   try {
     // 1. Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 

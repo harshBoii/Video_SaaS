@@ -219,7 +219,7 @@ const EmployeeSide = () => {
 
   if (loading) {
     return (
-      <aside className="w-60 flex-shrink-0 bg-[#fdfdfd] dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col px-4 py-6 font-['DM_Sans'] sticky top-0 h-screen">
+      <aside className="w-60 flex-shrink-0 bg-[#fdfdfd] dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col px-4 py-6  sticky top-0 h-screen">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

@@ -2,17 +2,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggler from './ThemeToggler';
-import { Menu, X, LogOut, UserCircle2, ChevronDown,RefreshCcw,CloudLightningIcon} from 'lucide-react';
+import { Menu, X, LogOut, UserCircle2, ChevronDown, CloudLightningIcon } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getDashboardRoute } from '@/app/lib/utils';
 
 export default function MainNav() {
   const [user, setUser] = useState(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchUser() {
+      setIsLoadingAuth(true);
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
         if (res.ok) {
@@ -21,6 +26,8 @@ export default function MainNav() {
         }
       } catch (err) {
         console.error('Failed to fetch user:', err);
+      } finally {
+        setIsLoadingAuth(false);
       }
     }
     fetchUser();
@@ -35,6 +42,16 @@ export default function MainNav() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+  
+  const handleLogoClick = (e) => {
+    if (isLoadingAuth) {
+      e.preventDefault();
+      return;
+    }
+    
+    const route = getDashboardRoute(user);
+    router.push(route);
+  };
 
   const handleLogout = async () => {
     try {
@@ -44,9 +61,11 @@ export default function MainNav() {
       console.error('Logout failed:', err);
     }
   };
+
   const triggerCron = async () => {
     await fetch("/api/run-cron");
   };
+
   return (
     <motion.header
       initial={{ y: -100 }}
@@ -57,18 +76,42 @@ export default function MainNav() {
       <div className="mx-auto h-full">
         <div className="h-full flex items-center px-4 sm:px-6 lg:px-8">
           
-          {/* Logo - FLUSH LEFT (No gap) */}
-          <Link href="/" className="group flex items-center shrink-0 h-full py-1">
+          {/* Logo with Role-based Routing */}
+          <motion.button
+            onClick={handleLogoClick}
+            disabled={isLoadingAuth}
+            className={`group flex items-center shrink-0 h-full py-1 ${
+              isLoadingAuth 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'cursor-pointer'
+            }`}
+            whileHover={!isLoadingAuth ? { scale: 1.02 } : {}}
+            whileTap={!isLoadingAuth ? { scale: 0.98 } : {}}
+          >
             <motion.div
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 group-hover:shadow-2xl group-hover:shadow-indigo-500/50 transition-all duration-400 overflow-hidden relative flex-shrink-0 mr-2"
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.25 }}
+              className={`w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 transition-all duration-400 overflow-hidden relative flex-shrink-0 mr-2 ${
+                isLoadingAuth 
+                  ? '' 
+                  : 'group-hover:shadow-2xl group-hover:shadow-indigo-500/50'
+              }`}
+              animate={isLoadingAuth ? {
+                scale: [1, 1.05, 1],
+                rotate: [0, 5, -5, 0]
+              } : {}}
+              transition={isLoadingAuth ? {
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              } : { duration: 0.25 }}
             >
               <motion.div
                 className="w-6 h-6 text-white relative z-10"
-                initial={{ rotate: -180 }}
-                animate={{ rotate: 0 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
+                animate={isLoadingAuth ? { rotate: 360 } : { rotate: 0 }}
+                transition={isLoadingAuth ? {
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "linear"
+                } : { duration: 0.6, ease: 'easeOut' }}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -80,24 +123,28 @@ export default function MainNav() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.75 11.17l-6.27-3.98A1 1 0 007 8.98v6.03a1 1 0 001.5.87l6.25-3.98a1 1 0 000-1.7z" />
                 </svg>
               </motion.div>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              {!isLoadingAuth && (
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              )}
             </motion.div>
             <motion.span
-              className="font-bold text-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 bg-clip-text tracking-tight select-none flex-shrink-0"
-              whileHover={{ x: 4 }}
+              className={`font-bold text-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 bg-clip-text tracking-tight select-none flex-shrink-0 ${
+                isLoadingAuth ? 'opacity-50' : ''
+              }`}
+              whileHover={!isLoadingAuth ? { x: 4 } : {}}
               transition={{ duration: 0.3 }}
             >
               Clipfox
             </motion.span>
-          </Link>
+          </motion.button>
 
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Right Controls - FLUSH RIGHT (No gap) */}
+          {/* Right Controls */}
           <div className="flex items-center h-full space-x-2 sm:space-x-3 lg:space-x-4 shrink-0">
             
-            {/* Theme Toggle - Perfect height */}
+            {/* Theme Toggle & Cron */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <motion.div
                 whileHover={{ scale: 0.9 }}
@@ -110,17 +157,23 @@ export default function MainNav() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => triggerCron()}
-                className="flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md"
+                onClick={triggerCron}
+                disabled={isLoadingAuth}
+                className={`flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md ${
+                  isLoadingAuth ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
-                <CloudLightningIcon />
+                <CloudLightningIcon className={isLoadingAuth ? 'animate-pulse' : ''} />
               </motion.button>
             </div>
-            {/* Guest CTA - Perfect height */}
-            {!user && (
+
+            {/* Guest CTA */}
+            {!isLoadingAuth && !user && (
               <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
                 whileHover={{ scale: 1.02 }} 
-                transition={{ duration: 0.2 }}
                 className="hidden md:inline-flex flex-shrink-0 h-10"
               >
                 <Link
@@ -136,53 +189,52 @@ export default function MainNav() {
               </motion.div>
             )}
 
-            {/* User Avatar Button - Perfect height */}
-            <AnimatePresence>
-            {user && (
-              <motion.div
-                ref={userDropdownRef}
-                className="relative h-10 flex-shrink-0"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  aria-haspopup="true"
-                  aria-expanded={userDropdownOpen}
-                  className="group flex items-center h-full p-1.5 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm  transition-all duration-200   shadow-sm hover:shadow-md flex-shrink-0"
+            {/* User Avatar Button */}
+            <AnimatePresence mode="wait">
+              {!isLoadingAuth && user && (
+                <motion.div
+                  ref={userDropdownRef}
+                  className="relative h-10 flex-shrink-0"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  {/* Avatar - Responsive sizes */}
-                  <motion.div
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 text-white flex items-center justify-center font-semibold text-sm sm:text-base shadow-xl shadow-slate-500/30 group-hover:shadow-2xl group-hover:shadow-slate-500/50 overflow-hidden relative flex-shrink-0"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    aria-haspopup="true"
+                    aria-expanded={userDropdownOpen}
+                    className="group flex items-center h-full p-1.5 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0"
                   >
-                    <span className="relative z-10">{user.firstName?.[0]}{user.lastName?.[0]}</span>
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </motion.div>
+                    {/* Avatar */}
+                    <motion.div
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 text-white flex items-center justify-center font-semibold text-sm sm:text-base shadow-xl shadow-slate-500/30 group-hover:shadow-2xl group-hover:shadow-slate-500/50 overflow-hidden relative flex-shrink-0"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <span className="relative z-10">{user.firstName?.[0]}{user.lastName?.[0]}</span>
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </motion.div>
 
+                    {/* Chevron */}
+                    <AnimatePresence>
+                      {userDropdownOpen && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0, rotate: -90 }}
+                          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                          exit={{ scale: 0, opacity: 0, rotate: -90 }}
+                          transition={{ duration: 0.2 }}
+                          className="hidden md:hidden lg:block w-4 h-4 sm:w-5 sm:h-5 bg-slate-800 rounded-full shadow-lg shadow-slate-800/25 ml-1 flex-shrink-0"
+                        >
+                          <ChevronDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white rotate-180 absolute inset-0 m-auto" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
 
-               {/* Chevron - Responsive */}
-                  <AnimatePresence>
-                    {userDropdownOpen && (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0, rotate: -90 }}
-                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                        exit={{ scale: 0, opacity: 0, rotate: -90 }}
-                        transition={{ duration: 0.2 }}
-                        className="hidden md:hidden lg:block w-4 h-4 sm:w-5 sm:h-5 bg-slate-800 rounded-full shadow-lg shadow-slate-800/25 ml-1 flex-shrink-0"
-                      >
-                        <ChevronDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white rotate-180 absolute inset-0 m-auto" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-
-
-                  {/* User Dropdown - Responsive width */}
+                  {/* User Dropdown */}
                   <AnimatePresence>
                     {userDropdownOpen && (
                       <motion.div
@@ -218,9 +270,11 @@ export default function MainNav() {
                           </p>
                           
                           {/* Role badge */}
-                          <p className="text-xs text-center font-semibold mt-2 inline-block px-3 py-1 bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-full capitalize">
-                            {user.role?.name?.replace(/_/g, ' ') || 'User'}
-                          </p>
+                          <div className="flex justify-center mt-2">
+                            <span className="text-xs font-semibold px-3 py-1 bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-full capitalize">
+                              {user.role?.name?.replace(/_/g, ' ') || 'User'}
+                            </span>
+                          </div>
                         </motion.div>
 
                         {/* Logout button */}
@@ -246,13 +300,24 @@ export default function MainNav() {
               )}
             </AnimatePresence>
 
+            {/* Loading Skeleton for User Avatar */}
+            {isLoadingAuth && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse flex-shrink-0"
+              />
+            )}
 
-            {/* Mobile Menu Button - Perfect height */}
+            {/* Mobile Menu Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setMenuOpen(!menuOpen)}
-              className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 shadow-sm hover:shadow-md lg:hidden flex-shrink-0 ml-2"
+              disabled={isLoadingAuth}
+              className={`h-10 w-10 flex items-center justify-center rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 shadow-sm hover:shadow-md lg:hidden flex-shrink-0 ml-2 ${
+                isLoadingAuth ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
               aria-label="Toggle menu"
               aria-expanded={menuOpen}
             >
@@ -272,7 +337,7 @@ export default function MainNav() {
         </div>
       </div>
 
-      {/* Mobile Menu - unchanged */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div

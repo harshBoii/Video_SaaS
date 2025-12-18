@@ -411,8 +411,8 @@ export default function AuthPage() {
 
                 {/* Submit Button */}
                 <motion.button
+                  disabled={true}
                   type="submit"
-                  disabled={loading}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"

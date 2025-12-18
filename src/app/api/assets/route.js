@@ -26,7 +26,9 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit') || '50');
 
     // Build base where clause
-    let whereClause = { companyId: user.companyId };
+    let whereClause = await { companyId: user.companyId };
+
+    
 
     // Authorization logic
     if (user.isAdmin) {

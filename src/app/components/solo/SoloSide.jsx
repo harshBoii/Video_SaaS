@@ -147,7 +147,7 @@ const ThemeToggleButton = () => {
 ----------------------------------- */
 const SoloSide = () => {
   return (
-    <aside className="w-60 flex-shrink-0 bg-[#fdfdfd] dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col px-4 py-6 font-['DM_Sans'] sticky top-0 h-screen overflow-y-auto transition-colors duration-200">
+    <aside className="w-60 flex-shrink-0 bg-[#fdfdfd] dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col px-4 py-6  sticky top-0 h-screen overflow-y-auto transition-colors duration-200">
       {/* Logo */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -212,3 +212,4 @@ const SoloSide = () => {
 };
 
 export default SoloSide;
+font-['DM_Sans']
