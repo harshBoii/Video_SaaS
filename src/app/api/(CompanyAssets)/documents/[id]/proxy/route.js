@@ -87,7 +87,9 @@ export async function GET(request, { params }) {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
         'Access-Control-Allow-Headers': '*',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'public, max-age=31536000, immutable', // 1 year browser cache
+        'CDN-Cache-Control': 'max-age=31536000', // 1 year CDN cache
+
       },
     });
 
