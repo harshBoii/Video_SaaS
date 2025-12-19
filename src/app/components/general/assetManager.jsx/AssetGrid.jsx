@@ -2,7 +2,15 @@
 import { motion } from 'framer-motion';
 import AssetCard from './AssetCard';
 
-export default function AssetGrid({ assets, loading, view, userRole, onVisibilityClick, onRefresh }) {
+export default function AssetGrid({ 
+  assets, 
+  loading, 
+  view, 
+  userRole, 
+  onVisibilityClick, 
+  onRefresh,
+  onAssetClick 
+}) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -61,6 +69,7 @@ export default function AssetGrid({ assets, loading, view, userRole, onVisibilit
             userRole={userRole}
             onVisibilityClick={onVisibilityClick}
             onRefresh={onRefresh}
+            onAssetClick={onAssetClick}
           />
         ))}
       </motion.div>
@@ -82,6 +91,7 @@ export default function AssetGrid({ assets, loading, view, userRole, onVisibilit
           userRole={userRole}
           onVisibilityClick={onVisibilityClick}
           onRefresh={onRefresh}
+          onAssetClick={onAssetClick}
         />
       ))}
     </motion.div>

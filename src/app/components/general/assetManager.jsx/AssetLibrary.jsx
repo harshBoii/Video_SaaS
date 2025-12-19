@@ -1,5 +1,5 @@
 // components/asset-library/AssetLibrary.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AssetFilters from './AssetFilter';
 import AssetSearch from './AssetSearch';
@@ -8,6 +8,9 @@ import AssetGrid from './AssetGrid';
 import ViewToggle from './ViewToggle';
 import UploadButton from './UploadButton';
 import VisibilityModal from './VisibilityModal';
+import AssetViewerModal from '../../nonVideoAssets/AssetViewer';
+import VideoPlayer from '../../video/VideoPlayer';
+import { CampaignPermissionsProvider } from '@/app/context/permissionContext';
 
 export default function AssetLibrary({ userRole = 'employee', userId, companyId }) {
   const [assets, setAssets] = useState([]);
@@ -15,6 +18,11 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
   const [view, setView] = useState('grid');
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showVisibilityModal, setShowVisibilityModal] = useState(false);
+
+  // Modal states for viewing assets
+  const [playingVideo, setPlayingVideo] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
+  const [viewingDocument, setViewingDocument] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -27,6 +35,15 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
 
   // Sort state
   const [sortBy, setSortBy] = useState('createdAt-desc');
+
+  // Separate assets by type for navigation
+  const { videos, images, documents } = useMemo(() => {
+    return {
+      videos: assets.filter(asset => asset.assetType === 'VIDEO'),
+      images: assets.filter(asset => asset.assetType === 'IMAGE'),
+      documents: assets.filter(asset => asset.assetType === 'DOCUMENT')
+    };
+  }, [assets]);
 
   // Fetch assets
   useEffect(() => {
@@ -45,12 +62,11 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
       });
 
       const response = await fetch(`/api/assets?${queryParams}`, {
-        credentials: 'include' // ✅ Include cookies for JWT
+        credentials: 'include'
       });
       
       const data = await response.json();
       
-      // ✅ Handle your API response format
       if (data.success) {
         setAssets(data.assets || []);
       } else {
@@ -72,6 +88,88 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
   const handleVisibilityClick = (asset) => {
     setSelectedAsset(asset);
     setShowVisibilityModal(true);
+  };
+
+  // Handle asset click to open appropriate modal
+  const handleAssetClick = (asset) => {
+    if (asset.assetType === 'VIDEO') {
+      setPlayingVideo(asset);
+    } else if (asset.assetType === 'IMAGE') {
+      setViewingImage(asset);
+    } else if (asset.assetType === 'DOCUMENT') {
+      setViewingDocument(asset);
+    }
+  };
+
+  // Download handlers
+  const downloadImage = async (assetId, title) => {
+    try {
+      const response = await fetch(`/api/assets/${assetId}/download`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = title;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    }
+  };
+
+  const downloadDocument = async (assetId, title) => {
+    try {
+      const response = await fetch(`/api/assets/${assetId}/download`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = title;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+    }
+  };
+
+  // Navigation helpers for images
+  const currentImageIndex = images.findIndex(img => img.id === viewingImage?.id);
+  const handleNextImage = () => {
+    if (currentImageIndex < images.length - 1) {
+      setViewingImage(images[currentImageIndex + 1]);
+    }
+  };
+  const handlePrevImage = () => {
+    if (currentImageIndex > 0) {
+      setViewingImage(images[currentImageIndex - 1]);
+    }
+  };
+
+  // Navigation helpers for documents
+  const currentDocumentIndex = documents.findIndex(doc => doc.id === viewingDocument?.id);
+  const handleNextDocument = () => {
+    if (currentDocumentIndex < documents.length - 1) {
+      setViewingDocument(documents[currentDocumentIndex + 1]);
+    }
+  };
+  const handlePrevDocument = () => {
+    if (currentDocumentIndex > 0) {
+      setViewingDocument(documents[currentDocumentIndex - 1]);
+    }
   };
 
   return (
@@ -144,6 +242,7 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
               userRole={userRole}
               onVisibilityClick={handleVisibilityClick}
               onRefresh={fetchAssets}
+              onAssetClick={handleAssetClick}
             />
           </motion.main>
         </div>
@@ -165,6 +264,44 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
           />
         )}
       </AnimatePresence>
+
+      {/* Video Player Modal */}
+      {playingVideo && (
+        <CampaignPermissionsProvider campaignId={playingVideo.campaignId}>
+          <VideoPlayer
+            video={playingVideo}
+            onClose={() => setPlayingVideo(null)}
+          />
+        </CampaignPermissionsProvider>
+      )}
+
+      {/* Image Viewer Modal */}
+      <AssetViewerModal
+        asset={viewingImage}
+        isOpen={!!viewingImage}
+        onClose={() => setViewingImage(null)}
+        onDownload={(asset) => downloadImage(asset.id, asset.title)}
+        showDownload={true}
+        showNavigation={images.length > 1}
+        onNext={handleNextImage}
+        onPrev={handlePrevImage}
+        hasNext={currentImageIndex < images.length - 1}
+        hasPrev={currentImageIndex > 0}
+      />
+
+      {/* Document Viewer Modal */}
+      <AssetViewerModal
+        asset={viewingDocument}
+        isOpen={!!viewingDocument}
+        onClose={() => setViewingDocument(null)}
+        onDownload={(asset) => downloadDocument(asset.id, asset.title)}
+        showDownload={true}
+        showNavigation={documents.length > 1}
+        onNext={handleNextDocument}
+        onPrev={handlePrevDocument}
+        hasNext={currentDocumentIndex < documents.length - 1}
+        hasPrev={currentDocumentIndex > 0}
+      />
     </div>
   );
 }

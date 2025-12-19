@@ -3,9 +3,18 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import Badge from './ui/badge';
 
-export default function AssetCard({ asset, view, userRole, onVisibilityClick, onRefresh }) {
+export default function AssetCard({ 
+  asset, 
+  view, 
+  userRole, 
+  onVisibilityClick, 
+  onRefresh,
+  onAssetClick // New prop to handle asset viewing
+}) {
   const [showActions, setShowActions] = useState(false);
   const isVideo = asset.assetType === 'VIDEO';
+  const isImage = asset.assetType === 'IMAGE';
+  const isDocument = asset.assetType === 'DOCUMENT';
   const isAdmin = userRole === 'admin';
 
   const cardVariants = {
@@ -27,6 +36,31 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleAssetClick = () => {
+    onAssetClick?.(asset);
+  };
+
+  const getAssetIcon = () => {
+    if (isVideo) {
+      return (
+        <svg className="w-8 h-8 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-8 h-8 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+      </svg>
+    );
+  };
+
+  const getAssetTypeLabel = () => {
+    if (isVideo) return 'Video';
+    if (isImage) return 'Image';
+    return asset.documentType || 'Document';
+  };
+
   if (view === 'list') {
     return (
       <motion.div
@@ -36,20 +70,15 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
       >
         <div className="flex items-center gap-4">
           {/* Thumbnail */}
-          <div className="w-32 h-20 bg-gradient-to-br from-slate-200 to-slate-300 rounded-lg overflow-hidden shrink-0 relative">
+          <div 
+            className="w-32 h-20 bg-gradient-to-br from-slate-200 to-slate-300 rounded-lg overflow-hidden shrink-0 relative cursor-pointer"
+            onClick={handleAssetClick}
+          >
             {asset.thumbnailUrl ? (
               <img src={asset.thumbnailUrl} alt={asset.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                {isVideo ? (
-                  <svg className="w-8 h-8 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                  </svg>
-                ) : (
-                  <svg className="w-8 h-8 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-                  </svg>
-                )}
+                {getAssetIcon()}
               </div>
             )}
             {isVideo && asset.duration && (
@@ -61,10 +90,15 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-slate-900 truncate mb-1">{asset.title}</h3>
+            <h3 
+              className="font-semibold text-slate-900 truncate mb-1 cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={handleAssetClick}
+            >
+              {asset.title}
+            </h3>
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={isVideo ? 'blue' : 'purple'}>
-                {isVideo ? 'Video' : asset.documentType}
+              <Badge variant={isVideo ? 'blue' : isImage ? 'green' : 'purple'}>
+                {getAssetTypeLabel()}
               </Badge>
               <Badge variant="slate">{formatFileSize(asset.fileSize || asset.originalSize)}</Badge>
               {asset.campaign && (
@@ -92,7 +126,7 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
             )}
             <button
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-              onClick={() => window.open(isVideo ? `/video/${asset.id}` : `/document/${asset.id}`, '_blank')}
+              onClick={handleAssetClick}
             >
               View
             </button>
@@ -112,7 +146,10 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
       className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow overflow-hidden group"
     >
       {/* Thumbnail */}
-      <div className="relative aspect-video bg-gradient-to-br from-slate-200 to-slate-300 overflow-hidden">
+      <div 
+        className="relative aspect-video bg-gradient-to-br from-slate-200 to-slate-300 overflow-hidden cursor-pointer"
+        onClick={handleAssetClick}
+      >
         {asset.thumbnailUrl ? (
           <img src={asset.thumbnailUrl} alt={asset.title} className="w-full h-full object-cover" />
         ) : (
@@ -136,14 +173,17 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
           className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2"
         >
           <button
-            onClick={() => window.open(isVideo ? `/video/${asset.id}` : `/document/${asset.id}`, '_blank')}
+            onClick={handleAssetClick}
             className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-lg font-medium transition-colors"
           >
             View
           </button>
           {isAdmin && !asset.campaignId && (
             <button
-              onClick={() => onVisibilityClick(asset)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onVisibilityClick(asset);
+              }}
               className="p-2 bg-white hover:bg-slate-100 rounded-lg transition-colors"
               title="Manage Visibility"
             >
@@ -165,13 +205,17 @@ export default function AssetCard({ asset, view, userRole, onVisibilityClick, on
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-semibold text-slate-900 mb-2 truncate" title={asset.title}>
+        <h3 
+          className="font-semibold text-slate-900 mb-2 truncate cursor-pointer hover:text-blue-600 transition-colors" 
+          title={asset.title}
+          onClick={handleAssetClick}
+        >
           {asset.title}
         </h3>
 
         <div className="flex items-center gap-2 flex-wrap mb-3">
-          <Badge variant={isVideo ? 'blue' : 'purple'}>
-            {isVideo ? 'Video' : asset.documentType}
+          <Badge variant={isVideo ? 'blue' : isImage ? 'green' : 'purple'}>
+            {getAssetTypeLabel()}
           </Badge>
           <Badge variant="slate">{formatFileSize(asset.fileSize || asset.originalSize)}</Badge>
         </div>
