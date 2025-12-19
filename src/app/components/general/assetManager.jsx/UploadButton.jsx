@@ -316,8 +316,8 @@ export default function UploadButton({ onUploadComplete, campaigns, campaignsLoa
                         {campaigns.map((campaign) => (
                           <motion.button
                             key={campaign.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: 0.96 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => {
                               handleCampaignSelect(campaign.id);
                               triggerFileInput();
