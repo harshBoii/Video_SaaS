@@ -1,39 +1,12 @@
 // components/asset-library/AssetFilters.jsx
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-export default function AssetFilters({ filters, onChange, userRole, companyId, userId }) {
-  const [campaigns, setCampaigns] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchCampaigns();
-  }, [companyId]);
-
-  const fetchCampaigns = async () => {
-    setLoading(true);
-    try {
-      // ✅ Your API returns campaigns in data.campaigns format
-      const response = await fetch('/api/campaigns', {
-        credentials: 'include'
-      });
-      
-      const result = await response.json();
-      
-      if (result.success && result.data?.campaigns) {
-        setCampaigns(result.data.campaigns);
-      } else {
-        console.error('Failed to fetch campaigns');
-        setCampaigns([]);
-      }
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      setCampaigns([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function AssetFilters({ 
+  filters, 
+  onChange, 
+  campaigns, 
+  campaignsLoading 
+}) {
   const FilterSection = ({ title, children }) => (
     <div className="mb-6">
       <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wide">{title}</h3>
@@ -90,6 +63,12 @@ export default function AssetFilters({ filters, onChange, userRole, companyId, u
             onChange={(val) => onChange('assetType', val)}
           />
           <FilterOption
+            label="Images"
+            value="IMAGE"
+            currentValue={filters.assetType}
+            onChange={(val) => onChange('assetType', val)}
+          />
+          <FilterOption
             label="Documents"
             value="DOCUMENT"
             currentValue={filters.assetType}
@@ -114,7 +93,7 @@ export default function AssetFilters({ filters, onChange, userRole, companyId, u
             onChange={(val) => onChange('campaignId', val)}
           />
           
-          {loading ? (
+          {campaignsLoading ? ( 
             <div className="p-2 text-sm text-slate-500">Loading campaigns...</div>
           ) : campaigns.length === 0 ? (
             <div className="p-2 text-sm text-slate-500">No campaigns found</div>

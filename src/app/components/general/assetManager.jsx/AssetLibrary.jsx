@@ -14,7 +14,9 @@ import { CampaignPermissionsProvider } from '@/app/context/permissionContext';
 
 export default function AssetLibrary({ userRole = 'employee', userId, companyId }) {
   const [assets, setAssets] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaignsLoading, setCampaignsLoading] = useState(true); // ✅ Added this
   const [view, setView] = useState('grid');
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showVisibilityModal, setShowVisibilityModal] = useState(false);
@@ -45,10 +47,38 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
     };
   }, [assets]);
 
-  // Fetch assets
+  // Fetch campaigns once on mount
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  // Fetch assets when filters or sort change
   useEffect(() => {
     fetchAssets();
   }, [filters, sortBy]);
+
+  const fetchCampaigns = async () => {
+    setCampaignsLoading(true);
+    try {
+      const response = await fetch('/api/campaigns', {
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.data?.campaigns) {
+        setCampaigns(result.data.campaigns);
+      } else {
+        console.error('Failed to fetch campaigns');
+        setCampaigns([]);
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      setCampaigns([]);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  };
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -191,7 +221,11 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
                 Manage your videos, documents, and media files
               </p>
             </div>
-            <UploadButton onUploadComplete={fetchAssets} />
+            <UploadButton 
+              onUploadComplete={fetchAssets} 
+              campaigns={campaigns}
+              campaignsLoading={campaignsLoading} // ✅ Pass loading state
+            />
           </div>
 
           {/* Search and Controls */}
@@ -222,9 +256,8 @@ export default function AssetLibrary({ userRole = 'employee', userId, companyId 
             <AssetFilters
               filters={filters}
               onChange={handleFilterChange}
-              userRole={userRole}
-              companyId={companyId}
-              userId={userId}
+              campaigns={campaigns}
+              campaignsLoading={campaignsLoading} // ✅ Pass loading state
             />
           </motion.aside>
 
