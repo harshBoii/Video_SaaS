@@ -129,13 +129,13 @@ const AdminSide = () => {
   return (
     <aside className="w-60 flex-shrink-0 bg-[#fdfdfd] dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col px-4 py-6  sticky top-0 h-screen overflow-y-auto transition-colors duration-200">
       {/* Logo */}
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="px-4 pb-6"
       >
         <Logo />
-      </motion.div>
+      </motion.div> */}
 
       {/* Main Navigation */}
       <nav className="flex-grow flex flex-col gap-1">

@@ -6,6 +6,7 @@ import { Menu, X, LogOut, UserCircle2, ChevronDown, CloudLightningIcon } from 'l
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getDashboardRoute } from '@/app/lib/utils';
+import Image from 'next/image';
 
 export default function MainNav() {
   const [user, setUser] = useState(null);
@@ -42,13 +43,13 @@ export default function MainNav() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
+
   const handleLogoClick = (e) => {
     if (isLoadingAuth) {
       e.preventDefault();
       return;
     }
-    
+
     const route = getDashboardRoute(user);
     router.push(route);
   };
@@ -75,25 +76,23 @@ export default function MainNav() {
     >
       <div className="mx-auto h-full">
         <div className="h-full flex items-center px-4 sm:px-6 lg:px-8">
-          
+
           {/* Logo with Role-based Routing */}
           <motion.button
             onClick={handleLogoClick}
             disabled={isLoadingAuth}
-            className={`group flex items-center shrink-0 h-full py-1 ${
-              isLoadingAuth 
-                ? 'opacity-50 cursor-not-allowed' 
+            className={`group flex items-center shrink-0 h-full py-1 ${isLoadingAuth
+                ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer'
-            }`}
+              }`}
             whileHover={!isLoadingAuth ? { scale: 1.02 } : {}}
             whileTap={!isLoadingAuth ? { scale: 0.98 } : {}}
           >
             <motion.div
-              className={`w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 transition-all duration-400 overflow-hidden relative flex-shrink-0 mr-2 ${
-                isLoadingAuth 
-                  ? '' 
+              className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-xl shadow-indigo-500/30 transition-all duration-400 overflow-hidden relative flex-shrink-0 mr-2 ${isLoadingAuth
+                  ? ''
                   : 'group-hover:shadow-2xl group-hover:shadow-indigo-500/50'
-              }`}
+                }`}
               animate={isLoadingAuth ? {
                 scale: [1, 1.05, 1],
                 rotate: [0, 5, -5, 0]
@@ -105,36 +104,36 @@ export default function MainNav() {
               } : { duration: 0.25 }}
             >
               <motion.div
-                className="w-6 h-6 text-white relative z-10"
-                animate={isLoadingAuth ? { rotate: 360 } : { rotate: 0 }}
+                className="w-10 h-10 text-white relative z-10"
                 transition={isLoadingAuth ? {
                   duration: 2,
                   repeat: Infinity,
                   ease: "linear"
                 } : { duration: 0.6, ease: 'easeOut' }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.75 11.17l-6.27-3.98A1 1 0 007 8.98v6.03a1 1 0 001.5.87l6.25-3.98a1 1 0 000-1.7z" />
-                </svg>
+                <Image
+                  src="/logo.svg"
+                  alt="Clipfox Logo"
+                  width={96}     // adjust as needed
+                  height={96}
+                  className="rounded-md text-white"
+                  priority
+                />
               </motion.div>
               {!isLoadingAuth && (
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               )}
             </motion.div>
             <motion.span
-              className={`font-bold text-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 bg-clip-text tracking-tight select-none flex-shrink-0 ${
-                isLoadingAuth ? 'opacity-50' : ''
-              }`}
+              className={`font-bold text-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 bg-clip-text tracking-tight select-none flex-shrink-0 ${isLoadingAuth ? 'opacity-50' : ''
+                }`}
               whileHover={!isLoadingAuth ? { x: 4 } : {}}
               transition={{ duration: 0.3 }}
             >
-              Clipfox
+              <div className='flex items-center'>
+
+                Clipfox
+              </div>
             </motion.span>
           </motion.button>
 
@@ -143,7 +142,7 @@ export default function MainNav() {
 
           {/* Right Controls */}
           <div className="flex items-center h-full space-x-2 sm:space-x-3 lg:space-x-4 shrink-0">
-            
+
             {/* Theme Toggle & Cron */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <motion.div
@@ -159,9 +158,8 @@ export default function MainNav() {
                 whileTap={{ scale: 0.98 }}
                 onClick={triggerCron}
                 disabled={isLoadingAuth}
-                className={`flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md ${
-                  isLoadingAuth ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`flex items-center justify-center h-10 w-10 rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm transition-all duration-200 shadow-sm hover:shadow-md ${isLoadingAuth ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
               >
                 <CloudLightningIcon className={isLoadingAuth ? 'animate-pulse' : ''} />
               </motion.button>
@@ -169,11 +167,11 @@ export default function MainNav() {
 
             {/* Guest CTA */}
             {!isLoadingAuth && !user && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                whileHover={{ scale: 1.02 }} 
+                whileHover={{ scale: 1.02 }}
                 className="hidden md:inline-flex flex-shrink-0 h-10"
               >
                 <Link
@@ -258,17 +256,17 @@ export default function MainNav() {
                           >
                             {user.firstName?.[0]}{user.lastName?.[0]}
                           </motion.div>
-                          
+
                           {/* Full name */}
                           <motion.p className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 text-center truncate">
                             {user.firstName} {user.lastName}
                           </motion.p>
-                          
+
                           {/* Email */}
                           <p className="text-sm text-slate-500 dark:text-slate-400 text-center truncate mt-1">
                             {user.email}
                           </p>
-                          
+
                           {/* Role badge */}
                           <div className="flex justify-center mt-2">
                             <span className="text-xs font-semibold px-3 py-1 bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-full capitalize">
@@ -315,9 +313,8 @@ export default function MainNav() {
               whileTap={{ scale: 0.95 }}
               onClick={() => setMenuOpen(!menuOpen)}
               disabled={isLoadingAuth}
-              className={`h-10 w-10 flex items-center justify-center rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 shadow-sm hover:shadow-md lg:hidden flex-shrink-0 ml-2 ${
-                isLoadingAuth ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`h-10 w-10 flex items-center justify-center rounded-xl hover:bg-slate-100/60 dark:hover:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 shadow-sm hover:shadow-md lg:hidden flex-shrink-0 ml-2 ${isLoadingAuth ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               aria-label="Toggle menu"
               aria-expanded={menuOpen}
             >
