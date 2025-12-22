@@ -34,6 +34,8 @@ import {
   FiPlay,
   FiEdit3,
   FiLogOut,
+  FiHome,
+  FiBox,
 } from 'react-icons/fi';
 import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
 
@@ -295,7 +297,7 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5 scrollbar-thin">
         {/* Core Navigation */}
-        <NavItem icon={<FiBell />} href="/notification" label="Notifications" />
+        {/* <NavItem icon={<FiBell />} href="/notification" label="Notifications" /> */}
 
         {/* Solo Creator View */}
         {initialUserType === 'solo' && (
@@ -311,7 +313,11 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
         {/* Employee View */}
         {(initialUserType === 'employee' || (isAdmin && viewMode === 'employee')) && initialUserType !== 'solo' && (
           <>
+            <NavItem icon={<FiMessageSquare />} href="/chat" label="Chat" />
+
             <NavItem icon={<FiGrid />} href="/campaign" label="My Campaigns" />
+            <NavItem icon={<FiFolderPlus />} href="/assets" label="Asset Library" />
+
 
             {hasContentPermissions && (
               <>
@@ -327,8 +333,15 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
                   </NavGroup>
                 )}
                 {hasAnyPermission('Edit Metadata', 'Upload Scripts', 'Edit Subtitles') && (
-                  <NavItem icon={<FiFileText />} href="/metadata" label="Metadata & Scripts" />
-                )}
+                  <NavItem icon={<FiFileText />} href="/docs" label="Docs" />
+                )}  
+
+
+                <NavItem icon={<FiBell />} href="/notification" label="Notifications" />
+
+                <NavItem icon={<FiShare2 />} href="/socials" label="Social Accounts" />
+                <NavItem icon={<FiFileText />} href="/posts" label="Posts" />
+
               </>
             )}
 
@@ -350,7 +363,7 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
         {isAdmin && viewMode === 'admin' && (
           <>
             <NavItem icon={<FiGrid />} href="/dashboard" label="Dashboard" />
-            <NavItem icon={<FiTarget />} href="/campaign" label="Campaigns" />
+            {/* <NavItem icon={<FiTarget />} href="/campaign" label="Campaigns" /> */}
             <NavItem icon={<FiUsers />} href="/employees" label="Employees" />
 
             {/* Contractors Group */}
@@ -363,11 +376,6 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
             <SectionLabel label="System" />
             <NavItem icon={<FiShield />} href="/roles" label="Roles & Permissions" />
             <NavItem icon={<FiGitBranch />} href="/hierarchy" label="Hierarchy" />
-
-            <SectionLabel label="Content" />
-            <NavItem icon={<FiShare2 />} href="/socials" label="Social Accounts" />
-            <NavItem icon={<FiFileText />} href="/posts" label="Posts" />
-            <NavItem icon={<FiFolderPlus />} href="/assets" label="Asset Library" />
           </>
         )}
 
