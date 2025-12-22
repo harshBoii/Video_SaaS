@@ -159,15 +159,15 @@ const SoloSide = () => {
 
       {/* Main Navigation */}
       <nav className="flex-grow flex flex-col gap-1">
-        <NavItem icon={<FiGrid />} href="/solo" label="Dashboard" />
-        <NavItem icon={<FiFilm />} href="/solo/videos" label="My Videos" />
-        <NavItem icon={<FiLayers />} href="/solo/projects" label="Projects" />
+        <NavItem icon={<FiGrid />} href="/dashboard" label="Dashboard" />
+        <NavItem icon={<FiFilm />} href="/videos" label="My Videos" />
+        <NavItem icon={<FiLayers />} href="/projects" label="Projects" />
         <NavItem
           icon={<FiMessageSquare />}
-          href="/solo/notification"
+          href="/notification"
           label="Comments"
         />
-        <NavItem icon={<FiUser />} href="/solo/profile" label="Profile" />
+        <NavItem icon={<FiUser />} href="/profile" label="Profile" />
       </nav>
 
       {/* Footer Section */}

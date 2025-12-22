@@ -1,11 +1,11 @@
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Users, 
-  GitBranch, 
-  Calendar as CalendarIcon, 
-  Settings, 
+import {
+  Users,
+  GitBranch,
+  Calendar as CalendarIcon,
+  Settings,
   TrendingUp,
   ArrowLeft,
   MoreVertical,
@@ -31,11 +31,11 @@ import { showSuccess, showError, showConfirm } from '@/app/lib/swal';
 
 const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: TrendingUp, requiredPermission: null },
-  { id: 'team',     label: 'Team',     icon: Users, requiredPermission: 'Assign Team' },
-  { id: 'flows',    label: 'Flows',    icon: GitBranch, requiredPermission: 'Manage Workflow' },
+  { id: 'team', label: 'Team', icon: Users, requiredPermission: 'Assign Team' },
+  { id: 'flows', label: 'Flows', icon: GitBranch, requiredPermission: 'Manage Workflow' },
   { id: 'calendar', label: 'Calendar', icon: CalendarIcon, requiredPermission: null },
   { id: 'settings', label: 'Settings', icon: Settings, requiredPermission: null },
-  { id: 'assets',   label: 'Assets',   icon: BoxIcon, requiredPermission: null }
+  { id: 'assets', label: 'Assets', icon: BoxIcon, requiredPermission: null }
 ];
 
 const ASSET_TYPES = [
@@ -170,7 +170,7 @@ export default function CampaignPage({ campaignId }) {
   const [loading, setLoading] = useState(true);
   const [showActions, setShowActions] = useState(false);
   const [showAssetDropdown, setShowAssetDropdown] = useState(false);
-  
+
   useEffect(() => {
     const tab = searchParams.get('tab') || 'overview';
     const asset = searchParams.get('asset') || 'videos';
@@ -203,11 +203,11 @@ export default function CampaignPage({ campaignId }) {
       } else {
         setPermissions({ permissions: [], isAdmin: false, role: null });
       }
-    } 
+    }
     catch (error) {
       console.error('Error loading campaign:', error);
       await showError('Load Failed', error.message);
-    } 
+    }
     finally {
       setLoading(false);
     }
@@ -215,7 +215,7 @@ export default function CampaignPage({ campaignId }) {
 
   const allowedTabs = useMemo(() => {
     if (!permissions) return ALL_TABS.filter(tab => !tab.requiredPermission);
-    
+
     const { isAdmin, permissions: userPermissions } = permissions;
 
     if (isAdmin) return ALL_TABS;
@@ -224,7 +224,7 @@ export default function CampaignPage({ campaignId }) {
     return ALL_TABS.filter(tab => {
       // Tabs with null permission are always visible
       if (!tab.requiredPermission) return true;
-      
+
       // Check if user has the required permission
       return userPermissions.includes(tab.requiredPermission);
     });
@@ -234,12 +234,12 @@ export default function CampaignPage({ campaignId }) {
     setActiveTab(tabId);
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tabId);
-    
+
     // Reset to default asset type when switching to assets tab
     if (tabId === 'assets' && !searchParams.get('asset')) {
       params.set('asset', 'videos');
     }
-    
+
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -313,14 +313,36 @@ export default function CampaignPage({ campaignId }) {
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           {/* Top Row - Back button and Actions */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => router.push(getBackRoute())}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Back to Dashboard</span>
-            </button>
+          <div className="flex items-start mt-5 justify-between mb-4">
+
+
+
+
+            {/* Campaign Title and Stats */}
+            <div className="mb-6 w-full">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {campaign.name}
+              </h1>
+              <div className="flex items-center gap-6 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-semibold">
+                    {campaign.admin.firstName[0]}{campaign.admin.lastName[0]}
+                  </div>
+                  <span>Managed by {campaign.admin.fullName}</span>
+                </div>
+                {campaign.team && (
+                  <div className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    <span>{campaign.team.name}</span>
+                  </div>
+                )}
+                {permissions && (
+                  <div className="px-2 sticky right-0 py-1 bg-black text-white border-2 border-yellow-500 text-xs font-semibold rounded-2xl">
+                    Your Role : {permissions.isAdmin ? 'Admin' : permissions.role}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Actions Menu */}
             <div className="relative">
@@ -382,31 +404,6 @@ export default function CampaignPage({ campaignId }) {
             </div>
           </div>
 
-          {/* Campaign Title and Stats */}
-          <div className="mb-6 w-full">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {campaign.name}
-            </h1>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-semibold">
-                  {campaign.admin.firstName[0]}{campaign.admin.lastName[0]}
-                </div>
-                <span>Managed by {campaign.admin.fullName}</span>
-              </div>
-              {campaign.team && (
-                <div className="flex items-center gap-1">
-                  <Users className="w-4 h-4" />
-                  <span>{campaign.team.name}</span>
-                </div>
-              )}
-              {permissions && (
-                <div className="px-2 sticky right-0 py-1 bg-black text-white border-2 border-yellow-500 text-xs font-semibold rounded-2xl">
-                  Your Role : {permissions.isAdmin ? 'Admin' : permissions.role}
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-4 mb-6">
@@ -478,29 +475,27 @@ export default function CampaignPage({ campaignId }) {
               if (tab.id === 'assets') {
                 const currentAssetType = ASSET_TYPES.find(a => a.id === assetType);
                 const AssetIcon = currentAssetType?.icon || BoxIcon;
-                
+
                 return (
                   <div key={tab.id} className="flex-1 relative">
                     <button
                       onClick={() => {
-                                      handleTabChange('assets');
-                                      setShowAssetDropdown(prev => !prev);
-                                    }}
+                        handleTabChange('assets');
+                        setShowAssetDropdown(prev => !prev);
+                      }}
 
-                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                        isActive
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${isActive
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                        }`}
                     >
                       <BoxIcon className="w-4 h-4" />
                       <span>Assets</span>
                       <span>{currentAssetType?.label || 'Assets'}</span>
                       {(
-                        <ChevronDown 
-                          className={`w-4 h-4 ml-1 cursor-pointer transition-transform ${
-                            showAssetDropdown ? 'rotate-180' : ''
-                          }`}
+                        <ChevronDown
+                          className={`w-4 h-4 ml-1 cursor-pointer transition-transform ${showAssetDropdown ? 'rotate-180' : ''
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowAssetDropdown(!showAssetDropdown);
@@ -529,11 +524,10 @@ export default function CampaignPage({ campaignId }) {
                                 <button
                                   key={asset.id}
                                   onClick={() => handleAssetTypeChange(asset.id)}
-                                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
-                                    assetType === asset.id
+                                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${assetType === asset.id
                                       ? 'bg-blue-50 text-blue-700 font-medium'
                                       : 'text-gray-700 hover:bg-gray-50'
-                                  }`}
+                                    }`}
                                 >
                                   <AssetTypeIcon className="w-4 h-4" />
                                   {asset.label}
@@ -553,14 +547,13 @@ export default function CampaignPage({ campaignId }) {
                 <button
                   key={tab.id}
                   onClick={() => {
-                                    handleTabChange(`${tab.id}`);
-                                    // setShowAssetDropdown(prev => !prev);
-                                  }}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                    isActive
+                    handleTabChange(`${tab.id}`);
+                    // setShowAssetDropdown(prev => !prev);
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${isActive
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{tab.label}</span>

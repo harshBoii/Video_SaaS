@@ -238,33 +238,28 @@ export default function CampaignTable({ companyId }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div>
       {/* Loading Bar */}
       <LoadingBar isLoading={isFetching || isSearching} />
 
-      <div className="max-w-7xl mx-auto">
+      <div>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6"
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
-                  <FiTarget className="text-white text-2xl" />
-                </div>
-                Campaigns
-              </h1>
-              <p className="text-gray-600">Manage and track all your marketing campaigns</p>
+              <h2 className="text-2xl font-bold text-foreground mb-1">Campaigns</h2>
+              <p className="text-sm text-muted-foreground">Manage and track all your marketing campaigns</p>
             </div>
             
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:scale-105"
+              className="flex items-center gap-2 bg-primary/90 hover:bg-primary text-primary-foreground px-4 py-2 rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105"
             >
-              <FiPlus size={20} />
+              <FiPlus size={18} />
               New Campaign
             </button>
           </div>
@@ -275,52 +270,52 @@ export default function CampaignTable({ companyId }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-4 gap-4 mb-6"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
         >
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-xl p-4 hover:shadow-lg transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Campaigns</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs text-muted-foreground mb-1">Total</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <FiTarget className="text-purple-600 text-xl" />
+              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <FiTarget className="text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-xl p-4 hover:shadow-lg transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Active</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
+                <p className="text-xs text-muted-foreground mb-1">Active</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Zap className="text-blue-600 text-xl" />
+              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <Zap className="text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-xl p-4 hover:shadow-lg transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Completed</p>
-                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                <p className="text-xs text-muted-foreground mb-1">Completed</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle2 className="text-green-600 text-xl" />
+              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="text-green-600 dark:text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-xl p-4 hover:shadow-lg transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">With Teams</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.withTeams}</p>
+                <p className="text-xs text-muted-foreground mb-1">With Teams</p>
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.withTeams}</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FiUsers className="text-orange-600 text-xl" />
+              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <FiUsers className="text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </div>
@@ -331,7 +326,7 @@ export default function CampaignTable({ companyId }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl p-4 mb-6 border border-gray-200 shadow-sm"
+          className="backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-xl p-4 mb-6 shadow-sm"
         >
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
@@ -342,7 +337,7 @@ export default function CampaignTable({ companyId }) {
                 placeholder="Search campaigns, admins, teams..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white"
+                className="w-full pl-12 pr-12 py-3 backdrop-blur-xl bg-white/5 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
               
               {isSearching && (
@@ -367,7 +362,7 @@ export default function CampaignTable({ companyId }) {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50 hover:bg-white transition-all"
+                className="px-4 py-3 backdrop-blur-xl bg-white/5 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="updatedAt">Recently Updated</option>
                 <option value="createdAt">Recently Created</option>
@@ -376,7 +371,7 @@ export default function CampaignTable({ companyId }) {
 
               <button
                 onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="p-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all"
+                className="p-3 backdrop-blur-xl bg-white/5 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-all"
                 title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
               >
                 {sortOrder === 'asc' ? <TrendingUp className="text-gray-600" /> : <TrendingDown className="text-gray-600" />}
@@ -385,7 +380,7 @@ export default function CampaignTable({ companyId }) {
               <button
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="p-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
+                className="p-3 backdrop-blur-xl bg-white/5 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-all disabled:opacity-50"
               >
                 <FiRefreshCw className={`text-gray-600 ${isFetching ? 'animate-spin' : ''}`} />
               </button>
@@ -409,7 +404,7 @@ export default function CampaignTable({ companyId }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+          className="backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-xl shadow-lg overflow-hidden"
         >
           {campaigns.length === 0 && !isFetching ? (
             <div className="text-center py-16">
@@ -433,21 +428,21 @@ export default function CampaignTable({ companyId }) {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-white/5 dark:bg-white/5 border-b border-white/10">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Campaign
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Admin
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Team
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Last Updated
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -464,7 +459,7 @@ export default function CampaignTable({ companyId }) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ delay: index * 0.05 }}
-                        className="hover:bg-gray-50 transition-colors group"
+                        className="hover:bg-white/5 dark:hover:bg-white/5 transition-colors group border-b border-white/5"
                       >
                         {/* Campaign Name */}
                         <td className="px-6 py-4">

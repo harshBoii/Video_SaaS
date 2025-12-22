@@ -250,12 +250,12 @@ const EmployeeSide = () => {
         {/* Always visible - Core */}
         <NavItem
           icon={<FiGrid />}
-          href="/employee/campaign"
+          href="/campaign"
           label="My Campaigns"
         />
         <NavItem
           icon={<FiBell />}
-          href="/employee/notification"
+          href="/notification"
           label="Notifications"
         />
 
@@ -281,7 +281,7 @@ const EmployeeSide = () => {
                 {hasAnyPermission('Upload Video', 'Preview Video') && (
                   <NavItem
                     icon={<FiVideo />}
-                    href="/admin/videos"
+                    href="/videos"
                     label="My Videos"
                     indent={true}
                   />
@@ -289,7 +289,7 @@ const EmployeeSide = () => {
                 {hasAnyPermission('Publish Video', 'Approve Reject Video') && (
                   <NavItem
                     icon={<FiCheckSquare />}
-                    href="/admin/videos/approval"
+                    href="/videos/approval"
                     label="Approvals"
                     indent={true}
                   />
@@ -304,7 +304,7 @@ const EmployeeSide = () => {
             ) && (
               <NavItem
                 icon={<FiFileText />}
-                href="/admin/metadata"
+                href="/metadata"
                 label="Metadata & Scripts"
               />
             )}
@@ -323,7 +323,7 @@ const EmployeeSide = () => {
             ) && (
               <NavItem
                 icon={<FiCheckSquare />}
-                href="/admin/reviews"
+                href="/reviews"
                 label="Reviews"
               />
             )}
@@ -336,7 +336,7 @@ const EmployeeSide = () => {
             ) && (
               <NavItem
                 icon={<FiMessageSquare />}
-                href="/admin/comments"
+                href="/comments"
                 label="Comments"
               />
             )}
@@ -349,7 +349,7 @@ const EmployeeSide = () => {
             <SectionDivider label="Insights" />
             <NavItem
               icon={<FiBarChart2 />}
-              href="/admin/analytics"
+              href="/analytics"
               label="Analytics"
             />
           </>
@@ -363,7 +363,7 @@ const EmployeeSide = () => {
             {hasPermission('Manage Users') && (
               <NavItem
                 icon={<FiUsers />}
-                href="/admin/employees"
+                href="/employees"
                 label="Team Members"
               />
             )}
@@ -371,7 +371,7 @@ const EmployeeSide = () => {
             {hasAnyPermission('Manage Roles', 'Assign Permissions') && (
               <NavItem
                 icon={<FiShield />}
-                href="/admin/roles"
+                href="/roles"
                 label="Roles & Permissions"
               />
             )}
@@ -379,7 +379,7 @@ const EmployeeSide = () => {
             {hasAnyPermission('Manage Workflows') && (
               <NavItem
                 icon={<FiGitBranch />}
-                href="/admin/hierarchy"
+                href="/hierarchy"
                 label="Organization"
               />
             )}

@@ -84,7 +84,7 @@ export default function RootLayout({ children }) {
       >
         <GoogleAuthProviderWrapper>
         <Providers>
-          <MainNav/>
+          {/* <MainNav/> */}
           {children}
           <ChatWidget/>
         </Providers>
