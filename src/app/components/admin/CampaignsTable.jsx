@@ -89,13 +89,13 @@ function TableSkeleton() {
   return (
     <div className="space-y-3">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg animate-pulse">
-          <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+        <div key={i} className="flex items-center gap-4 p-4 glass-card animate-pulse">
+          <div className="w-12 h-12 bg-[var(--glass-hover)] rounded-lg"></div>
           <div className="flex-1 space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-[var(--glass-hover)] rounded w-1/3"></div>
+            <div className="h-3 bg-[var(--glass-hover)] rounded w-1/2"></div>
           </div>
-          <div className="h-6 bg-gray-200 rounded w-20"></div>
+          <div className="h-6 bg-[var(--glass-hover)] rounded w-20"></div>
         </div>
       ))}
     </div>
@@ -200,11 +200,11 @@ export default function CampaignTable({ companyId }) {
   // Loading state
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <div className="h-8 bg-gray-200 rounded w-48 animate-pulse mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+            <div className="h-8 bg-[var(--glass-hover)] rounded w-48 animate-pulse mb-4"></div>
+            <div className="h-4 bg-[var(--glass-hover)] rounded w-64 animate-pulse"></div>
           </div>
           <TableSkeleton />
         </div>
@@ -215,20 +215,20 @@ export default function CampaignTable({ companyId }) {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+          className="glass-card p-8 max-w-md w-full text-center"
         >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Campaigns</h3>
-          <p className="text-gray-600 mb-6">{error.message}</p>
+          <h3 className="text-xl font-bold text-foreground mb-2">Failed to Load Campaigns</h3>
+          <p className="text-muted-foreground mb-6">{error.message}</p>
           <button
             onClick={() => refetch()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold"
           >
             Try Again
           </button>

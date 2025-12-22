@@ -66,6 +66,25 @@
   --clipfox-surface: oklch(0.98 0 0);
   --clipfox-surface-hover: oklch(0.96 0 0);
 
+  /* Glassmorphism Variables - Light Mode */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-solid: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-blur: 20px;
+  --glass-hover: rgba(0, 0, 0, 0.04);
+  --glass-active: rgba(0, 0, 0, 0.08);
+  
+  /* Sidebar Glass */
+  --sidebar-glass-bg: rgba(250, 250, 250, 0.85);
+  --sidebar-glass-border: rgba(0, 0, 0, 0.06);
+  --sidebar-icon-bg: rgba(0, 0, 0, 0.04);
+  --sidebar-icon-active: rgba(215, 118, 90, 0.15);
+  
+  /* Navbar Glass */
+  --navbar-glass-bg: rgba(255, 255, 255, 0.8);
+  --navbar-glass-border: rgba(0, 0, 0, 0.08);
+
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -95,7 +114,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
+  --background: oklch(0.98 0.005 90);
   --foreground: oklch(0.145 0 0);
 }
 
@@ -108,36 +127,68 @@
   --clipfox-surface: oklch(0.18 0 0);
   --clipfox-surface-hover: oklch(0.22 0 0);
 
-  --background: oklch(0.12 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.70 0.16 25); /* Clipfox coral for dark */
+  /* Netflix-Style Dark Mode - Configurable */
+  /* Main background: Lighter dark gray instead of pure black */
+  --dark-bg-primary: rgba(20, 20, 20, 1);        /* #141414 - Netflix main bg */
+  --dark-bg-secondary: rgba(24, 24, 24, 1);      /* #181818 - Slightly lighter */
+  --dark-bg-elevated: rgba(32, 32, 32, 1);       /* #202020 - Cards/elevated surfaces */
+  --dark-bg-hover: rgba(42, 42, 42, 1);          /* #2a2a2a - Hover states */
+  
+  /* Text colors: Higher contrast for readability */
+  --dark-text-primary: rgba(255, 255, 255, 0.95); /* Almost white */
+  --dark-text-secondary: rgba(255, 255, 255, 0.7); /* Muted text */
+  --dark-text-tertiary: rgba(255, 255, 255, 0.5);  /* Subtle text */
+
+  /* Glassmorphism Variables - Dark Mode (Netflix-inspired) */
+  --glass-bg: rgba(32, 32, 32, 0.8);              /* Lighter glass */
+  --glass-bg-solid: rgba(24, 24, 24, 0.98);       /* Solid glass */
+  --glass-border: rgba(255, 255, 255, 0.1);       /* More visible borders */
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);  /* Stronger shadows */
+  --glass-blur: 20px;
+  --glass-hover: rgba(255, 255, 255, 0.08);       /* More visible hover */
+  --glass-active: rgba(255, 255, 255, 0.12);      /* More visible active */
+  
+  /* Sidebar Glass - Dark (Netflix-style) */
+  --sidebar-glass-bg: rgba(24, 24, 24, 0.95);     /* Lighter sidebar */
+  --sidebar-glass-border: rgba(255, 255, 255, 0.08);
+  --sidebar-icon-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-icon-active: rgba(215, 118, 90, 0.25);
+  
+  /* Navbar Glass - Dark (Netflix-style) */
+  --navbar-glass-bg: rgba(20, 20, 20, 0.95);      /* Match main bg */
+  --navbar-glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Theme colors using Netflix-style palette */
+  --background: oklch(0.15 0.005 280);            /* Lighter than before */
+  --foreground: oklch(0.98 0 0);                  /* High contrast text */
+  --card: oklch(0.18 0 0);                        /* Lighter cards */
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.70 0.16 25);                 /* Clipfox coral */
   --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.22 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.25 0 0);                   /* Lighter secondary */
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0 0);                       /* Lighter muted */
+  --muted-foreground: oklch(0.70 0 0);            /* Higher contrast muted text */
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.70 0.16 25); /* Match primary */
+  --border: oklch(1 0 0 / 10%);                   /* More visible borders */
+  --input: oklch(1 0 0 / 15%);                    /* More visible inputs */
+  --ring: oklch(0.70 0.16 25);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.18 0 0);                     /* Lighter sidebar */
+  --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.25 0 0);              /* Lighter accent */
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.556 0 0);
 }
 
@@ -150,7 +201,7 @@
     @apply bg-background text-foreground;
   }
 
-    h1 {
+  h1 {
     @apply font-heading text-4xl md:text-6xl lg:text-7xl font-medium leading-tight;
   }
 
@@ -261,4 +312,123 @@
     transform: scale(0.9);
     opacity: 0;
   }
+}
+
+/* ================================
+   GLASSMORPHISM UTILITY CLASSES
+   ================================ */
+
+/* Base glass effect */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-solid {
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Sidebar glass styles */
+.glass-sidebar {
+  background: var(--sidebar-glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-right: 1px solid var(--sidebar-glass-border);
+}
+
+.glass-sidebar-secondary {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid var(--glass-border);
+}
+
+/* Navbar glass styles */
+.glass-navbar {
+  background: var(--navbar-glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--navbar-glass-border);
+}
+
+/* Glass card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Glass input */
+.glass-input {
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  background: var(--glass-bg);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(215, 118, 90, 0.15);
+}
+
+/* Glass button */
+.glass-button {
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+}
+
+.glass-button:hover {
+  background: var(--glass-active);
+}
+
+/* Glass dropdown */
+.glass-dropdown {
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+/* Sidebar icon styles */
+.sidebar-icon {
+  background: var(--sidebar-icon-bg);
+  transition: all 0.2s ease;
+}
+
+.sidebar-icon:hover {
+  background: var(--glass-hover);
+}
+
+.sidebar-icon.active {
+  background: var(--sidebar-icon-active);
+}
+
+/* Scrollbar styles for glass surfaces */
+.glass-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.glass-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.glass-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 3px;
+}
+
+.glass-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }

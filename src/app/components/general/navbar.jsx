@@ -72,7 +72,7 @@ export default function MainNav() {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-black/50 border-b border-black/20 dark:border-white/10 h-16"
+      className="sticky top-0 z-50 glass-navbar h-14"
     >
       <div className="mx-auto h-full">
         <div className="h-full flex items-center px-4 sm:px-6 lg:px-8">
@@ -233,10 +233,10 @@ export default function MainNav() {
                         animate={{ y: 0, opacity: 1, scale: 1 }}
                         exit={{ y: -10, opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="absolute right-0 w-64 mt-2 rounded-xl backdrop-blur-xl bg-white/95 dark:bg-black border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden z-50"
+                        className="absolute right-0 w-64 mt-2 rounded-xl glass-dropdown overflow-hidden z-50"
                       >
                         {/* User Info Section */}
-                        <div className="p-4 border-b border-white/10">
+                        <div className="p-4 border-b border-[var(--glass-border)]">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/80 to-primary text-primary-foreground flex items-center justify-center font-medium text-sm flex-shrink-0">
                               {user.firstName?.[0]}{user.lastName?.[0]}
@@ -264,7 +264,7 @@ export default function MainNav() {
                               setUserDropdownOpen(false);
                               router.push('/settings');
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-[var(--glass-hover)] transition-all duration-200"
                           >
                             <Settings className="w-4 h-4 text-muted-foreground" />
                             <span>Settings</span>
@@ -276,13 +276,13 @@ export default function MainNav() {
                               setUserDropdownOpen(false);
                               router.push('/help');
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-[var(--glass-hover)] transition-all duration-200"
                           >
                             <HelpCircle className="w-4 h-4 text-muted-foreground" />
                             <span>Help & Support</span>
                           </motion.button>
 
-                          <div className="my-2 border-t border-white/10" />
+                          <div className="my-2 border-t border-[var(--glass-border)]" />
 
                           <motion.button
                             whileHover={{ x: 4 }}
@@ -345,7 +345,7 @@ export default function MainNav() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="lg:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-700/50 shadow-inner"
+            className="lg:hidden glass-solid border-t border-[var(--glass-border)] shadow-inner"
           >
             <div className="px-4 sm:px-6 py-8 space-y-6">
               <motion.div

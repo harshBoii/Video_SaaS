@@ -106,7 +106,7 @@ export default function IntegrationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 via-slate-50 to-stone-100">
+      <div className="min-h-screen flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -115,16 +115,16 @@ export default function IntegrationsPage() {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full"
+            className="w-12 h-12 border-4 border-[var(--glass-border)] border-t-primary rounded-full"
           />
-          <p className="text-zinc-600 font-semibold">Loading integrations...</p>
+          <p className="text-muted-foreground font-semibold">Loading integrations...</p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-slate-50 to-stone-100 relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
       {/* Subtle background gradient */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-zinc-900/3 to-transparent rounded-full blur-3xl" />
@@ -143,22 +143,22 @@ export default function IntegrationsPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.3, delay: 0.1, type: "spring" }}
-              className="p-2.5 bg-gradient-to-br from-zinc-900 to-zinc-700 rounded-xl shadow-lg"
+              className="p-2.5 bg-gradient-to-br from-primary to-primary/70 rounded-xl shadow-lg"
             >
-              <HiBell className="w-6 h-6 text-white" />
+              <HiBell className="w-6 h-6 text-primary-foreground" />
             </motion.div>
-            <h1 className="text-4xl font-bold text-zinc-900 tracking-tight relative inline-block">
+            <h1 className="text-4xl font-bold text-foreground tracking-tight relative inline-block">
               Notification Integrations
               <motion.div
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="absolute -bottom-1 left-0 w-3/4 h-1.5 bg-gradient-to-r from-zinc-900 via-zinc-600 to-transparent origin-left opacity-20"
+                className="absolute -bottom-1 left-0 w-3/4 h-1.5 bg-gradient-to-r from-primary via-primary/60 to-transparent origin-left opacity-30"
                 style={{ clipPath: 'polygon(0 30%, 100% 0%, 97% 70%, 3% 100%)' }}
               />
             </h1>
           </div>
-          <p className="text-zinc-600 ml-12">
+          <p className="text-muted-foreground ml-12">
             Connect your preferred notification channels
           </p>
         </motion.div>
@@ -242,7 +242,7 @@ function IntegrationCard({
       whileHover={{ scale: 1.01, x: 4 }}
       className="relative group"
     >
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-zinc-200/80 overflow-hidden relative">
+      <div className="glass-card hover:shadow-xl transition-all duration-300 p-6 overflow-hidden relative">
         <motion.div
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
@@ -282,8 +282,8 @@ function IntegrationCard({
             </motion.div>
             
             <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-bold text-zinc-900 mb-1">{title}</h3>
-              <p className="text-sm text-zinc-600 leading-relaxed">{description}</p>
+              <h3 className="text-xl font-bold text-foreground mb-1">{title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
               
               {isActive && channelName && (
                 <motion.div
@@ -307,7 +307,7 @@ function IntegrationCard({
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={onTest}
-                  className="group px-5 py-2.5 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-all text-sm font-bold shadow-md hover:shadow-lg flex items-center gap-1.5"
+                  className="group px-5 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-md hover:shadow-lg flex items-center gap-1.5"
                 >
                   Test
                   <HiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -317,7 +317,7 @@ function IntegrationCard({
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onDisconnect}
-                    className="px-5 py-2.5 bg-zinc-50 text-zinc-700 rounded-lg hover:bg-zinc-100 transition-all text-sm font-bold border border-zinc-200 hover:border-zinc-300"
+                    className="px-5 py-2.5 bg-[var(--glass-hover)] text-foreground rounded-lg hover:bg-[var(--glass-active)] transition-all text-sm font-bold border border-[var(--glass-border)]"
                   >
                     Disconnect
                   </motion.button>
@@ -328,7 +328,7 @@ function IntegrationCard({
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onConnect}
-                className="group px-6 py-2.5 bg-gradient-to-r from-zinc-900 to-zinc-700 text-white rounded-lg hover:from-zinc-800 hover:to-zinc-600 transition-all font-bold shadow-lg hover:shadow-xl flex items-center gap-1.5"
+                className="group px-6 py-2.5 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-lg hover:from-primary/90 hover:to-primary/70 transition-all font-bold shadow-lg hover:shadow-xl flex items-center gap-1.5"
               >
                 Connect
                 <HiArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />

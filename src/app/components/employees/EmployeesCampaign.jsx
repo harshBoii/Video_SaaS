@@ -277,7 +277,7 @@ export default function EmployeeCampaignsPage() {
         {/* Content */}
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
         ) : filteredCampaigns.length === 0 ? (
           <div className="text-center py-20 backdrop-blur-xl bg-white/10 dark:bg-black/10 border border-black/10 dark:border-white/10 rounded-2xl">

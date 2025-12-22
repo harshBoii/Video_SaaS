@@ -50,15 +50,12 @@ const Skeleton = ({ className = "" }) => (
     initial={{ opacity: 0.6 }}
     animate={{ opacity: 1 }}
     transition={{ duration: 0.8, repeat: Infinity, repeatType: "reverse" }}
-    className={`bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] rounded ${className}`}
-    style={{
-      animation: "shimmer 1.5s ease-in-out infinite"
-    }}
+    className={`bg-[var(--glass-hover)] rounded ${className}`}
   />
 );
 
 const HeaderSkeleton = () => (
-  <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+  <div className="glass-card rounded-none border-x-0 border-t-0 sticky top-0 z-10">
     <div className="max-w-7xl mx-auto px-6 py-4">
       {/* Back button skeleton */}
       <div className="flex items-center justify-between mb-4">
@@ -87,7 +84,7 @@ const HeaderSkeleton = () => (
       {/* Stats cards skeleton */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+          <div key={i} className="glass-card p-4">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <Skeleton className="w-24 h-4 mb-2" />
@@ -100,7 +97,7 @@ const HeaderSkeleton = () => (
       </div>
 
       {/* Tabs skeleton */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+      <div className="flex gap-1 bg-[var(--glass-hover)] p-1 rounded-lg">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5">
             <Skeleton className="w-4 h-4" />
@@ -119,7 +116,7 @@ const ContentSkeleton = () => (
     className="space-y-6"
   >
     {/* Content cards skeleton */}
-    <div className="bg-white rounded-2xl p-6 border border-gray-200">
+    <div className="glass-card p-6">
       <Skeleton className="w-48 h-6 mb-4" />
       <div className="space-y-3">
         <Skeleton className="w-full h-4" />
@@ -130,7 +127,7 @@ const ContentSkeleton = () => (
 
     <div className="grid grid-cols-2 gap-4">
       {[1, 2].map((i) => (
-        <div key={i} className="bg-white rounded-2xl p-6 border border-gray-200">
+        <div key={i} className="glass-card p-6">
           <Skeleton className="w-32 h-6 mb-4" />
           <div className="space-y-3">
             <Skeleton className="w-full h-4" />
@@ -140,7 +137,7 @@ const ContentSkeleton = () => (
       ))}
     </div>
 
-    <div className="bg-white rounded-2xl p-6 border border-gray-200">
+    <div className="glass-card p-6">
       <Skeleton className="w-40 h-6 mb-4" />
       <div className="space-y-2">
         {[1, 2, 3, 4].map((i) => (
@@ -273,7 +270,7 @@ export default function CampaignPage({ campaignId }) {
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         <HeaderSkeleton />
         <div className="max-w-7xl mx-auto px-6 py-6">
           <ContentSkeleton />
@@ -285,20 +282,20 @@ export default function CampaignPage({ campaignId }) {
   // Not Found State
   if (!campaign) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
+          className="text-center glass-card p-8"
         >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ArrowLeft className="w-8 h-8 text-red-600" />
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ArrowLeft className="w-8 h-8 text-destructive" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Campaign Not Found</h2>
-          <p className="text-gray-600 mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Campaign Not Found</h2>
+          <p className="text-muted-foreground mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
           <button
             onClick={() => router.push(getBackRoute())}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Go back to Dashboard
           </button>
@@ -308,9 +305,9 @@ export default function CampaignPage({ campaignId }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="glass-card rounded-none border-x-0 border-t-0 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           {/* Top Row - Back button and Actions */}
           <div className="flex items-start mt-5 justify-between mb-4">
@@ -320,12 +317,12 @@ export default function CampaignPage({ campaignId }) {
 
             {/* Campaign Title and Stats */}
             <div className="mb-6 w-full">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
                 {campaign.name}
               </h1>
-              <div className="flex items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-semibold">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-xs font-semibold">
                     {campaign.admin.firstName[0]}{campaign.admin.lastName[0]}
                   </div>
                   <span>Managed by {campaign.admin.fullName}</span>
@@ -337,7 +334,7 @@ export default function CampaignPage({ campaignId }) {
                   </div>
                 )}
                 {permissions && (
-                  <div className="px-2 sticky right-0 py-1 bg-black text-white border-2 border-yellow-500 text-xs font-semibold rounded-2xl">
+                  <div className="px-2 sticky right-0 py-1 bg-primary/10 text-primary border border-primary/30 text-xs font-semibold rounded-2xl">
                     Your Role : {permissions.isAdmin ? 'Admin' : permissions.role}
                   </div>
                 )}
@@ -348,9 +345,9 @@ export default function CampaignPage({ campaignId }) {
             <div className="relative">
               <button
                 onClick={() => setShowActions(!showActions)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-[var(--glass-hover)] rounded-lg transition-colors"
               >
-                <MoreVertical className="w-5 h-5 text-gray-600" />
+                <MoreVertical className="w-5 h-5 text-muted-foreground" />
               </button>
 
               <AnimatePresence>
@@ -364,14 +361,14 @@ export default function CampaignPage({ campaignId }) {
                       initial={{ opacity: 0, scale: 0.95, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+                      className="absolute right-0 mt-2 w-48 glass-dropdown rounded-lg py-1 z-20"
                     >
                       <button
                         onClick={() => {
                           setShowActions(false);
                           // Handle edit
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-[var(--glass-hover)] flex items-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
                         Edit Campaign
@@ -381,18 +378,18 @@ export default function CampaignPage({ campaignId }) {
                           setShowActions(false);
                           // Handle share
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-[var(--glass-hover)] flex items-center gap-2"
                       >
                         <Share2 className="w-4 h-4" />
                         Share
                       </button>
-                      <div className="border-t border-gray-100 my-1" />
+                      <div className="border-t border-[var(--glass-border)] my-1" />
                       <button
                         onClick={() => {
                           setShowActions(false);
                           handleDeleteCampaign();
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
                       >
                         <Trash2 className="w-4 h-4" />
                         Delete Campaign
@@ -411,17 +408,17 @@ export default function CampaignPage({ campaignId }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200"
+              className="glass-card p-4 border-l-4 border-l-primary"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-blue-600 font-medium">Team Members</p>
-                  <p className="text-2xl font-bold text-blue-900 mt-1">
+                  <p className="text-sm text-muted-foreground font-medium">Team Members</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
                     {campaign.stats.totalAssignments}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Users className="w-6 h-6 text-primary" />
                 </div>
               </div>
             </motion.div>
@@ -430,17 +427,17 @@ export default function CampaignPage({ campaignId }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200"
+              className="glass-card p-4 border-l-4 border-l-purple-500"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-purple-600 font-medium">Active Flows</p>
-                  <p className="text-2xl font-bold text-purple-900 mt-1">
+                  <p className="text-sm text-muted-foreground font-medium">Active Flows</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
                     {campaign.stats.totalFlows}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <GitBranch className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                  <GitBranch className="w-6 h-6 text-purple-500" />
                 </div>
               </div>
             </motion.div>
@@ -449,24 +446,24 @@ export default function CampaignPage({ campaignId }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200"
+              className="glass-card p-4 border-l-4 border-l-green-500"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-green-600 font-medium">Scheduled Events</p>
-                  <p className="text-2xl font-bold text-green-900 mt-1">
+                  <p className="text-sm text-muted-foreground font-medium">Scheduled Events</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
                     {campaign.stats.totalSchedules}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CalendarIcon className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+                  <CalendarIcon className="w-6 h-6 text-green-500" />
                 </div>
               </div>
             </motion.div>
           </div>
 
           {/* Tabs Navigation */}
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+          <div className="flex gap-1 bg-[var(--glass-hover)] p-1 rounded-lg">
             {allowedTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -485,8 +482,8 @@ export default function CampaignPage({ campaignId }) {
                       }}
 
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${isActive
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
                       <BoxIcon className="w-4 h-4" />
@@ -516,7 +513,7 @@ export default function CampaignPage({ campaignId }) {
                             initial={{ opacity: 0, scale: 0.95, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+                            className="absolute top-full left-0 right-0 mt-2 glass-dropdown rounded-lg py-1 z-20"
                           >
                             {ASSET_TYPES.map((asset) => {
                               const AssetTypeIcon = asset.icon;
@@ -525,8 +522,8 @@ export default function CampaignPage({ campaignId }) {
                                   key={asset.id}
                                   onClick={() => handleAssetTypeChange(asset.id)}
                                   className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${assetType === asset.id
-                                      ? 'bg-blue-50 text-blue-700 font-medium'
-                                      : 'text-gray-700 hover:bg-gray-50'
+                                      ? 'bg-primary/10 text-primary font-medium'
+                                      : 'text-foreground hover:bg-[var(--glass-hover)]'
                                     }`}
                                 >
                                   <AssetTypeIcon className="w-4 h-4" />
@@ -551,8 +548,8 @@ export default function CampaignPage({ campaignId }) {
                     // setShowAssetDropdown(prev => !prev);
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${isActive
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                   <Icon className="w-4 h-4" />

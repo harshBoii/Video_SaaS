@@ -335,7 +335,8 @@ function ModalContent({ onClose, campaignId, onUploadComplete }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+        style={{ zIndex: 99999 }}
         onClick={handleClose}
       >
         <motion.div
@@ -343,11 +344,11 @@ function ModalContent({ onClose, campaignId, onUploadComplete }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
+          className="glass-card rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-8 py-6 flex items-center justify-between flex-shrink-0">
+          <div className="bg-gradient-to-r from-primary via-primary/80 to-primary px-8 py-6 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                 <Layers className="w-7 h-7 text-white" />
@@ -370,9 +371,9 @@ function ModalContent({ onClose, campaignId, onUploadComplete }) {
           </div>
 
           {/* Progress Bar */}
-          <div className="h-2 bg-gray-200 flex-shrink-0">
+          <div className="h-2 bg-[var(--glass-hover)] flex-shrink-0">
             <motion.div
-              className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600"
+              className="h-full bg-gradient-to-r from-primary via-primary/80 to-primary"
               initial={{ width: '50%' }}
               animate={{ width: `${(step / 2) * 100}%` }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -393,10 +394,10 @@ function ModalContent({ onClose, campaignId, onUploadComplete }) {
                 >
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-32 space-y-6">
-                      <Loader2 className="w-16 h-16 text-purple-600 animate-spin" />
+                      <Loader2 className="w-16 h-16 text-primary animate-spin" />
                       <div className="text-center">
-                        <p className="text-xl font-semibold text-gray-900 mb-2">Loading Videos...</p>
-                        <p className="text-sm text-gray-500">Fetching your videos</p>
+                        <p className="text-xl font-semibold text-foreground mb-2">Loading Videos...</p>
+                        <p className="text-sm text-muted-foreground">Fetching your videos</p>
                       </div>
                     </div>
                   ) : (

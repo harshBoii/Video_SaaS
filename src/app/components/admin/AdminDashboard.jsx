@@ -112,13 +112,13 @@ export default function AdminDashboard() {
   if (loading || !user ) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error)
-    return <p className="p-10 text-center text-red-500">Error: {error}</p>;
+    return <p className="p-10 text-center text-destructive">Error: {error}</p>;
 
   return (
     <div className="min-h-screen  p-4 md:p-6 lg:p-8">

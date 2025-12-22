@@ -27,9 +27,9 @@ export default function WorkspaceLayout({ children }) {
     <div className="flex min-h-screen bg-background">
       <WorkspaceSidebar user={user} userType={userType} />
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-        <MainNav />
-        <div className="bg-gradient-to-br from-background/10 via-background/10 to-primary/5">
-        {children}
+        {/* <MainNav /> */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          {children}
         </div>
       </main>
     </div>

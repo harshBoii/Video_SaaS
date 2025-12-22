@@ -135,7 +135,7 @@ const EmptyState = () => (
           key={index}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          className="p-4 rounded-xl bg-clipfox-surface dark:bg-white/5 border border-border hover:border-primary/30 text-left transition-all group"
+          className="p-4 rounded-xl glass-card hover:border-primary/30 text-left transition-all group"
         >
           <h3 className="text-sm font-medium text-foreground mb-1 group-hover:text-primary transition-colors">
             {item.title}
@@ -200,13 +200,13 @@ export default function Chat() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Chat Header */}
-        <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
+        <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-[var(--glass-border)] glass">
           <div className="flex items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors"
             >
               {sidebarOpen ? (
                 <FiArrowLeft className="w-5 h-5" />
@@ -225,21 +225,21 @@ export default function Chat() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors"
             >
               <FiShare2 className="w-5 h-5" />
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors"
             >
               <FiDownload className="w-5 h-5" />
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors"
             >
               <FiMoreVertical className="w-5 h-5" />
             </motion.button>
@@ -261,7 +261,7 @@ export default function Chat() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex gap-4 py-6 px-4 md:px-8 bg-clipfox-surface/50 dark:bg-white/[0.02]"
+                  className="flex gap-4 py-6 px-4 md:px-8 bg-[var(--glass-hover)]"
                 >
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-clipfox-accent flex items-center justify-center">
                     <motion.div
