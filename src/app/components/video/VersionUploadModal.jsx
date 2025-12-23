@@ -226,7 +226,8 @@ function ModalContent({ onClose, videoId, videoTitle, onUploadComplete }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+        style={{ zIndex: 99999 }}
         onClick={handleClose}
       >
         <motion.div
@@ -234,11 +235,11 @@ function ModalContent({ onClose, videoId, videoTitle, onUploadComplete }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200"
+          className="glass-card rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-6 py-5 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-primary via-primary/80 to-primary px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                 <Layers className="w-6 h-6 text-white" />
@@ -263,7 +264,7 @@ function ModalContent({ onClose, videoId, videoTitle, onUploadComplete }) {
           <div className="p-6 space-y-5">
             {/* Version Note */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 Version Note *
               </label>
               <textarea
@@ -272,13 +273,13 @@ function ModalContent({ onClose, videoId, videoTitle, onUploadComplete }) {
                 placeholder="What changed in this version? (e.g., 'Fixed audio sync issues', 'Updated branding')"
                 rows={4}
                 disabled={uploading}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
             {/* File Upload */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 Video File *
               </label>
               <label className="block">
@@ -291,10 +292,10 @@ function ModalContent({ onClose, videoId, videoTitle, onUploadComplete }) {
                 />
                 <div className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
                   uploading
-                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                    ? 'border-[var(--glass-border)] bg-[var(--glass-hover)] cursor-not-allowed opacity-50'
                     : selectedFile
-                    ? 'border-purple-400 bg-purple-50 hover:bg-purple-100'
-                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-purple-300'
+                    ? 'border-primary/50 bg-primary/10 hover:bg-primary/20'
+                    : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:bg-[var(--glass-active)] hover:border-primary/30'
                 }`}>
                   <FileVideo className={`w-12 h-12 mx-auto mb-3 ${
                     selectedFile ? 'text-purple-600' : 'text-gray-400'

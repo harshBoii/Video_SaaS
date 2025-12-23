@@ -99,10 +99,10 @@ export default function Profile() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <User2 className="w-16 h-16 mx-auto mb-3 text-slate-300" />
-          <p className="text-lg font-medium text-slate-600">Could not load profile</p>
+          <User2 className="w-16 h-16 mx-auto mb-3 text-muted-foreground" />
+          <p className="text-lg font-medium text-muted-foreground">Could not load profile</p>
         </div>
       </div>
     );
@@ -120,43 +120,55 @@ export default function Profile() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Top Header Bar */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-screen-2xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-900">Your Account</h1>
-            <button className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
+    <div className="min-h-screen pt-14 md:pt-0">
+      {/* Hero Section with Gradient Background */}
+      <div className="relative overflow-hidden">
+        {/* Animated Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 via-primary/10 to-blue-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+        
+        {/* Floating Shapes */}
+        <div className="absolute top-10 left-20 w-64 h-64 bg-gradient-to-br from-violet-500/30 to-primary/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-10 w-80 h-80 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="relative max-w-screen-2xl mx-auto px-4 md:px-6 pt-8 pb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Your Account</h1>
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-4 py-2.5 glass-card text-foreground hover:shadow-lg rounded-xl transition-all"
+            >
               <Settings className="w-5 h-5" />
               <span className="text-sm font-medium">Settings</span>
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-screen-2xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-12 gap-6">
+      <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        <div className="grid grid-cols-12 gap-4 md:gap-6">
           {/* Sidebar */}
           <div className="col-span-12 lg:col-span-3">
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden sticky top-6">
+            <div className="glass-card overflow-hidden sticky top-20 md:top-6">
               {/* Profile Summary in Sidebar */}
-              <div className="p-6 border-b border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+              <div className="p-4 md:p-6 border-b border-[var(--glass-border)] bg-gradient-to-br from-primary/10 to-violet-500/10">
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <img
                       src={profile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${profile.firstName}+${profile.lastName}&backgroundColor=3b82f6`}
                       alt={profile.firstName}
-                      className="w-16 h-16 rounded-full border-2 border-white shadow-md object-cover"
+                      className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-background shadow-md object-cover"
                     />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2 border-background rounded-full" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">
+                    <h3 className="font-semibold text-foreground truncate">
                       {profile.firstName} {profile.lastName}
                     </h3>
-                    <p className="text-xs text-slate-600 truncate">{profile.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
                     {profile.role && (
-                      <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
                         {profile.role.name}
                       </span>
                     )}
@@ -167,36 +179,38 @@ export default function Profile() {
               {/* Menu Items */}
               <nav className="p-2">
                 {menuItems.map((item) => (
-                  <button
+                  <motion.button
                     key={item.id}
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                       activeSection === item.id
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:bg-[var(--glass-hover)] hover:text-foreground'
                     }`}
                   >
                     <item.icon className="w-5 h-5" />
                     <span className="text-sm flex-1 text-left">{item.label}</span>
                     <ChevronRight className="w-4 h-4 opacity-40" />
-                  </button>
+                  </motion.button>
                 ))}
               </nav>
 
               {/* Stats Summary */}
-              <div className="p-4 border-t border-slate-200">
+              <div className="p-4 border-t border-[var(--glass-border)]">
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <div className="text-lg font-bold text-slate-900">{assignCount}</div>
-                    <div className="text-xs text-slate-500">Projects</div>
+                    <div className="text-lg font-bold text-foreground">{assignCount}</div>
+                    <div className="text-xs text-muted-foreground">Projects</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-slate-900">{videoCount}</div>
-                    <div className="text-xs text-slate-500">Videos</div>
+                    <div className="text-lg font-bold text-foreground">{videoCount}</div>
+                    <div className="text-xs text-muted-foreground">Videos</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-slate-900">{commentCount}</div>
-                    <div className="text-xs text-slate-500">Comments</div>
+                    <div className="text-lg font-bold text-foreground">{commentCount}</div>
+                    <div className="text-xs text-muted-foreground">Comments</div>
                   </div>
                 </div>
               </div>
@@ -238,47 +252,47 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       {/* Profile Header Card */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="relative h-32 bg-gradient-to-r from-blue-100 via-indigo-300 to-purple-300">
+      <div className="glass-card overflow-hidden">
+        <div className="relative h-24 md:h-32 bg-gradient-to-r from-primary/40 via-violet-500/40 to-blue-500/40">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30" />
         </div>
         
-        <div className="px-6 pb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-16 relative z-10">
+        <div className="px-4 md:px-6 pb-4 md:pb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-12 md:-mt-16 relative z-10">
             <div className="relative group">
               <img
                 src={profile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${profile.firstName}+${profile.lastName}&backgroundColor=ffffff`}
                 alt={profile.firstName}
-                className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl object-cover bg-white"
+                className="w-24 h-24 md:w-32 md:h-32 rounded-2xl border-4 border-background shadow-xl object-cover bg-background"
               />
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="absolute bottom-2 right-2 p-2 bg-blue-600 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute bottom-2 right-2 p-2 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Camera className="w-4 h-4" />
               </motion.button>
             </div>
 
             <div className="flex-1 sm:mb-4">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground">
                     {profile.firstName} {profile.lastName}
                   </h2>
-                  <p className="text-slate-600 mt-1">{profile.email}</p>
+                  <p className="text-muted-foreground mt-1">{profile.email}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {profile.role && (
-                      <span className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full">
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
                         <Briefcase className="w-3.5 h-3.5" />
                         {profile.role.name}
                       </span>
                     )}
                     {profile.title && (
-                      <span className="flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 text-sm font-medium rounded-full">
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-violet-500/10 text-violet-600 text-sm font-medium rounded-full">
                         <Award className="w-3.5 h-3.5" />
                         {profile.title}
                       </span>
@@ -296,21 +310,21 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
                       className="flex gap-2"
                     >
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
+                        whileHover={{ scale: 1.05, y: -1 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
                       >
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Save
                       </motion.button>
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
+                        whileHover={{ scale: 1.05, y: -1 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleCancel}
                         disabled={isSaving}
-                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        className="px-4 py-2 glass-card text-foreground rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
                       >
                         <X className="w-4 h-4" />
                         Cancel
@@ -322,10 +336,10 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: 1.05, y: -1 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setIsEditing(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-xl font-medium hover:shadow-lg transition-all flex items-center gap-2"
                     >
                       <Pencil className="w-4 h-4" />
                       Edit Profile
@@ -340,15 +354,15 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCardAmazon icon={Folder} label="Total Projects" value={assignCount} color="blue" />
-        <StatCardAmazon icon={Video} label="Videos Uploaded" value={videoCount} color="indigo" />
-        <StatCardAmazon icon={MessageSquare} label="Comments Made" value={commentCount} color="purple" />
+        <StatCardAmazon icon={Folder} label="Total Projects" value={assignCount} color="primary" />
+        <StatCardAmazon icon={Video} label="Videos Uploaded" value={videoCount} color="violet" />
+        <StatCardAmazon icon={MessageSquare} label="Comments Made" value={commentCount} color="blue" />
       </div>
 
       {/* Personal Information */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <User2 className="w-5 h-5 text-blue-600" />
+      <div className="glass-card p-4 md:p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <User2 className="w-5 h-5 text-primary" />
           Personal Information
         </h3>
         
@@ -395,8 +409,8 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
       </div>
 
       {/* About / Bio */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">About</h3>
+      <div className="glass-card p-4 md:p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">About</h3>
         
         {isEditing ? (
           <div>
@@ -405,17 +419,17 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
               onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
               maxLength={500}
               rows={4}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              className="w-full px-4 py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none resize-none text-foreground placeholder:text-muted-foreground"
               placeholder="Tell us about yourself..."
             />
-            <div className="text-right text-xs text-slate-400 mt-1">
+            <div className="text-right text-xs text-muted-foreground mt-1">
               {editData.bio.length} / 500 characters
             </div>
           </div>
         ) : (
-          <p className="text-slate-600 leading-relaxed">
+          <p className="text-muted-foreground leading-relaxed">
             {profile.bio || (
-              <span className="text-slate-400 italic">No biography added yet.</span>
+              <span className="text-muted-foreground/60 italic">No biography added yet.</span>
             )}
           </p>
         )}
@@ -423,9 +437,9 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
 
       {/* Company Info */}
       {profile.company && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
+        <div className="glass-card p-4 md:p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary" />
             Company
           </h3>
           
@@ -434,16 +448,16 @@ function AccountSection({ profile, editData, setEditData, isEditing, setIsEditin
               <img 
                 src={profile.company.logoUrl} 
                 alt="Company" 
-                className="w-16 h-16 rounded-lg object-cover border border-slate-200" 
+                className="w-16 h-16 rounded-xl object-cover border border-[var(--glass-border)]" 
               />
             ) : (
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-violet-500 rounded-xl flex items-center justify-center text-primary-foreground text-2xl font-bold">
                 {profile.company.name.charAt(0)}
               </div>
             )}
             <div>
-              <p className="font-semibold text-slate-900 text-lg">{profile.company.name}</p>
-              <p className="text-sm text-slate-500">Organization</p>
+              <p className="font-semibold text-foreground text-lg">{profile.company.name}</p>
+              <p className="text-sm text-muted-foreground">Organization</p>
             </div>
           </div>
         </div>
@@ -460,9 +474,9 @@ function SecuritySection() {
       exit={{ opacity: 0, y: -20 }}
       className="space-y-6"
     >
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
-          <Shield className="w-5 h-5 text-blue-600" />
+      <div className="glass-card p-4 md:p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+          <Shield className="w-5 h-5 text-primary" />
           Security & Privacy
         </h3>
 
@@ -491,13 +505,13 @@ function ActivitySection() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="bg-white rounded-xl border border-slate-200 p-6"
+      className="glass-card p-4 md:p-6"
     >
-      <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
-        <Clock className="w-5 h-5 text-blue-600" />
+      <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+        <Clock className="w-5 h-5 text-primary" />
         Recent Activity
       </h3>
-      <div className="text-center py-12 text-slate-400">
+      <div className="text-center py-12 text-muted-foreground">
         <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
         <p>Activity timeline coming soon...</p>
       </div>
@@ -511,13 +525,13 @@ function NotificationsSection() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="bg-white rounded-xl border border-slate-200 p-6"
+      className="glass-card p-4 md:p-6"
     >
-      <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
-        <Bell className="w-5 h-5 text-blue-600" />
+      <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+        <Bell className="w-5 h-5 text-primary" />
         Notification Preferences
       </h3>
-      <div className="text-center py-12 text-slate-400">
+      <div className="text-center py-12 text-muted-foreground">
         <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
         <p>Notification settings coming soon...</p>
       </div>
@@ -527,23 +541,23 @@ function NotificationsSection() {
 
 function StatCardAmazon({ icon: Icon, label, value, color }) {
   const colorClasses = {
+    primary: 'from-primary to-primary/80',
+    violet: 'from-violet-500 to-violet-600',
     blue: 'from-blue-500 to-blue-600',
-    indigo: 'from-indigo-500 to-indigo-600',
-    purple: 'from-purple-500 to-purple-600',
   };
 
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
+      whileHover={{ y: -4, scale: 1.02 }}
+      className="glass-card p-4 md:p-6 hover:shadow-lg transition-all"
     >
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[color]} rounded-lg flex items-center justify-center flex-shrink-0`}>
+        <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[color]} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-slate-900">{value.toLocaleString()}</div>
-          <div className="text-sm text-slate-600">{label}</div>
+          <div className="text-2xl font-bold text-foreground">{value.toLocaleString()}</div>
+          <div className="text-sm text-muted-foreground">{label}</div>
         </div>
       </div>
     </motion.div>
@@ -553,17 +567,17 @@ function StatCardAmazon({ icon: Icon, label, value, color }) {
 function FormField({ label, value, isEditing, onChange, icon: Icon, readOnly }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-muted-foreground mb-2">{label}</label>
       {isEditing && !readOnly ? (
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-4 py-2 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-foreground"
         />
       ) : (
-        <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900">
-          {Icon && <Icon className="w-4 h-4 text-slate-400" />}
+        <div className="flex items-center gap-2 px-4 py-2 bg-[var(--glass-hover)] border border-[var(--glass-border)] rounded-xl text-foreground">
+          {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
           <span>{value}</span>
         </div>
       )}
@@ -573,55 +587,60 @@ function FormField({ label, value, isEditing, onChange, icon: Icon, readOnly }) 
 
 function SecurityItem({ icon: Icon, title, description, action }) {
   return (
-    <div className="flex items-center justify-between py-4 border-b border-slate-100 last:border-0">
+    <div className="flex items-center justify-between py-4 border-b border-[var(--glass-border)] last:border-0">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-          <Icon className="w-5 h-5 text-slate-600" />
+        <div className="w-10 h-10 bg-[var(--glass-hover)] rounded-xl flex items-center justify-center">
+          <Icon className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="font-medium text-slate-900">{title}</p>
-          <p className="text-sm text-slate-500">{description}</p>
+          <p className="font-medium text-foreground">{title}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
-      <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-xl transition-colors"
+      >
         {action}
-      </button>
+      </motion.button>
     </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-screen-2xl mx-auto px-6 py-4">
-          <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+    <div className="min-h-screen pt-14 md:pt-0">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 via-primary/10 to-blue-500/20" />
+        <div className="relative max-w-screen-2xl mx-auto px-4 md:px-6 py-8">
+          <div className="h-8 w-48 bg-[var(--glass-hover)] rounded-xl animate-pulse" />
         </div>
       </div>
-      <div className="max-w-screen-2xl mx-auto px-6 py-8">
+      <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-8">
         <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-3">
-            <div className="bg-white rounded-xl border border-slate-200 p-6 animate-pulse">
+          <div className="col-span-12 lg:col-span-3">
+            <div className="glass-card p-6 animate-pulse">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-slate-200 rounded-full" />
+                <div className="w-16 h-16 bg-[var(--glass-hover)] rounded-full" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-slate-200 rounded w-3/4" />
-                  <div className="h-3 bg-slate-200 rounded w-1/2" />
+                  <div className="h-4 bg-[var(--glass-hover)] rounded w-3/4" />
+                  <div className="h-3 bg-[var(--glass-hover)] rounded w-1/2" />
                 </div>
               </div>
               <div className="space-y-2">
                 {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="h-10 bg-slate-200 rounded" />
+                  <div key={i} className="h-10 bg-[var(--glass-hover)] rounded-xl" />
                 ))}
               </div>
             </div>
           </div>
-          <div className="col-span-9 space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-6 animate-pulse">
-              <div className="h-32 bg-slate-200 rounded mb-6" />
+          <div className="col-span-12 lg:col-span-9 space-y-6">
+            <div className="glass-card p-6 animate-pulse">
+              <div className="h-32 bg-[var(--glass-hover)] rounded-xl mb-6" />
               <div className="space-y-3">
-                <div className="h-6 bg-slate-200 rounded w-1/3" />
-                <div className="h-4 bg-slate-200 rounded w-1/2" />
+                <div className="h-6 bg-[var(--glass-hover)] rounded w-1/3" />
+                <div className="h-4 bg-[var(--glass-hover)] rounded w-1/2" />
               </div>
             </div>
           </div>

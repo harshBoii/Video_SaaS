@@ -14,7 +14,7 @@ const Spinner = ({ size = 22 }) => (
     <motion.div
       animate={{ rotate: 360 }}
       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-      className="rounded-full border-4 border-indigo-500 border-t-transparent"
+      className="rounded-full border-4 border-primary border-t-transparent"
       style={{ width: size, height: size }}
     />
   </div>
@@ -134,65 +134,101 @@ export default function ContractEditor() {
     }
   };
 
-  if (loading) return <Spinner size={40} />;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Spinner size={40} />
+          <p className="text-muted-foreground mt-4">Loading contract...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-sans">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
-          >
-            <FiArrowLeft /> Back
-          </button>
-          <div className="flex gap-3">
-            <button
-              onClick={() => window.open(pdfUrl, '_blank')}
-              className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2 hover:bg-gray-100"
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-6 font-sans">
+      <div className="max-w-7xl mx-auto">
+        {/* Header with glassmorphism */}
+        <div className="glass-card p-4 md:p-6 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <motion.button
+              whileHover={{ x: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.back()}
+              className="flex items-center gap-2 text-foreground hover:text-primary transition-colors font-medium"
             >
-              <FiDownload /> View Original
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg px-4 py-2 flex items-center gap-2 shadow-md hover:shadow-lg"
-            >
-              {saving ? <Spinner size={16} /> : <FiSave />} Save Contract
-            </button>
+              <FiArrowLeft className="w-5 h-5" /> Back
+            </motion.button>
+            
+            <div className="flex flex-wrap gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => window.open(pdfUrl, '_blank')}
+                className="glass-card px-4 py-2.5 flex items-center gap-2 hover:shadow-md transition-all text-foreground font-medium rounded-xl"
+              >
+                <FiDownload className="w-4 h-4" /> View Original
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-xl px-5 py-2.5 flex items-center gap-2 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 font-semibold"
+              >
+                {saving ? <Spinner size={16} /> : <FiSave className="w-4 h-4" />} Save Contract
+              </motion.button>
+            </div>
           </div>
         </div>
 
         {/* Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* PDF Viewer */}
-          <div className="lg:col-span-2 bg-white rounded-xl p-4 shadow border">
+          <div className="lg:col-span-2 glass-card p-4 md:p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <FiDownload className="w-5 h-5 text-primary" />
+              Contract Preview
+            </h3>
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-              <div style={{ height: '80vh' }}>
+              <div className="rounded-xl overflow-hidden border border-[var(--glass-border)]" style={{ height: '75vh' }}>
                 <Viewer fileUrl={pdfUrl} defaultScale={SpecialZoomLevel.PageFit} />
               </div>
             </Worker>
           </div>
 
           {/* Editable Field Panel */}
-          <div className="bg-white rounded-xl p-4 shadow border">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Edit Offer Letter</h3>
+          <div className="glass-card p-4 md:p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+              <FiSave className="w-5 h-5 text-primary" />
+              Edit Contract Details
+            </h3>
 
-            {Object.entries(fields).map(([key, val]) => (
-              <div key={key} className="mb-3">
-                <label className="text-sm text-gray-600 capitalize">
-                  {key.replace(/_/g, ' ')}
-                </label>
-                <input
-                  className="w-full border rounded px-3 py-2 mt-1"
-                  value={val}
-                  onChange={(e) => updateField(key, e.target.value)}
-                />
+            <div className="space-y-4 max-h-[calc(75vh-60px)] overflow-y-auto glass-scrollbar pr-2">
+              {Object.entries(fields).map(([key, val]) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2 capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </label>
+                  <input
+                    className="w-full border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                    value={val}
+                    onChange={(e) => updateField(key, e.target.value)}
+                    placeholder={`Enter ${key.replace(/_/g, ' ')}`}
+                  />
+                </div>
+              ))}
+              
+              <div className="pt-4 border-t border-[var(--glass-border)]">
+                <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Signature
+                </h4>
+                <SignatureCanvas ref={signatureCanvasRef} />
               </div>
-            ))}
-            <h4 className="text-sm font-medium text-gray-700 mt-4 mb-2">Signature</h4>
-            <SignatureCanvas ref={signatureCanvasRef} />
+            </div>
           </div>
         </div>
       </div>
@@ -238,7 +274,7 @@ const SignatureCanvas = React.forwardRef((_, ref) => {
   return (
     <canvas
       ref={canvasRef}
-      className="w-full border rounded bg-gray-50 shadow-sm cursor-crosshair"
+      className="w-full border border-[var(--glass-border)] rounded-xl bg-[var(--glass-hover)] shadow-sm cursor-crosshair"
       style={{ height: 120 }}
     />
   );

@@ -200,134 +200,153 @@ const PostsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen pt-14 md:pt-0">
       <Toaster position="top-right" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header with Gradient */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      {/* Hero Section with Gradient Background */}
+      <div className="relative overflow-hidden">
+        {/* Animated Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-primary/10 to-violet-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+        
+        {/* Floating Shapes */}
+        <div className="absolute top-10 right-20 w-64 h-64 bg-gradient-to-br from-blue-500/30 to-violet-500/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-10 w-80 h-80 bg-gradient-to-br from-primary/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="relative max-w-7xl mx-auto px-4 md:px-6 pt-8 pb-6">
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div>
               <motion.h1
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2"
+                className="text-3xl md:text-4xl font-bold text-foreground mb-2"
               >
-                Social Media Posts
+                <span className="bg-gradient-to-r from-blue-500 via-primary to-violet-500 bg-clip-text text-transparent">
+                  Social Media
+                </span>
+                {' '}Posts
               </motion.h1>
-              <p className="text-gray-600 text-lg">
+              <p className="text-muted-foreground text-base md:text-lg">
                 Manage and track all your scheduled and published content
               </p>
             </div>
 
-            {/* Create Post Button - Always Visible */}
+            {/* Create Post Button */}
             <motion.button
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setModalOpen(true)}
-              className="flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all font-semibold"
+              className="flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-xl shadow-lg hover:shadow-xl transition-all font-semibold"
             >
-              <FaPlus className="text-xl" />
+              <FaPlus className="text-lg" />
               <span>Create New Post</span>
             </motion.button>
           </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              className="glass-card p-4 md:p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-primary to-violet-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <FaChartLine className="text-lg md:text-xl text-white" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs md:text-sm font-medium">Total Posts</p>
+                  <p className="text-xl md:text-2xl font-bold text-foreground">{stats.total}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              className="glass-card p-4 md:p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <FaCheck className="text-lg md:text-xl text-white" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs md:text-sm font-medium">Published</p>
+                  <p className="text-xl md:text-2xl font-bold text-emerald-600">{stats.published}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              className="glass-card p-4 md:p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <FaClock className="text-lg md:text-xl text-white" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs md:text-sm font-medium">Scheduled</p>
+                  <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.scheduled}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              className="glass-card p-4 md:p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <FaFileAlt className="text-lg md:text-xl text-white" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs md:text-sm font-medium">Drafts</p>
+                  <p className="text-xl md:text-2xl font-bold text-foreground">{stats.draft}</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">Total Posts</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center">
-                <FaChartLine className="text-2xl text-blue-600" />
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">Published</p>
-                <p className="text-3xl font-bold text-green-600">{stats.published}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center">
-                <FaCheck className="text-2xl text-green-600" />
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">Scheduled</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.scheduled}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center">
-                <FaClock className="text-2xl text-blue-600" />
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">Drafts</p>
-                <p className="text-3xl font-bold text-gray-600">{stats.draft}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center">
-                <FaFileAlt className="text-2xl text-gray-600" />
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         {/* Search & Filters Bar */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
+        <div className="glass-card p-4 md:p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Bar */}
             <div className="flex-1">
               <div className="relative">
-                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   value={filters.search}
                   onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                   onKeyPress={(e) => e.key === 'Enter' && applySearch()}
                   placeholder="Search posts by title or content..."
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             </div>
 
             {/* Quick Filters */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 md:gap-3">
               <select
                 value={filters.status}
                 onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                className="px-3 md:px-4 py-2.5 md:py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-foreground text-sm"
               >
                 <option value="">All Status</option>
                 <option value="draft">Draft</option>
@@ -339,7 +358,7 @@ const PostsPage = () => {
               <select
                 value={filters.platform}
                 onChange={(e) => setFilters((prev) => ({ ...prev, platform: e.target.value }))}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                className="px-3 md:px-4 py-2.5 md:py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-foreground text-sm"
               >
                 <option value="">All Platforms</option>
                 <option value="instagram">Instagram</option>
@@ -352,26 +371,32 @@ const PostsPage = () => {
                 <option value="threads">Threads</option>
               </select>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-3 border-2 rounded-xl transition-all ${
+                className={`flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl transition-all text-sm font-medium ${
                   showFilters
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-primary/10 border-primary/30 text-primary border'
+                    : 'glass-card text-foreground hover:shadow-md'
                 }`}
               >
                 <FaFilter />
                 <span className="hidden sm:inline">More</span>
-              </button>
+              </motion.button>
 
               {(filters.status || filters.platform || filters.dateFrom || filters.dateTo || filters.search) && (
-                <button
+                <motion.button
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={clearFilters}
-                  className="flex items-center gap-2 px-4 py-3 bg-red-50 text-red-600 border-2 border-red-200 rounded-xl hover:bg-red-100 transition-all"
+                  className="flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3 bg-destructive/10 text-destructive border border-destructive/30 rounded-xl hover:bg-destructive/20 transition-all text-sm font-medium"
                 >
                   <FaTimes />
                   <span className="hidden sm:inline">Clear</span>
-                </button>
+                </motion.button>
               )}
             </div>
           </div>
@@ -386,11 +411,11 @@ const PostsPage = () => {
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden"
               >
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-4">Date Range</h4>
+                <div className="mt-6 pt-6 border-t border-[var(--glass-border)]">
+                  <h4 className="text-sm font-semibold text-foreground mb-4">Date Range</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-2">
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">
                         From Date
                       </label>
                       <input
@@ -399,11 +424,11 @@ const PostsPage = () => {
                         onChange={(e) =>
                           setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
                         }
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-foreground"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-2">
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">
                         To Date
                       </label>
                       <input
@@ -412,7 +437,7 @@ const PostsPage = () => {
                         onChange={(e) =>
                           setFilters((prev) => ({ ...prev, dateTo: e.target.value }))
                         }
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-[var(--glass-border)] bg-[var(--glass-hover)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-foreground"
                       />
                     </div>
                   </div>
@@ -428,38 +453,40 @@ const PostsPage = () => {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-              className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full mb-4"
+              className="w-12 h-12 md:w-16 md:h-16 border-4 border-primary border-t-transparent rounded-full mb-4"
             />
-            <p className="text-gray-600 font-medium">Loading posts...</p>
+            <p className="text-muted-foreground font-medium">Loading posts...</p>
           </div>
         ) : posts.length === 0 ? (
           /* Empty State */
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100"
+            className="glass-card p-8 md:p-12 text-center"
           >
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FaRocket className="text-4xl text-blue-600" />
+            <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-primary/20 to-violet-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <FaRocket className="text-3xl md:text-4xl text-primary" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">No posts found</h3>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            <h3 className="text-xl md:text-2xl font-bold text-foreground mb-3">No posts found</h3>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
               {filters.status || filters.platform || filters.search
                 ? "Try adjusting your filters to see more results"
                 : "Get started by creating your first social media post"}
             </p>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setModalOpen(true)}
-              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-xl transition-all font-semibold"
+              className="inline-flex items-center gap-3 px-6 md:px-8 py-3.5 md:py-4 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-semibold"
             >
-              <FaPlus className="text-xl" />
+              <FaPlus className="text-lg md:text-xl" />
               Create Your First Post
-            </button>
+            </motion.button>
           </motion.div>
         ) : (
           <>
             {/* Posts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
               {posts.map((post, index) => {
                 const status = statusConfig[post.status] || statusConfig.draft;
                 const StatusIcon = status.icon;
@@ -470,11 +497,11 @@ const PostsPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -8, shadow: '0 20px 40px rgba(0,0,0,0.1)' }}
-                    className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all overflow-hidden border border-gray-100 group"
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    className="glass-card hover:shadow-2xl transition-all overflow-hidden group"
                   >
                     {/* Status Badge - Top Right */}
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div
                           className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${status.bg} border ${status.border}`}
@@ -486,17 +513,17 @@ const PostsPage = () => {
                         </div>
 
                         {post.status === 'scheduled' && post.scheduledFor && (
-                          <div className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg">
+                          <div className="text-xs text-blue-600 font-medium bg-blue-500/10 px-2 py-1 rounded-lg">
                             {getRelativeTime(post.scheduledFor)}
                           </div>
                         )}
                       </div>
 
                       {/* Post Content */}
-                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                         {post.title || 'Untitled Post'}
                       </h3>
-                      <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                      <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
                         {post.content}
                       </p>
 
@@ -507,14 +534,14 @@ const PostsPage = () => {
                           const platformInfo = platformIcons[platformKey] || {
                             icon: FaFileAlt,
                             color: 'from-gray-400 to-gray-600',
-                            bg: 'bg-gray-100',
+                            bg: 'bg-[var(--glass-hover)]',
                           };
                           const Icon = platformInfo.icon;
 
                           return (
                             <div
                               key={platformData.platform}
-                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${platformInfo.bg} text-gray-700 text-xs font-medium`}
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--glass-hover)] text-foreground text-xs font-medium`}
                             >
                               <Icon className="text-sm" />
                               <span className="capitalize">{platformData.platform}</span>
@@ -522,7 +549,7 @@ const PostsPage = () => {
                           );
                         })}
                         {post.platforms?.length > 3 && (
-                          <div className="px-2.5 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-700">
+                          <div className="px-2.5 py-1 bg-[var(--glass-hover)] rounded-lg text-xs font-medium text-muted-foreground">
                             +{post.platforms.length - 3}
                           </div>
                         )}
@@ -534,13 +561,13 @@ const PostsPage = () => {
                           {post.tags.slice(0, 3).map((tag, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-medium"
+                              className="px-2 py-1 bg-violet-500/10 text-violet-600 rounded-lg text-xs font-medium"
                             >
                               #{tag}
                             </span>
                           ))}
                           {post.tags.length > 3 && (
-                            <span className="px-2 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-medium">
+                            <span className="px-2 py-1 bg-violet-500/10 text-violet-600 rounded-lg text-xs font-medium">
                               +{post.tags.length - 3}
                             </span>
                           )}
@@ -548,7 +575,7 @@ const PostsPage = () => {
                       )}
 
                       {/* Meta Info */}
-                      <div className="flex items-center text-sm text-gray-500 pt-4 border-t border-gray-100">
+                      <div className="flex items-center text-sm text-muted-foreground pt-4 border-t border-[var(--glass-border)]">
                         <FaCalendarAlt className="mr-2" />
                         <span className="text-xs">
                           {post.scheduledFor
@@ -559,10 +586,10 @@ const PostsPage = () => {
                     </div>
 
                     {/* Actions Footer */}
-                    <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 flex justify-between items-center">
+                    <div className="px-4 md:px-6 py-3 md:py-4 bg-[var(--glass-hover)] border-t border-[var(--glass-border)] flex justify-between items-center">
                       <Link
                         href={`/admin/posts/${post._id}`}
-                        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                        className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-semibold transition-colors"
                       >
                         <FaEye />
                         View Details
@@ -570,7 +597,7 @@ const PostsPage = () => {
                       {post.status === 'draft' && (
                         <Link
                           href={`/admin/posts/${post._id}/edit`}
-                          className="text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                          className="text-sm text-foreground hover:text-primary font-medium transition-colors"
                         >
                           Edit →
                         </Link>
@@ -590,12 +617,12 @@ const PostsPage = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page === 1}
-                    className="px-5 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium text-gray-700"
+                    className="px-4 md:px-5 py-2 md:py-2.5 glass-card rounded-xl hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium text-foreground text-sm md:text-base"
                   >
                     Previous
                   </motion.button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 md:gap-2">
                     {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
                       let pageNum;
                       if (pagination.pages <= 5) {
@@ -614,10 +641,10 @@ const PostsPage = () => {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => handlePageChange(pageNum)}
-                          className={`w-11 h-11 rounded-xl font-semibold transition-all ${
+                          className={`w-9 h-9 md:w-11 md:h-11 rounded-xl font-semibold transition-all text-sm md:text-base ${
                             pagination.page === pageNum
-                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                              : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                              ? 'bg-gradient-to-r from-primary to-violet-500 text-primary-foreground shadow-lg'
+                              : 'glass-card text-foreground hover:shadow-md'
                           }`}
                         >
                           {pageNum}
@@ -631,13 +658,13 @@ const PostsPage = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page === pagination.pages}
-                    className="px-5 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium text-gray-700"
+                    className="px-4 md:px-5 py-2 md:py-2.5 glass-card rounded-xl hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium text-foreground text-sm md:text-base"
                   >
                     Next
                   </motion.button>
                 </div>
 
-                <div className="text-center text-sm text-gray-600 font-medium">
+                <div className="text-center text-xs md:text-sm text-muted-foreground font-medium">
                   Showing {(pagination.page - 1) * pagination.limit + 1} -{' '}
                   {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
                   {pagination.total} posts
@@ -653,9 +680,9 @@ const PostsPage = () => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setModalOpen(true)}
-        className="fixed bottom-8 right-8 lg:hidden w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
+        className="fixed bottom-6 right-6 lg:hidden w-14 h-14 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-2xl shadow-2xl flex items-center justify-center z-40"
       >
-        <FaPlus className="text-2xl" />
+        <FaPlus className="text-xl" />
       </motion.button>
 
       {/* Create Post Modal */}

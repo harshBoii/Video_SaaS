@@ -69,7 +69,7 @@ export default function AuthPage() {
         return;
       }
 
-      router.push(data.redirect);
+      router.push('/campaign');
     } catch (err) {
       console.error(err);
       setError("Something went wrong, please try again.");
@@ -167,25 +167,29 @@ export default function AuthPage() {
 
   return (
     <div className="flex-col lg:flex-row flex h-screen w-screen font-sans">
-      {/* Left wallpaper */}
+      {/* Left wallpaper with enhanced gradient */}
       <motion.div
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8 }}
-        className="w-1/2 bg-gradient-to-br from-purple-700 via-purple-300 to-purple-600 items-center justify-center hidden lg:flex"
+        className="w-1/2 bg-gradient-to-br from-primary via-violet-500 to-blue-500 items-center justify-center hidden lg:flex relative overflow-hidden"
       >
+        {/* Floating shapes */}
+        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-br from-violet-500/30 to-primary/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        
         <motion.img
           src="/images/Login_Side.png"
           alt="Video SaaS Wallpaper"
-          className="h-full w-full object-cover opacity-80"
+          className="h-full w-full object-cover opacity-90 relative z-10"
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 1.2 }}
         />
       </motion.div>
 
-      {/* Right Auth Section */}
-      <div className=" w-full lg:w-1/2 flex flex-col items-center justify-center bg-white p-12 sm:p-8 md:p-12 shadow-lg overflow-y-auto min-h-screen  ">
+      {/* Right Auth Section with glassmorphism */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-6 sm:p-8 md:p-12 overflow-y-auto min-h-screen">
         <CurvedLoop 
           marqueeText="Create-OS ✦ Where Creativity Meets Control ✦"
           speed={3}
@@ -199,7 +203,7 @@ export default function AuthPage() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md glass-card p-8 md:p-10"
         >
           {/* Dynamic Title */}
           <motion.h1
@@ -208,9 +212,9 @@ export default function AuthPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="text-2xl font-bold text-purple-700 mb-6 tracking-wide text-center font-serif"
+            className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary via-violet-500 to-blue-500 bg-clip-text text-transparent mb-6 tracking-wide text-center"
           >
-            {mode === "login" ? "Login" : "Create Account"}
+            {mode === "login" ? "Welcome Back" : "Create Account"}
           </motion.h1>
 
           {/* Error/Success Messages */}
@@ -220,7 +224,7 @@ export default function AuthPage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs"
+                className="mb-4 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm"
               >
                 {error}
               </motion.div>
@@ -230,7 +234,7 @@ export default function AuthPage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs"
+                className="mb-4 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-600 text-sm"
               >
                 {success}
               </motion.div>
@@ -251,7 +255,7 @@ export default function AuthPage() {
                 className="space-y-2"
               >
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Email Address
                   </label>
                   <input
@@ -260,12 +264,12 @@ export default function AuthPage() {
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full mt-2 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Password
                   </label>
                   <input
@@ -274,16 +278,16 @@ export default function AuthPage() {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full mt-2 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   />
                 </div>
 
                 <motion.button
                   type="submit"
                   disabled={loading}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-gradient-to-r from-primary to-violet-500 text-primary-foreground py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
                   {loading ? "Signing In..." : "Sign In"}
                 </motion.button>
@@ -301,7 +305,7 @@ export default function AuthPage() {
               >
                 {/* Name Field */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Full Name
                   </label>
                   <input
@@ -310,13 +314,13 @@ export default function AuthPage() {
                     onChange={(e) => setSignupName(e.target.value)}
                     placeholder="John Doe"
                     required
-                    className="w-full mt-2 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   />
                 </div>
 
                 {/* Email Field */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Email Address
                   </label>
                   <input
@@ -325,24 +329,25 @@ export default function AuthPage() {
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full mt-2 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   />
                 </div>
 
                 {/* Workspace Type Dropdown */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Workspace Type
                   </label>
                   <div className="grid grid-cols-1 gap-2">
                     {WORKSPACE_TYPES.map((type) => (
                       <motion.label
                         key={type.value}
-                        whileHover={{ scale: 1.02 }}
-                        className={`relative flex items-center px-3 py-2 rounded-xl border-2 cursor-pointer transition-all ${
+                        whileHover={{ scale: 1.01, y: -1 }}
+                        whileTap={{ scale: 0.99 }}
+                        className={`relative flex items-center px-4 py-3 rounded-xl border cursor-pointer transition-all ${
                           workspaceType === type.value
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 hover:border-purple-300'
+                            ? 'border-primary/50 bg-primary/10'
+                            : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-primary/30'
                         }`}
                       >
                         <input
@@ -353,16 +358,16 @@ export default function AuthPage() {
                           onChange={(e) => setWorkspaceType(e.target.value)}
                           className="sr-only"
                         />
-                        <span className="text-xs mr-3">{type.icon}</span>
+                        <span className="text-lg mr-3">{type.icon}</span>
                         <div className="flex-1">
-                          <div className="font-semibold text-gray-800">{type.label}</div>
-                          <div className="text-xs text-gray-500">{type.description}</div>
+                          <div className="font-semibold text-foreground text-sm">{type.label}</div>
+                          <div className="text-xs text-muted-foreground">{type.description}</div>
                         </div>
                         {workspaceType === type.value && (
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center"
+                            className="w-5 h-5 bg-gradient-to-r from-primary to-violet-500 rounded-full flex items-center justify-center shadow-lg"
                           >
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -376,7 +381,7 @@ export default function AuthPage() {
 
                 {/* Password Field */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Password
                   </label>
                   <input
@@ -386,16 +391,16 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     required
                     minLength={8}
-                    className="w-full mt-2 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1.5">
                     Minimum 8 characters
                   </p>
                 </div>
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Confirm Password
                   </label>
                   <input
@@ -405,7 +410,7 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     required
                     minLength={8}
-                    className="w-full mt-2 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   />
                 </div>
 
@@ -413,14 +418,14 @@ export default function AuthPage() {
                 <motion.button
                   disabled={true}
                   type="submit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold shadow-md hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-gradient-to-r from-primary to-violet-500 text-primary-foreground py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
                   {loading ? "Creating Account..." : "Create Account"}
                 </motion.button>
 
-                <p className="text-xs text-gray-500 text-center mt-4">
+                <p className="text-xs text-muted-foreground text-center mt-4">
                   By signing up, you agree to our Terms of Service and Privacy Policy
                 </p>
               </motion.form>
@@ -429,29 +434,30 @@ export default function AuthPage() {
 
           {/* Divider */}
           <div className="flex items-center my-6">
-            <div className="flex-grow h-px bg-gray-300"></div>
-            <span className="px-3 text-gray-500 text-xs">OR</span>
-            <div className="flex-grow h-px bg-gray-300"></div>
+            <div className="flex-grow h-px bg-[var(--glass-border)]"></div>
+            <span className="px-3 text-muted-foreground text-xs">OR</span>
+            <div className="flex-grow h-px bg-[var(--glass-border)]"></div>
           </div>
 
           {/* Social Login */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-xl hover:bg-gray-50 transition"
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full flex items-center justify-center gap-2 border border-[var(--glass-border)] bg-[var(--glass-hover)] py-3 rounded-xl hover:shadow-md transition-all"
           >
             <img
               src="https://www.svgrepo.com/show/355037/google.svg"
               alt="Google"
               className="w-5 h-5"
             />
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-foreground">
               Continue with Google
             </span>
           </motion.button>
 
           {/* Toggle between Login/Signup */}
           <motion.p 
-            className="text-center text-gray-600 mt-6"
+            className="text-center text-muted-foreground mt-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -461,7 +467,7 @@ export default function AuthPage() {
                 Don't have an account?{" "}
                 <button
                   onClick={toggleMode}
-                  className="text-purple-600 font-medium hover:underline focus:outline-none"
+                  className="text-primary font-semibold hover:underline focus:outline-none transition-colors"
                 >
                   Sign Up
                 </button>
@@ -471,7 +477,7 @@ export default function AuthPage() {
                 Already have an account?{" "}
                 <button
                   onClick={toggleMode}
-                  className="text-purple-600 font-medium hover:underline focus:outline-none"
+                  className="text-primary font-semibold hover:underline focus:outline-none transition-colors"
                 >
                   Login
                 </button>

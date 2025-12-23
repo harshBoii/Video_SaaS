@@ -238,11 +238,11 @@ export default function EmployeesPage() {
   // Loading state
   if (authLoading || status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <div className="h-8 bg-gray-200 rounded w-48 animate-pulse mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+            <div className="h-8 bg-[var(--glass-hover)] rounded w-48 animate-pulse mb-4"></div>
+            <div className="h-4 bg-[var(--glass-hover)] rounded w-64 animate-pulse"></div>
           </div>
           <TableSkeleton />
         </div>
@@ -253,20 +253,20 @@ export default function EmployeesPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+      <div className="flex items-center justify-center p-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+          className="glass-card p-8 max-w-md w-full text-center"
         >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Employees</h3>
-          <p className="text-gray-600 mb-6">{error.message}</p>
+          <h3 className="text-xl font-bold text-foreground mb-2">Failed to Load Employees</h3>
+          <p className="text-muted-foreground mb-6">{error.message}</p>
           <button
             onClick={() => refetch()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold"
           >
             Try Again
           </button>
@@ -276,7 +276,7 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="p-2">
       {/* Loading Bar */}
       <LoadingBar isLoading={isFetching || isSearching} />
 
@@ -289,20 +289,20 @@ export default function EmployeesPage() {
         >
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <FiUsers className="text-white text-2xl" />
+              <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
+                  <FiUsers className="text-primary-foreground text-xl" />
                 </div>
                 Employees
               </h1>
-              <p className="text-gray-600">Manage your team members and their roles</p>
+              <p className="text-muted-foreground">Manage your team members and their roles</p>
             </div>
             
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-105"
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl hover:scale-105"
             >
-              <FiPlus size={20} />
+              <FiPlus size={18} />
               Add Employee
             </button>
           </div>
@@ -313,52 +313,52 @@ export default function EmployeesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-4 gap-4 mb-6"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
         >
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="glass-card p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs text-muted-foreground mb-1">Total</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FiUsers className="text-blue-600 text-xl" />
+              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <FiUsers className="text-blue-500 text-lg" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="glass-card p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Active</p>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                <p className="text-xs text-muted-foreground mb-1">Active</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.active}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <UserCheck className="text-green-600 text-xl" />
+              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                <UserCheck className="text-green-500 text-lg" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="glass-card p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Inactive</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.inactive}</p>
+                <p className="text-xs text-muted-foreground mb-1">Inactive</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.inactive}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <UserX className="text-yellow-600 text-xl" />
+              <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center">
+                <UserX className="text-yellow-500 text-lg" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="glass-card p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Admins</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.admins}</p>
+                <p className="text-xs text-muted-foreground mb-1">Admins</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.admins}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Medal className="text-purple-600 text-xl" />
+              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <Medal className="text-purple-500 text-lg" />
               </div>
             </div>
           </div>
@@ -369,18 +369,18 @@ export default function EmployeesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl p-4 mb-6 border border-gray-200 shadow-sm"
+          className="glass-card p-4 mb-6"
         >
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
             <div className="flex-1 min-w-[300px] relative">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
+              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search by name, email, role..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white"
+                className="w-full pl-12 pr-12 py-3 glass-input rounded-xl focus:outline-none text-foreground placeholder:text-muted-foreground"
               />
               
               {/* Loading Spinner in Search */}
@@ -402,11 +402,11 @@ export default function EmployeesPage() {
 
             {/* Sort */}
             <div className="flex items-center gap-2">
-              <FiFilter className="text-gray-400" />
+              <FiFilter className="text-muted-foreground" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 hover:bg-white transition-all"
+                className="px-4 py-3 glass-input rounded-xl focus:outline-none text-foreground"
               >
                 <option value="updatedAt">Recently Updated</option>
                 <option value="createdAt">Recently Added</option>
@@ -416,10 +416,10 @@ export default function EmployeesPage() {
 
               <button
                 onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="p-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all"
+                className="p-3 glass-button rounded-xl"
                 title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
               >
-                {sortOrder === 'asc' ? <TrendingUp className="text-gray-600" /> : <TrendingDown className="text-gray-600" />}
+                {sortOrder === 'asc' ? <TrendingUp className="text-muted-foreground" /> : <TrendingDown className="text-muted-foreground" />}
               </button>
             </div>
 
@@ -428,7 +428,7 @@ export default function EmployeesPage() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium"
+                className="px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium"
               >
                 {isSearching ? 'Searching...' : `${employees.length} result${employees.length !== 1 ? 's' : ''} found`}
               </motion.div>
@@ -441,21 +441,21 @@ export default function EmployeesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+          className="glass-card overflow-hidden"
         >
           {employees.length === 0 && !isFetching ? (
             <div className="text-center py-16">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FiUsers className="text-gray-400 text-3xl" />
+              <div className="w-20 h-20 bg-[var(--glass-hover)] rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiUsers className="text-muted-foreground text-3xl" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Employees Found</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-2">No Employees Found</h3>
+              <p className="text-muted-foreground mb-6">
                 {search ? 'Try adjusting your search criteria' : 'Get started by adding your first employee'}
               </p>
               {!search && (
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg transition-colors font-semibold"
                 >
                   <FiPlus />
                   Add Your First Employee
@@ -465,29 +465,29 @@ export default function EmployeesPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-[var(--glass-hover)] border-b border-[var(--glass-border)]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Employee
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Role & Department
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Teams & Campaigns
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Last Login
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-[var(--glass-border)]">
                   <AnimatePresence>
                     {employees.map((emp, index) => (
                       <motion.tr
@@ -496,7 +496,7 @@ export default function EmployeesPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ delay: index * 0.05 }}
-                        className="hover:bg-gray-50 transition-colors group"
+                        className="hover:bg-[var(--glass-hover)] transition-colors group"
                       >
                         {/* Employee Info */}
                         <td className="px-6 py-4">
@@ -507,7 +507,7 @@ export default function EmployeesPage() {
                                 alt={emp.firstName}
                                 width={40}
                                 height={40}
-                                className="rounded-full ring-2 ring-gray-100"
+                                className="rounded-full ring-2 ring-[var(--glass-border)]"
                                 unoptimized
                               />
                               {emp.is_admin && (
@@ -518,7 +518,7 @@ export default function EmployeesPage() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="font-semibold text-gray-900">
+                                <p className="font-semibold text-foreground">
                                   {emp.firstName} {emp.lastName}
                                 </p>
                                 {emp.is_admin && (
@@ -527,7 +527,7 @@ export default function EmployeesPage() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
                                 <FiMail className="w-3 h-3" />
                                 {emp.email}
                               </p>
@@ -538,9 +538,9 @@ export default function EmployeesPage() {
                         {/* Role & Department */}
                         <td className="px-6 py-4">
                           <div className="space-y-1">
-                            <p className="font-medium text-gray-900">{emp.role?.name || '—'}</p>
+                            <p className="font-medium text-foreground">{emp.role?.name || '—'}</p>
                             {emp.department && (
-                              <p className="text-sm text-gray-500">{emp.department.name}</p>
+                              <p className="text-sm text-muted-foreground">{emp.department.name}</p>
                             )}
                           </div>
                         </td>
@@ -561,7 +561,7 @@ export default function EmployeesPage() {
                               </div>
                             )}
                             {!emp.campaigns?.length && !emp.teams?.length && (
-                              <span className="text-sm text-gray-400">—</span>
+                              <span className="text-sm text-muted-foreground">—</span>
                             )}
                           </div>
                         </td>
@@ -569,12 +569,12 @@ export default function EmployeesPage() {
                         {/* Last Login */}
                         <td className="px-6 py-4">
                           {emp.lastLogin ? (
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <FiClock className="w-3 h-3" />
                               {new Date(emp.lastLogin).toLocaleDateString()}
                             </div>
                           ) : (
-                            <span className="text-sm text-gray-400">Never</span>
+                            <span className="text-sm text-muted-foreground">Never</span>
                           )}
                         </td>
 
@@ -603,14 +603,14 @@ export default function EmployeesPage() {
                                 setSelectedEmployee(emp);
                                 setEditModalOpen(true);
                               }}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                               title="Edit employee"
                             >
                               <FiEdit3 size={16} />
                             </button>
                             <button
                               onClick={() => handleDeleteEmployee(emp)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                               title="Delete employee"
                             >
                               <FiTrash2 size={16} />
@@ -626,16 +626,16 @@ export default function EmployeesPage() {
           )}
 
           {/* Infinite Scroll Loader */}
-          <div ref={loadMoreRef} className="flex justify-center py-6 border-t border-gray-200">
+          <div ref={loadMoreRef} className="flex justify-center py-6 border-t border-[var(--glass-border)]">
             {isFetchingNextPage ? (
               <div className="flex items-center gap-3">
-                <div className="h-5 w-5 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm text-gray-600 font-medium">Loading more employees...</span>
+                <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-muted-foreground font-medium">Loading more employees...</span>
               </div>
             ) : hasNextPage ? (
-              <span className="text-sm text-gray-500">Scroll to load more</span>
+              <span className="text-sm text-muted-foreground">Scroll to load more</span>
             ) : employees.length > 0 ? (
-              <span className="text-sm text-gray-500">✓ All employees loaded</span>
+              <span className="text-sm text-muted-foreground">✓ All employees loaded</span>
             ) : null}
           </div>
         </motion.div>

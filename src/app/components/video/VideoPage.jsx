@@ -1,12 +1,22 @@
 'use client';
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Grid, List, Search, Filter, Trash2, Share2, Play, 
   Check, X, Loader2, Download, Eye, MessageSquare,
-  Calendar, User, LayoutGrid, LayoutList, ChevronDown,Upload, Layers
+  Calendar, User, LayoutGrid, LayoutList, ChevronDown, Upload, Layers,
+  Video, Clock, Star, FolderOpen, SlidersHorizontal, MoreHorizontal,
+  Sparkles, TrendingUp, Film
 } from 'lucide-react';
 import SingleVideoVersionUploadModal from './VersionUploadModal';
+
+// Quick action categories for Canva-style layout
+const QUICK_ACTIONS = [
+  { id: 'all', label: 'All Videos', icon: Film, color: 'from-violet-500 to-purple-600' },
+  { id: 'recent', label: 'Recent', icon: Clock, color: 'from-blue-500 to-cyan-600' },
+  { id: 'popular', label: 'Popular', icon: TrendingUp, color: 'from-rose-500 to-pink-600' },
+  { id: 'starred', label: 'Starred', icon: Star, color: 'from-amber-500 to-orange-600' },
+];
 const CampaignPermissionsProvider = lazy(() =>
   import('@/app/context/permissionContext').then(m => ({ default: m.CampaignPermissionsProvider }))
 );
@@ -135,66 +145,198 @@ export default function VideosPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Stats for display
+  const videoStats = useMemo(() => ({
+    total: pagination.total || videos.length,
+    campaigns: campaigns.length
+  }), [pagination.total, videos.length, campaigns.length]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      {/* Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-40 shadow-sm"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-black text-gray-900">Videos</h1>
-            <div className="flex items-center gap-3">
-              {/* View Toggle */}
-              <div className="flex items-center bg-slate-100 rounded-xl p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-white shadow-sm text-indigo-600'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <LayoutGrid className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all ${
-                    viewMode === 'list'
-                      ? 'bg-white shadow-sm text-indigo-600'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <LayoutList className="w-5 h-5" />
+    <div className="min-h-screen">
+      {/* Hero Section with Gradient Background */}
+      <div className="relative overflow-hidden">
+        {/* Animated Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/20 via-primary/10 to-violet-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+        
+        {/* Floating Shapes */}
+        <div className="absolute top-10 right-20 w-64 h-64 bg-gradient-to-br from-primary/30 to-rose-500/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-10 w-80 h-80 bg-gradient-to-br from-violet-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="relative max-w-6xl mx-auto px-6 pt-8 pb-12">
+          {/* Headline */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
+              <span className="bg-gradient-to-r from-rose-500 via-primary to-violet-500 bg-clip-text text-transparent">
+                Your Video
+              </span>
+              <span className="text-foreground"> Library</span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Browse, organize, and share your video content
+            </p>
+          </motion.div>
+
+          {/* Tab Navigation */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center justify-center gap-2 mb-8 flex-wrap"
+          >
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, sortBy: 'createdAt', sortOrder: 'desc' }))}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                filters.sortBy === 'createdAt' && filters.sortOrder === 'desc'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'glass-card hover:bg-[var(--glass-hover)] text-foreground'
+              }`}
+            >
+              <Film className="w-4 h-4 inline-block mr-2" />
+              All Videos
+            </button>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, sortBy: 'viewCount', sortOrder: 'desc' }))}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                filters.sortBy === 'viewCount'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'glass-card hover:bg-[var(--glass-hover)] text-foreground'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 inline-block mr-2" />
+              Popular
+            </button>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, sortBy: 'duration', sortOrder: 'desc' }))}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                filters.sortBy === 'duration'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'glass-card hover:bg-[var(--glass-hover)] text-foreground'
+              }`}
+            >
+              <Clock className="w-4 h-4 inline-block mr-2" />
+              By Duration
+            </button>
+          </motion.div>
+
+          {/* Search Bar - Canva Style */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="max-w-3xl mx-auto mb-10"
+          >
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-rose-500/20 via-primary/20 to-violet-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative glass-card rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Search your videos..."
+                  className="w-full pl-14 pr-14 py-5 bg-transparent text-lg text-foreground placeholder:text-muted-foreground outline-none rounded-2xl"
+                />
+                <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-[var(--glass-hover)] rounded-xl transition-colors">
+                  <SlidersHorizontal className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Bulk Actions */}
-              <AnimatePresence>
-                {selectedVideos.length > 0 && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    className="flex items-center gap-2 bg-indigo-100 px-4 py-2 rounded-xl"
-                  >
-                    <span className="text-sm font-semibold text-indigo-900">
-                      {selectedVideos.length} selected
-                    </span>
-                    <button
-                      onClick={() => setSelectedVideos([])}
-                      className="p-1 hover:bg-indigo-200 rounded-lg transition-colors"
-                    >
-                      <X className="w-4 h-4 text-indigo-700" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          {/* Quick Action Icons Row */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center justify-center gap-4 md:gap-8 flex-wrap"
+          >
+            {QUICK_ACTIONS.map((item) => (
+              <motion.button
+                key={item.id}
+                whileHover={{ scale: 1.05, y: -4 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (item.id === 'all') setFilters(prev => ({ ...prev, sortBy: 'createdAt', sortOrder: 'desc' }));
+                  else if (item.id === 'recent') setFilters(prev => ({ ...prev, sortBy: 'createdAt', sortOrder: 'desc' }));
+                  else if (item.id === 'popular') setFilters(prev => ({ ...prev, sortBy: 'viewCount', sortOrder: 'desc' }));
+                }}
+                className="flex flex-col items-center gap-2 group"
+              >
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200`}>
+                  <item.icon className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <span className="text-xs md:text-sm font-medium text-foreground">{item.label}</span>
+              </motion.button>
+            ))}
+            
+            {/* Upload New Version */}
+            <motion.button
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowVersionModal(true)}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
+                <Upload className="w-7 h-7 md:w-8 md:h-8 text-white" />
+              </div>
+              <span className="text-xs md:text-sm font-medium text-foreground">Upload</span>
+            </motion.button>
+            
+            {/* More Options */}
+            <motion.button
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-[var(--glass-hover)] border-2 border-dashed border-[var(--glass-border)] flex items-center justify-center group-hover:border-primary/50 transition-all duration-200">
+                <MoreHorizontal className="w-7 h-7 md:w-8 md:h-8 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <span className="text-xs md:text-sm font-medium text-foreground">More</span>
+            </motion.button>
+          </motion.div>
+        </div>
+      </div>
 
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Section Header with Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-wrap items-center justify-between gap-4 mb-6"
+        >
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Your Videos</h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              {videoStats.total} videos across {videoStats.campaigns} campaigns
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Bulk Actions */}
+            <AnimatePresence>
               {selectedVideos.length > 0 && (
-                <>
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl border border-primary/20"
+                >
+                  <span className="text-sm font-semibold text-primary">
+                    {selectedVideos.length} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedVideos([])}
+                    className="p-1 hover:bg-primary/20 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4 text-primary" />
+                  </button>
                   <Suspense fallback={<Loader2 className="w-5 h-5 animate-spin" />}>
                     <ShareCollectionButton
                       campaignId={filters.campaignId || videos[0]?.campaignId}
@@ -205,93 +347,81 @@ export default function VideosPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleBulkDelete}
-                    className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-colors"
+                    className="p-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4" />
                   </motion.button>
-                </>
+                </motion.div>
               )}
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search videos..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                />
-              </div>
-            </div>
+            </AnimatePresence>
 
             {/* Campaign Filter */}
             <select
               value={filters.campaignId}
               onChange={(e) => setFilters(prev => ({ ...prev, campaignId: e.target.value }))}
-              className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              className="px-4 py-2.5 bg-[var(--glass-hover)] border border-[var(--glass-border)] rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all text-foreground"
             >
               <option value="">All Campaigns</option>
               {campaigns.map(campaign => (
                 <option key={campaign.id} value={campaign.id}>
-                  {campaign.name} ({campaign.videoCount})
+                  {campaign.name}
                 </option>
               ))}
             </select>
 
-            {/* Sort */}
-            <select
-              value={`${filters.sortBy}-${filters.sortOrder}`}
-              onChange={(e) => {
-                const [sortBy, sortOrder] = e.target.value.split('-');
-                setFilters(prev => ({ ...prev, sortBy, sortOrder }));
-              }}
-              className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-            >
-              <option value="createdAt-desc">Newest First</option>
-              <option value="createdAt-asc">Oldest First</option>
-              <option value="title-asc">Title A-Z</option>
-              <option value="title-desc">Title Z-A</option>
-              <option value="duration-desc">Longest</option>
-              <option value="duration-asc">Shortest</option>
-            </select>
+            {/* View Toggle */}
+            <div className="flex items-center bg-[var(--glass-hover)] rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-lg transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-background shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <LayoutGrid className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-lg transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-background shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <LayoutList className="w-5 h-5" />
+              </button>
+            </div>
 
-            {selectedVideos.length < videos.length && (
+            {selectedVideos.length < videos.length && videos.length > 0 && (
               <button
                 onClick={selectAll}
-                className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl transition-colors"
+                className="px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-xl transition-colors border border-primary/20"
               >
                 Select All
               </button>
             )}
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Video Grid/List */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl p-4 animate-pulse">
-                <div className="aspect-video bg-slate-200 rounded-xl mb-4" />
-                <div className="h-6 bg-slate-200 rounded mb-2" />
-                <div className="h-4 bg-slate-200 rounded w-2/3" />
+              <div key={i} className="glass-card p-4 animate-pulse">
+                <div className="aspect-video bg-[var(--glass-hover)] rounded-xl mb-4" />
+                <div className="h-6 bg-[var(--glass-hover)] rounded mb-2" />
+                <div className="h-4 bg-[var(--glass-hover)] rounded w-2/3" />
               </div>
             ))}
           </div>
         ) : videos.length === 0 ? (
           <div className="text-center py-24">
-            <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Play className="w-10 h-10 text-slate-400" />
+            <div className="w-20 h-20 bg-[var(--glass-hover)] rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Play className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Videos Found</h3>
-            <p className="text-slate-600">Try adjusting your filters</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">No Videos Found</h3>
+            <p className="text-muted-foreground">Try adjusting your filters</p>
           </div>
         ) : viewMode === 'grid' ? (
           <GridView
@@ -323,8 +453,8 @@ export default function VideosPage() {
                 onClick={() => setPagination(prev => ({ ...prev, page: i + 1 }))}
                 className={`px-4 py-2 rounded-xl font-semibold transition-all ${
                   pagination.page === i + 1
-                    ? 'bg-indigo-600 text-white shadow-lg'
-                    : 'bg-white text-slate-700 hover:bg-slate-100'
+                    ? 'bg-primary text-primary-foreground shadow-lg'
+                    : 'glass-card hover:bg-[var(--glass-hover)]'
                 }`}
               >
                 {i + 1}
@@ -339,7 +469,7 @@ export default function VideosPage() {
         {playingVideo && (
           <Suspense
             fallback={
-              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md" style={{ zIndex: 99999 }}>
                 <Loader2 className="w-10 h-10 text-white animate-spin" />
               </div>
             }
@@ -385,14 +515,14 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
           whileHover={{ y: -4, scale: 1.02 }}
-          className={`group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all border-2 ${
+          className={`group glass-card overflow-hidden hover:shadow-2xl transition-all border-2 ${
             selectedVideos.includes(video.id)
-              ? 'border-indigo-500 ring-4 ring-indigo-100'
+              ? 'border-primary ring-4 ring-primary/20'
               : 'border-transparent'
           }`}
         >
           {/* Thumbnail */}
-          <div className="relative aspect-video bg-slate-100">
+          <div className="relative aspect-video bg-[var(--glass-hover)]">
             <img
               src={video.thumbnailUrl || '/placeholder.jpg'}
               alt={video.title}
@@ -407,8 +537,8 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
               }}
               className={`absolute top-3 left-3 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
                 selectedVideos.includes(video.id)
-                  ? 'bg-indigo-600 border-indigo-600'
-                  : 'bg-white/90 border-white hover:border-indigo-400'
+                  ? 'bg-primary border-primary'
+                  : 'bg-white/90 dark:bg-black/50 border-white dark:border-white/20 hover:border-primary'
               }`}
             >
               {selectedVideos.includes(video.id) && (
@@ -423,9 +553,9 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
             >
               <motion.div
                 whileHover={{ scale: 1.1 }}
-                className="w-16 h-16 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-2xl"
+                className="w-16 h-16 bg-white/90 dark:bg-black/70 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-2xl"
               >
-                <Play className="w-8 h-8 text-indigo-600 ml-1" />
+                <Play className="w-8 h-8 text-primary ml-1" />
               </motion.div>
             </button>
 
@@ -445,14 +575,14 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
 
           {/* Content */}
           <div className="p-5">
-            <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-indigo-600 transition-colors">
+            <h3 className="font-bold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
               {video.title}
             </h3>
-            <p className="text-sm text-slate-600 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               {video.campaign.name}
             </p>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 text-xs text-slate-500">
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Eye className="w-3.5 h-3.5" />
                   <span>{video.viewCount || 0}</span>
@@ -471,7 +601,7 @@ function GridView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
                   e.stopPropagation();
                   onVersionUpload(video);
                 }}
-                className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
                 title="Upload New Version"
               >
                 <Upload className="w-4 h-4" />
@@ -499,9 +629,9 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.03 }}
           whileHover={{ x: 4 }}
-          className={`group bg-white rounded-2xl p-4 shadow-sm hover:shadow-lg transition-all border-2 ${
+          className={`group glass-card p-4 hover:shadow-lg transition-all border-2 ${
             selectedVideos.includes(video.id)
-              ? 'border-indigo-500 ring-4 ring-indigo-100'
+              ? 'border-primary ring-4 ring-primary/20'
               : 'border-transparent'
           }`}
         >
@@ -511,8 +641,8 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
               onClick={() => onToggleSelect(video.id)}
               className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                 selectedVideos.includes(video.id)
-                  ? 'bg-indigo-600 border-indigo-600'
-                  : 'bg-white border-slate-300 hover:border-indigo-400'
+                  ? 'bg-primary border-primary'
+                  : 'bg-background border-[var(--glass-border)] hover:border-primary'
               }`}
             >
               {selectedVideos.includes(video.id) && (
@@ -521,7 +651,7 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
             </button>
 
             {/* Thumbnail */}
-            <div className="relative w-32 aspect-video bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
+            <div className="relative w-32 aspect-video bg-[var(--glass-hover)] rounded-xl overflow-hidden flex-shrink-0">
               <img
                 src={video.thumbnailUrl || '/placeholder.jpg'}
                 alt={video.title}
@@ -545,13 +675,13 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-gray-900 line-clamp-1 mb-1 group-hover:text-indigo-600 transition-colors">
+              <h3 className="font-bold text-foreground line-clamp-1 mb-1 group-hover:text-primary transition-colors">
                 {video.title}
               </h3>
-              <p className="text-sm text-slate-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 {video.campaign.name} • {video.uploaderName}
               </p>
-              <div className="flex items-center gap-4 text-xs text-slate-500">
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{new Date(video.createdAt).toLocaleDateString()}</span>
@@ -569,7 +699,7 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
 
             {/* Duration & Actions */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="text-sm font-mono text-slate-600">
+              <div className="text-sm font-mono text-muted-foreground">
                 {formatDuration(video.duration)}
               </div>
               
@@ -578,7 +708,7 @@ function ListView({ videos, selectedVideos, onToggleSelect, onPlay, onVersionUpl
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onVersionUpload(video)}
-                className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
                 title="Upload New Version"
               >
                 <Upload className="w-4 h-4" />

@@ -93,7 +93,7 @@ export default function CampaignDetailContent({ campaignId }) {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Campaign Not Found</h2>
           <button
-            onClick={() => router.push('/solo')}
+            onClick={() => router.push('/dashboard')}
             className="text-blue-600 hover:text-blue-700"
           >
             Go back to Home
@@ -111,7 +111,7 @@ export default function CampaignDetailContent({ campaignId }) {
           {/* Top Row - Back button and Actions */}
           <div className="flex items-center justify-between mb-4">
             <button
-              onClick={() => router.push('/solo')}
+              onClick={() => router.push('/dashboard')}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

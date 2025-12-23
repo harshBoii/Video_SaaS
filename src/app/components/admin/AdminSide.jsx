@@ -129,28 +129,28 @@ const AdminSide = () => {
   return (
     <aside className="w-60 flex-shrink-0 bg-[#fdfdfd] dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col px-4 py-6  sticky top-0 h-screen overflow-y-auto transition-colors duration-200">
       {/* Logo */}
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="px-4 pb-6"
       >
         <Logo />
-      </motion.div>
+      </motion.div> */}
 
       {/* Main Navigation */}
       <nav className="flex-grow flex flex-col gap-1">
         {/* Core Section */}
-        <NavItem icon={<FiGrid />} href="/admin" label="Dashboard" />
+        <NavItem icon={<FiGrid />} href="/dashboard" label="Dashboard" />
 
         <NavItem
           icon={<FiTarget />}
-          href="/admin/campaigns"
+          href="/campaigns"
           label="Campaigns"
         />
 
         <NavItem
           icon={<FiUsers />}
-          href="/admin/employees"
+          href="/employees"
           label="Employees"
         />
 
@@ -162,19 +162,19 @@ const AdminSide = () => {
         >
           <NavItem
             icon={<FiTarget />}
-            href="/admin/agencies"
+            href="/agencies"
             label="Agencies"
             indent={true}
           />
           <NavItem
             icon={<FiUsers />}
-            href="/admin/freelancers"
+            href="/freelancers"
             label="Freelancers"
             indent={true}
           />
           <NavItem
             icon={<FiFileText />}
-            href="/admin/contract/add"
+            href="/contract/add"
             label="Create Contract"
             indent={true}
           />
@@ -185,13 +185,13 @@ const AdminSide = () => {
 
         <NavItem
           icon={<FiShield />}
-          href="/admin/roles"
+          href="/roles"
           label="Roles & Permissions"
         />
 
         <NavItem
           icon={<FiGitBranch />}
-          href="/admin/hierarchy"
+          href="/hierarchy"
           label="Hierarchy"
         />
 
@@ -199,19 +199,19 @@ const AdminSide = () => {
 
         <NavItem
           icon={<FiShare2 />}
-          href="/admin/socials"
+          href="/socials"
           label="Social Accounts"
         />
 
         <NavItem
           icon={<FiFileText />}
-          href="/admin/posts"
+          href="/posts"
           label="Posts"
         />
 
         <NavItem
           icon={<FiFolderPlus />}
-          href="/admin/assets"
+          href="/assets"
           label="Asset Library"
         />
       </nav>
@@ -220,13 +220,13 @@ const AdminSide = () => {
       <div className="pt-4 mt-4 border-t border-gray-200 dark:border-slate-800 flex flex-col gap-1">
         <NavItem
           icon={<FiPlus />}
-          href="/admin/integrations"
+          href="/integrations"
           label="Integrations"
         />
 
         <NavItem
           icon={<FiBarChart2 />}
-          href="/admin/reports"
+          href="/reports"
           label="Analytics"
         />
       </div>
