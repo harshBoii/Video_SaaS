@@ -392,18 +392,18 @@ const SocialConnector = ({ redirectUrl }) => {
 
   if (profileStatus === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-          className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full"
+          className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full"
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen">
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -437,7 +437,8 @@ const SocialConnector = ({ redirectUrl }) => {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
+            style={{ zIndex: 99999 }}
             onClick={() => !creatingProfile && setShowModal(false)}
           >
             <motion.div
@@ -445,10 +446,10 @@ const SocialConnector = ({ redirectUrl }) => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+              className="glass-card rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
+              <div className="relative bg-gradient-to-r from-primary to-violet-500 p-8 text-white">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -490,26 +491,26 @@ const SocialConnector = ({ redirectUrl }) => {
                   className="space-y-6"
                 >
                   <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <FaCheckCircle className="text-2xl text-blue-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <FaCheckCircle className="text-2xl text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">
+                      <h3 className="font-semibold text-foreground mb-1">
                         Initialize Your Social Profile
                       </h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         To begin connecting your social media accounts, we need to create 
                         a centralized profile that will serve as your content management hub.
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
-                    <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                      <HiLightningBolt className="mr-2 text-purple-600" />
+                  <div className="bg-gradient-to-r from-primary/10 to-violet-500/10 rounded-xl p-4 border border-primary/20">
+                    <h4 className="font-medium text-foreground mb-2 flex items-center">
+                      <HiLightningBolt className="mr-2 text-violet-500" />
                       What you&apos;ll get:
                     </h4>
-                    <ul className="space-y-2 text-sm text-gray-700">
+                    <ul className="space-y-2 text-sm text-foreground">
                       <li className="flex items-start">
                         <span className="text-green-500 mr-2">✓</span>
                         Unified dashboard for all social platforms
@@ -542,7 +543,7 @@ const SocialConnector = ({ redirectUrl }) => {
                   <button
                     onClick={createProfile}
                     disabled={creatingProfile}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    className="w-full bg-gradient-to-r from-primary to-violet-500 text-primary-foreground py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
                     {creatingProfile ? (
                       <>
@@ -561,7 +562,7 @@ const SocialConnector = ({ redirectUrl }) => {
                     )}
                   </button>
 
-                  <p className="text-xs text-center text-gray-500">
+                  <p className="text-xs text-center text-muted-foreground">
                     This process is secure and takes just a moment
                   </p>
                 </motion.div>
@@ -571,38 +572,57 @@ const SocialConnector = ({ redirectUrl }) => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-5xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            Connect Your Social Accounts
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Link your social media platforms to streamline your content management and scheduling
-          </p>
+      {/* Hero Section with Gradient Background */}
+      <div className="relative overflow-hidden">
+        {/* Animated Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-primary/10 to-violet-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+        
+        {/* Floating Shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-gradient-to-br from-violet-500/20 to-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="relative max-w-6xl mx-auto px-6 pt-8 pb-12">
+          {/* Headline */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
+              <span className="bg-gradient-to-r from-blue-500 via-primary to-violet-500 bg-clip-text text-transparent">
+                Connect Your
+              </span>
+              <span className="text-foreground"> Social World</span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Link your social media platforms to streamline your content management and scheduling
+            </p>
+          </motion.div>
           
-          <div className="mt-6 flex items-center justify-center gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center justify-center gap-4 flex-wrap"
+          >
             {profile ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="inline-flex items-center space-x-2 bg-green-50 text-green-700 px-4 py-2 rounded-full border border-green-200"
+                className="inline-flex items-center space-x-2 glass-card px-5 py-2.5 rounded-full border-2 border-emerald-500/50"
               >
-                <FaCheckCircle />
-                <span className="text-sm font-medium">Profile Active: {profile.name}</span>
+                <FaCheckCircle className="text-emerald-500" />
+                <span className="text-sm font-medium text-foreground">Profile Active: {profile.name}</span>
               </motion.div>
             ) : (
               <motion.button
                 onClick={() => setShowModal(true)}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                className="inline-flex items-center space-x-2 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <FaRocket />
                 <span className="text-sm font-semibold">Initialize Social Profile</span>
@@ -615,9 +635,9 @@ const SocialConnector = ({ redirectUrl }) => {
                 disabled={deletingProfile}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: deletingProfile ? 1 : 1.05 }}
+                whileHover={{ scale: deletingProfile ? 1 : 1.05, y: deletingProfile ? 0 : -2 }}
                 whileTap={{ scale: deletingProfile ? 1 : 0.95 }}
-                className="inline-flex items-center space-x-2 bg-white text-red-600 px-4 py-2 rounded-full border border-red-300 shadow-sm hover:shadow-md hover:bg-red-50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center space-x-2 glass-card text-destructive px-4 py-2 rounded-full border border-destructive/30 shadow-sm hover:shadow-md hover:bg-destructive/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Delete Profile"
               >
                 {deletingProfile ? (
@@ -625,7 +645,7 @@ const SocialConnector = ({ redirectUrl }) => {
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                      className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full"
+                      className="w-4 h-4 border-2 border-destructive border-t-transparent rounded-full"
                     />
                     <span className="text-sm font-medium">Deleting...</span>
                   </>
@@ -637,21 +657,23 @@ const SocialConnector = ({ redirectUrl }) => {
                 )}
               </motion.button>
             )}
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {profile?.socialAccounts && profile.socialAccounts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-12 bg-white rounded-xl p-6 shadow-md"
+            className="mb-12 glass-card p-6"
           >
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Connected Accounts</h3>
+            <h3 className="text-xl font-semibold text-foreground mb-4">Connected Accounts</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {profile.socialAccounts.map((account) => (
                 <div
                   key={account.id}
-                  className="relative flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                  className="relative flex items-center space-x-3 p-3 bg-[var(--glass-hover)] rounded-xl hover:bg-[var(--glass-active)] transition-colors group"
                 >
                   {account.profilePicture && (
                     <img 
@@ -661,10 +683,10 @@ const SocialConnector = ({ redirectUrl }) => {
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {account.displayName || account.username}
                     </p>
-                    <p className="text-xs text-gray-500 capitalize">
+                    <p className="text-xs text-muted-foreground capitalize">
                       {account.platform.toLowerCase()}
                     </p>
                   </div>
@@ -741,18 +763,17 @@ const SocialConnector = ({ redirectUrl }) => {
                   <Link
                     href={''}
                     className={`
-                      w-full bg-white rounded-xl p-6 
-                      shadow-md hover:shadow-xl 
+                      w-full glass-card rounded-xl p-6 
+                      hover:shadow-2xl 
                       ${platform.hoverColor}
                       transition-all duration-300
-                      border border-gray-200
                       relative overflow-hidden
-                      ring-2 ring-green-500
+                      ring-2 ring-emerald-500
                       flex flex-col items-center
                       cursor-pointer
                     `}
                   >
-                    <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                    <div className="absolute top-2 right-2 bg-emerald-500 rounded-full p-1">
                       <FaCheckCircle className="text-white text-sm" />
                     </div>
 
@@ -785,7 +806,6 @@ const SocialConnector = ({ redirectUrl }) => {
                       absolute inset-0 bg-gradient-to-r ${platform.color} 
                       opacity-0 group-hover:opacity-5 transition-opacity duration-300
                     `} />
-
                     <div className="relative z-10 flex flex-col items-center space-y-4 w-full">
                       <motion.div
                         whileHover={{ rotate: [0, -10, 10, -10, 0] }}
@@ -795,18 +815,17 @@ const SocialConnector = ({ redirectUrl }) => {
                           bg-gradient-to-r ${platform.color}
                           flex items-center justify-center
                           shadow-lg relative
-                        `}
-                      >
+                        `}>
                         <Icon className="text-white text-3xl" />
                       </motion.div>
 
                       <div className="text-center">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                        <h3 className="text-xl font-semibold text-foreground mb-1">
                           {platform.name}
                         </h3>
                         
                         <div className="flex items-center justify-center space-x-2">
-                          <span className="text-sm font-medium text-green-600">
+                          <span className="text-sm font-medium text-emerald-600">
                             Connected
                           </span>
                         </div>
@@ -838,11 +857,10 @@ const SocialConnector = ({ redirectUrl }) => {
                     onClick={() => handleConnect(platform.value)}
                     disabled={isConnecting || profileStatus !== 'ready'}
                     className={`
-                      w-full bg-white rounded-xl p-6 
-                      shadow-md hover:shadow-xl 
+                      w-full glass-card rounded-xl p-6 
+                      hover:shadow-2xl 
                       ${platform.hoverColor}
                       transition-all duration-300
-                      border border-gray-200
                       disabled:opacity-70 disabled:cursor-not-allowed
                       relative overflow-hidden
                     `}
@@ -851,7 +869,6 @@ const SocialConnector = ({ redirectUrl }) => {
                       absolute inset-0 bg-gradient-to-r ${platform.color} 
                       opacity-0 group-hover:opacity-5 transition-opacity duration-300
                     `} />
-
                     <div className="relative z-10 flex flex-col items-center space-y-4">
                       <motion.div
                         whileHover={{ rotate: [0, -10, 10, -10, 0] }}
@@ -867,7 +884,7 @@ const SocialConnector = ({ redirectUrl }) => {
                       </motion.div>
 
                       <div className="text-center">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                        <h3 className="text-xl font-semibold text-foreground mb-1">
                           {platform.name}
                         </h3>
                         

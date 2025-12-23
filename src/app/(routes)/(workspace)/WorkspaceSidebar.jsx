@@ -650,6 +650,7 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const isAdmin = initialUserType === 'admin';
@@ -730,8 +731,141 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
     return true;
   });
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   return (
-    <div className="flex h-screen sticky top-0">
+    <>
+      {/* Mobile Header Bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 glass-sidebar flex items-center justify-between px-4 z-50">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setMobileMenuOpen(true)}
+          className="p-2 rounded-lg hover:bg-[var(--glass-hover)] text-foreground"
+        >
+          <FiGrid className="w-5 h-5" />
+        </motion.button>
+
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-xs">
+            {user?.company_name?.charAt(0) || 'C'}
+          </div>
+          <span className="text-sm font-semibold text-foreground">{user?.company_name || 'Workspace'}</span>
+        </div>
+
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setSearchModalOpen(true)}
+          className="p-2 rounded-lg hover:bg-[var(--glass-hover)] text-muted-foreground"
+        >
+          <FiSearch className="w-5 h-5" />
+        </motion.button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Slide-out Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="md:hidden fixed top-0 left-0 bottom-0 w-[85%] max-w-[320px] glass-sidebar z-50 flex flex-col"
+          >
+            {/* Mobile Menu Header */}
+            <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-sm">
+                  {user?.company_name?.charAt(0) || 'C'}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{user?.company_name || 'Workspace'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-lg hover:bg-[var(--glass-hover)] text-muted-foreground"
+              >
+                <FiX className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            {/* Mobile Section Tabs */}
+            <div className="p-3 border-b border-[var(--glass-border)]">
+              <div className="flex flex-wrap gap-2">
+                {visibleSections.map((section) => (
+                  <motion.button
+                    key={section.id}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveSection(section.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      activeSection === section.id
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-[var(--glass-hover)] hover:text-foreground'
+                    }`}
+                  >
+                    <section.icon className="w-4 h-4" />
+                    <span>{section.label}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile Navigation Content */}
+            <nav className="flex-1 overflow-y-auto px-3 py-3 glass-scrollbar">
+              <SecondarySidebarContent
+                activeSection={activeSection}
+                user={user}
+                viewMode={viewMode}
+                hasPermission={hasPermission}
+                hasAnyPermission={hasAnyPermission}
+                campaigns={campaigns}
+                campaignsLoading={campaignsLoading}
+              />
+            </nav>
+
+            {/* Mobile Menu Footer */}
+            <div className="p-3 border-t border-[var(--glass-border)] space-y-2">
+              <Link href="/integrations" onClick={() => setMobileMenuOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--glass-hover)] transition-colors">
+                  <SiGitconnected className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm text-foreground">Integrations</span>
+                </div>
+              </Link>
+              <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--glass-hover)] transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-medium text-xs">
+                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{user?.firstName} {user?.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{user?.role?.name?.replace(/_/g, ' ') || 'User'}</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    <div className="hidden md:flex h-screen sticky top-0">
       {/* PRIMARY SIDEBAR - Narrow icon bar */}
       <aside className="w-16 flex-shrink-0 glass-sidebar flex flex-col items-center py-4 z-20">
         {/* Workspace Avatar / Profile */}
@@ -888,6 +1022,19 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
         )}
       </AnimatePresence>
     </div>
+
+    {/* Search Modal for Mobile (outside the hidden div) */}
+    <div className="md:hidden">
+      <AnimatePresence>
+        {searchModalOpen && (
+          <SearchModal
+            isOpen={searchModalOpen}
+            onClose={() => setSearchModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+    </>
   );
 };
 

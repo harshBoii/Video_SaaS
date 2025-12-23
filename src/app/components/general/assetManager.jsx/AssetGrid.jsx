@@ -1,5 +1,6 @@
 // components/asset-library/AssetGrid.jsx
 import { motion } from 'framer-motion';
+import { FolderOpen } from 'lucide-react';
 import AssetCard from './AssetCard';
 
 export default function AssetGrid({ 
@@ -15,8 +16,12 @@ export default function AssetGrid({
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {[...Array(8)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-white rounded-xl h-72 shadow-sm" />
+          <div key={i} className="glass-card animate-pulse">
+            <div className="aspect-video bg-[var(--glass-hover)] rounded-t-2xl" />
+            <div className="p-4 space-y-3">
+              <div className="h-5 bg-[var(--glass-hover)] rounded-lg w-3/4" />
+              <div className="h-4 bg-[var(--glass-hover)] rounded-lg w-1/2" />
+            </div>
           </div>
         ))}
       </div>
@@ -30,13 +35,11 @@ export default function AssetGrid({
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center py-20 px-4"
       >
-        <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-6">
-          <svg className="w-12 h-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
+        <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-violet-500/20 rounded-2xl flex items-center justify-center mb-6">
+          <FolderOpen className="w-12 h-12 text-primary" />
         </div>
-        <h3 className="text-xl font-semibold text-slate-800 mb-2">No assets found</h3>
-        <p className="text-slate-600 text-center max-w-md">
+        <h3 className="text-xl font-semibold text-foreground mb-2">No assets found</h3>
+        <p className="text-muted-foreground text-center max-w-md">
           Try adjusting your filters or upload new assets to get started
         </p>
       </motion.div>

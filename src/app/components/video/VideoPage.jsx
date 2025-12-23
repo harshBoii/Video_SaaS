@@ -1,12 +1,22 @@
 'use client';
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Grid, List, Search, Filter, Trash2, Share2, Play, 
   Check, X, Loader2, Download, Eye, MessageSquare,
-  Calendar, User, LayoutGrid, LayoutList, ChevronDown,Upload, Layers
+  Calendar, User, LayoutGrid, LayoutList, ChevronDown, Upload, Layers,
+  Video, Clock, Star, FolderOpen, SlidersHorizontal, MoreHorizontal,
+  Sparkles, TrendingUp, Film
 } from 'lucide-react';
 import SingleVideoVersionUploadModal from './VersionUploadModal';
+
+// Quick action categories for Canva-style layout
+const QUICK_ACTIONS = [
+  { id: 'all', label: 'All Videos', icon: Film, color: 'from-violet-500 to-purple-600' },
+  { id: 'recent', label: 'Recent', icon: Clock, color: 'from-blue-500 to-cyan-600' },
+  { id: 'popular', label: 'Popular', icon: TrendingUp, color: 'from-rose-500 to-pink-600' },
+  { id: 'starred', label: 'Starred', icon: Star, color: 'from-amber-500 to-orange-600' },
+];
 const CampaignPermissionsProvider = lazy(() =>
   import('@/app/context/permissionContext').then(m => ({ default: m.CampaignPermissionsProvider }))
 );
@@ -135,66 +145,198 @@ export default function VideosPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Stats for display
+  const videoStats = useMemo(() => ({
+    total: pagination.total || videos.length,
+    campaigns: campaigns.length
+  }), [pagination.total, videos.length, campaigns.length]);
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="glass-card rounded-none border-x-0 border-t-0 sticky top-0 z-40"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-black text-foreground">Videos</h1>
-            <div className="flex items-center gap-3">
-              {/* View Toggle */}
-              <div className="flex items-center bg-[var(--glass-hover)] rounded-xl p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-background shadow-sm text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <LayoutGrid className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all ${
-                    viewMode === 'list'
-                      ? 'bg-background shadow-sm text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <LayoutList className="w-5 h-5" />
+      {/* Hero Section with Gradient Background */}
+      <div className="relative overflow-hidden">
+        {/* Animated Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/20 via-primary/10 to-violet-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+        
+        {/* Floating Shapes */}
+        <div className="absolute top-10 right-20 w-64 h-64 bg-gradient-to-br from-primary/30 to-rose-500/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-10 w-80 h-80 bg-gradient-to-br from-violet-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="relative max-w-6xl mx-auto px-6 pt-8 pb-12">
+          {/* Headline */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
+              <span className="bg-gradient-to-r from-rose-500 via-primary to-violet-500 bg-clip-text text-transparent">
+                Your Video
+              </span>
+              <span className="text-foreground"> Library</span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Browse, organize, and share your video content
+            </p>
+          </motion.div>
+
+          {/* Tab Navigation */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center justify-center gap-2 mb-8 flex-wrap"
+          >
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, sortBy: 'createdAt', sortOrder: 'desc' }))}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                filters.sortBy === 'createdAt' && filters.sortOrder === 'desc'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'glass-card hover:bg-[var(--glass-hover)] text-foreground'
+              }`}
+            >
+              <Film className="w-4 h-4 inline-block mr-2" />
+              All Videos
+            </button>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, sortBy: 'viewCount', sortOrder: 'desc' }))}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                filters.sortBy === 'viewCount'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'glass-card hover:bg-[var(--glass-hover)] text-foreground'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 inline-block mr-2" />
+              Popular
+            </button>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, sortBy: 'duration', sortOrder: 'desc' }))}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                filters.sortBy === 'duration'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'glass-card hover:bg-[var(--glass-hover)] text-foreground'
+              }`}
+            >
+              <Clock className="w-4 h-4 inline-block mr-2" />
+              By Duration
+            </button>
+          </motion.div>
+
+          {/* Search Bar - Canva Style */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="max-w-3xl mx-auto mb-10"
+          >
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-rose-500/20 via-primary/20 to-violet-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative glass-card rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Search your videos..."
+                  className="w-full pl-14 pr-14 py-5 bg-transparent text-lg text-foreground placeholder:text-muted-foreground outline-none rounded-2xl"
+                />
+                <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-[var(--glass-hover)] rounded-xl transition-colors">
+                  <SlidersHorizontal className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Bulk Actions */}
-              <AnimatePresence>
-                {selectedVideos.length > 0 && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl border border-primary/20"
-                  >
-                    <span className="text-sm font-semibold text-primary">
-                      {selectedVideos.length} selected
-                    </span>
-                    <button
-                      onClick={() => setSelectedVideos([])}
-                      className="p-1 hover:bg-primary/20 rounded-lg transition-colors"
-                    >
-                      <X className="w-4 h-4 text-primary" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          {/* Quick Action Icons Row */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center justify-center gap-4 md:gap-8 flex-wrap"
+          >
+            {QUICK_ACTIONS.map((item) => (
+              <motion.button
+                key={item.id}
+                whileHover={{ scale: 1.05, y: -4 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (item.id === 'all') setFilters(prev => ({ ...prev, sortBy: 'createdAt', sortOrder: 'desc' }));
+                  else if (item.id === 'recent') setFilters(prev => ({ ...prev, sortBy: 'createdAt', sortOrder: 'desc' }));
+                  else if (item.id === 'popular') setFilters(prev => ({ ...prev, sortBy: 'viewCount', sortOrder: 'desc' }));
+                }}
+                className="flex flex-col items-center gap-2 group"
+              >
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200`}>
+                  <item.icon className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <span className="text-xs md:text-sm font-medium text-foreground">{item.label}</span>
+              </motion.button>
+            ))}
+            
+            {/* Upload New Version */}
+            <motion.button
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowVersionModal(true)}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
+                <Upload className="w-7 h-7 md:w-8 md:h-8 text-white" />
+              </div>
+              <span className="text-xs md:text-sm font-medium text-foreground">Upload</span>
+            </motion.button>
+            
+            {/* More Options */}
+            <motion.button
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-[var(--glass-hover)] border-2 border-dashed border-[var(--glass-border)] flex items-center justify-center group-hover:border-primary/50 transition-all duration-200">
+                <MoreHorizontal className="w-7 h-7 md:w-8 md:h-8 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <span className="text-xs md:text-sm font-medium text-foreground">More</span>
+            </motion.button>
+          </motion.div>
+        </div>
+      </div>
 
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Section Header with Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-wrap items-center justify-between gap-4 mb-6"
+        >
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Your Videos</h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              {videoStats.total} videos across {videoStats.campaigns} campaigns
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Bulk Actions */}
+            <AnimatePresence>
               {selectedVideos.length > 0 && (
-                <>
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl border border-primary/20"
+                >
+                  <span className="text-sm font-semibold text-primary">
+                    {selectedVideos.length} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedVideos([])}
+                    className="p-1 hover:bg-primary/20 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4 text-primary" />
+                  </button>
                   <Suspense fallback={<Loader2 className="w-5 h-5 animate-spin" />}>
                     <ShareCollectionButton
                       campaignId={filters.campaignId || videos[0]?.campaignId}
@@ -205,63 +347,53 @@ export default function VideosPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleBulkDelete}
-                    className="p-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-xl transition-colors border border-destructive/20"
+                    className="p-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4" />
                   </motion.button>
-                </>
+                </motion.div>
               )}
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search videos..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[var(--glass-hover)] border border-[var(--glass-border)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-foreground placeholder:text-muted-foreground"
-                />
-              </div>
-            </div>
+            </AnimatePresence>
 
             {/* Campaign Filter */}
             <select
               value={filters.campaignId}
               onChange={(e) => setFilters(prev => ({ ...prev, campaignId: e.target.value }))}
-              className="px-4 py-2.5 bg-[var(--glass-hover)] border border-[var(--glass-border)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-foreground"
+              className="px-4 py-2.5 bg-[var(--glass-hover)] border border-[var(--glass-border)] rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all text-foreground"
             >
               <option value="">All Campaigns</option>
               {campaigns.map(campaign => (
                 <option key={campaign.id} value={campaign.id}>
-                  {campaign.name} ({campaign.videoCount})
+                  {campaign.name}
                 </option>
               ))}
             </select>
 
-            {/* Sort */}
-            <select
-              value={`${filters.sortBy}-${filters.sortOrder}`}
-              onChange={(e) => {
-                const [sortBy, sortOrder] = e.target.value.split('-');
-                setFilters(prev => ({ ...prev, sortBy, sortOrder }));
-              }}
-              className="px-4 py-2.5 bg-[var(--glass-hover)] border border-[var(--glass-border)] rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-foreground"
-            >
-              <option value="createdAt-desc">Newest First</option>
-              <option value="createdAt-asc">Oldest First</option>
-              <option value="title-asc">Title A-Z</option>
-              <option value="title-desc">Title Z-A</option>
-              <option value="duration-desc">Longest</option>
-              <option value="duration-asc">Shortest</option>
-            </select>
+            {/* View Toggle */}
+            <div className="flex items-center bg-[var(--glass-hover)] rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-lg transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-background shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <LayoutGrid className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-lg transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-background shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <LayoutList className="w-5 h-5" />
+              </button>
+            </div>
 
-            {selectedVideos.length < videos.length && (
+            {selectedVideos.length < videos.length && videos.length > 0 && (
               <button
                 onClick={selectAll}
                 className="px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-xl transition-colors border border-primary/20"
@@ -270,11 +402,9 @@ export default function VideosPage() {
               </button>
             )}
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Video Grid/List */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (

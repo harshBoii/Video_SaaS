@@ -69,7 +69,7 @@ export default function AuthPage() {
         return;
       }
 
-      router.push(data.redirect);
+      router.push('/campaign');
     } catch (err) {
       console.error(err);
       setError("Something went wrong, please try again.");

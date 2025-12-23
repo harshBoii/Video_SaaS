@@ -1,8 +1,9 @@
 // components/asset-library/UploadButton.jsx
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, X, ChevronRight, ChevronLeft, Building2, FolderOpen, Loader2 } from 'lucide-react';
 
-export default function UploadButton({ onUploadComplete, campaigns, campaignsLoading }) {
+export default function UploadButton({ onUploadComplete, campaigns, campaignsLoading, variant = 'default' }) {
   const [showModal, setShowModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [uploadType, setUploadType] = useState(null); // 'company' or 'campaign'
@@ -170,32 +171,79 @@ export default function UploadButton({ onUploadComplete, campaigns, campaignsLoa
     }
   };
 
+  // Canva-style icon button for category row
+  if (variant === 'canva') {
+    return (
+      <>
+        <motion.button
+          whileHover={{ scale: 1.05, y: -4 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleUploadClick}
+          className="flex flex-col items-center gap-2 group"
+        >
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
+            <Upload className="w-7 h-7 md:w-8 md:h-8 text-white" />
+          </div>
+          <span className="text-xs md:text-sm font-medium text-foreground">Upload</span>
+        </motion.button>
+
+        {/* Upload Progress Indicator */}
+        {uploadingFile && (
+          <div className="fixed bottom-6 right-6 glass-card p-4 w-80 z-50 shadow-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-foreground truncate mr-2">
+                Uploading {uploadingFile.name}
+              </span>
+              <span className="text-sm text-muted-foreground font-medium">{uploadProgress}%</span>
+            </div>
+            <div className="w-full bg-[var(--glass-hover)] rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-primary to-violet-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Upload Modal */}
+        <UploadModal 
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+          uploadType={uploadType}
+          handleUploadTypeSelect={handleUploadTypeSelect}
+          campaigns={campaigns}
+          campaignsLoading={campaignsLoading}
+          handleCampaignSelect={handleCampaignSelect}
+          triggerFileInput={triggerFileInput}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleUploadClick}
-        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-semibold shadow-lg transition-all flex items-center gap-2"
+        className="px-6 py-3 bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 text-primary-foreground rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
+        <Upload className="w-5 h-5" />
         Upload Asset
       </motion.button>
 
       {/* Upload Progress Indicator */}
       {uploadingFile && (
-        <div className="fixed bottom-6 right-6 bg-white rounded-lg shadow-xl p-4 w-80 z-50">
+        <div className="fixed bottom-6 right-6 glass-card p-4 w-80 z-50 shadow-2xl">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-slate-900 truncate mr-2">
+            <span className="text-sm font-semibold text-foreground truncate mr-2">
               Uploading {uploadingFile.name}
             </span>
-            <span className="text-sm text-slate-600 font-medium">{uploadProgress}%</span>
+            <span className="text-sm text-muted-foreground font-medium">{uploadProgress}%</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2">
+          <div className="w-full bg-[var(--glass-hover)] rounded-full h-2">
             <div
-              className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-primary to-violet-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -203,170 +251,171 @@ export default function UploadButton({ onUploadComplete, campaigns, campaignsLoa
       )}
 
       {/* Upload Modal */}
-      <AnimatePresence>
-        {showModal && (
+      <UploadModal 
+        showModal={showModal}
+        handleCloseModal={handleCloseModal}
+        uploadType={uploadType}
+        handleUploadTypeSelect={handleUploadTypeSelect}
+        campaigns={campaigns}
+        campaignsLoading={campaignsLoading}
+        handleCampaignSelect={handleCampaignSelect}
+        triggerFileInput={triggerFileInput}
+      />
+    </>
+  );
+}
+
+// Extracted Modal Component for reuse
+function UploadModal({ showModal, handleCloseModal, uploadType, handleUploadTypeSelect, campaigns, campaignsLoading, handleCampaignSelect, triggerFileInput }) {
+  return (
+    <AnimatePresence>
+      {showModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={handleCloseModal}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={handleCloseModal}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="glass-card rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden"
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden"
-            >
-              {/* Header */}
-              <div className="p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900">Upload Asset</h2>
+            {/* Header */}
+            <div className="p-6 border-b border-[var(--glass-border)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-foreground">Upload Asset</h2>
+                <button
+                  onClick={handleCloseModal}
+                  className="p-2 hover:bg-[var(--glass-hover)] rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              <p className="text-muted-foreground mt-2">Choose where to upload your asset</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)]">
+              {!uploadType ? (
+                <div className="space-y-4">
+                  {/* Company Asset Option */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleUploadTypeSelect('company')}
+                    className="w-full p-5 glass-card hover:border-primary/50 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                        <Building2 className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground text-lg mb-1">Company Asset</h3>
+                        <p className="text-sm text-muted-foreground">Available to all campaigns</p>
+                      </div>
+                      <ChevronRight className="w-6 h-6 text-muted-foreground group-hover:text-primary flex-shrink-0 transition-colors" />
+                    </div>
+                  </motion.button>
+
+                  {/* Campaign Asset Option */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleUploadTypeSelect('campaign')}
+                    className="w-full p-5 glass-card hover:border-primary/50 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                        <FolderOpen className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground text-lg mb-1">Add to Campaign</h3>
+                        <p className="text-sm text-muted-foreground">Upload to specific campaign</p>
+                      </div>
+                      <ChevronRight className="w-6 h-6 text-muted-foreground group-hover:text-primary flex-shrink-0 transition-colors" />
+                    </div>
+                  </motion.button>
+                </div>
+              ) : uploadType === 'campaign' ? (
+                <div className="space-y-4">
+                  <button
+                    onClick={() => handleUploadTypeSelect(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 -mt-2 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back
+                  </button>
+
+                  <h3 className="font-semibold text-foreground text-lg mb-4">Select Campaign</h3>
+
+                  {campaignsLoading ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3 text-primary" />
+                      <p className="text-sm">Loading campaigns...</p>
+                    </div>
+                  ) : campaigns.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FolderOpen className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm font-medium">No campaigns available</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+                      {campaigns.map((campaign) => (
+                        <motion.button
+                          key={campaign.id}
+                          whileHover={{ scale: 0.98 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            handleCampaignSelect(campaign.id);
+                            triggerFileInput();
+                          }}
+                          className="w-full p-4 glass-card hover:border-primary/50 transition-all text-left"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-foreground truncate mb-1">{campaign.name}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                {campaign.videoCount || 0} assets
+                              </p>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            {uploadType === 'company' && (
+              <div className="p-6 border-t border-[var(--glass-border)] bg-[var(--glass-hover)]">
+                <div className="flex gap-3">
                   <button
                     onClick={handleCloseModal}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="flex-1 px-5 py-2.5 border border-[var(--glass-border)] rounded-xl text-foreground font-medium hover:bg-[var(--glass-active)] transition-colors"
                   >
-                    <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={triggerFileInput}
+                    className="flex-1 px-5 py-2.5 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground rounded-xl hover:from-primary/90 hover:to-violet-500/90 transition-all font-semibold shadow-lg hover:shadow-xl"
+                  >
+                    Choose File
                   </button>
                 </div>
-                <p className="text-slate-600 mt-2">Choose where to upload your asset</p>
               </div>
-
-              {/* Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)]">
-                {!uploadType ? (
-                  <div className="space-y-4">
-                    {/* Company Asset Option */}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleUploadTypeSelect('company')}
-                      className="w-full p-5 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg flex items-center justify-center group-hover:from-blue-100 group-hover:to-blue-200 transition-colors flex-shrink-0">
-                          <svg className="w-7 h-7 text-amber-600 group-hover:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-900 text-lg mb-1">Company Asset</h3>
-                          <p className="text-sm text-slate-600">Available to all campaigns</p>
-                        </div>
-                        <svg className="w-6 h-6 text-slate-400 group-hover:text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </motion.button>
-
-                    {/* Campaign Asset Option */}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleUploadTypeSelect('campaign')}
-                      className="w-full p-5 border-2 border-slate-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-colors flex-shrink-0">
-                          <svg className="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-900 text-lg mb-1">Add to Campaign</h3>
-                          <p className="text-sm text-slate-600">Upload to specific campaign</p>
-                        </div>
-                        <svg className="w-6 h-6 text-slate-400 group-hover:text-purple-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </motion.button>
-                  </div>
-                ) : uploadType === 'campaign' ? (
-                  <div className="space-y-4">
-                    <button
-                      onClick={() => handleUploadTypeSelect(null)}
-                      className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 mb-4 -mt-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      Back
-                    </button>
-
-                    <h3 className="font-semibold text-slate-900 text-lg mb-4">Select Campaign</h3>
-
-                    {campaignsLoading ? (
-                      <div className="text-center py-12 text-slate-500">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                        <p className="text-sm">Loading campaigns...</p>
-                      </div>
-                    ) : campaigns.length === 0 ? (
-                      <div className="text-center py-12 text-slate-500">
-                        <svg className="w-16 h-16 mx-auto mb-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                        </svg>
-                        <p className="text-sm font-medium">No campaigns available</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                        {campaigns.map((campaign) => (
-                          <motion.button
-                            key={campaign.id}
-                            whileHover={{ scale: 0.96 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                              handleCampaignSelect(campaign.id);
-                              triggerFileInput();
-                            }}
-                            className="w-full p-4 border-2 border-slate-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-slate-900 truncate mb-1">{campaign.name}</h4>
-                                <p className="text-xs text-slate-500">
-                                  {campaign.videoCount || 0} assets
-                                </p>
-                              </div>
-                              <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Footer */}
-              {uploadType === 'company' && (
-                <div className="p-6 border-t border-slate-200 bg-slate-50">
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleCloseModal}
-                      className="flex-1 px-5 py-2.5 border-2 border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white hover:border-slate-400 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={triggerFileInput}
-                      className="flex-1 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-md hover:shadow-lg"
-                    >
-                      Choose File
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
+            )}
           </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

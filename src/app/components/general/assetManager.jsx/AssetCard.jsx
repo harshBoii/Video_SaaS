@@ -1,6 +1,7 @@
 // components/asset-library/AssetCard.jsx
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { Play, FileText, Image, Eye, FolderOpen, Building2 } from 'lucide-react';
 import Badge from './ui/badge';
 
 export default function AssetCard({ 
@@ -65,24 +66,26 @@ export default function AssetCard({
     return (
       <motion.div
         variants={cardVariants}
-        whileHover={{ scale: 1.01 }}
-        className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow"
+        whileHover={{ scale: 1.01, x: 4 }}
+        className="glass-card p-4 hover:shadow-lg transition-all group"
       >
         <div className="flex items-center gap-4">
           {/* Thumbnail */}
           <div 
-            className="w-32 h-20 bg-gradient-to-br from-slate-200 to-slate-300 rounded-lg overflow-hidden shrink-0 relative cursor-pointer"
+            className="w-32 h-20 bg-[var(--glass-hover)] rounded-xl overflow-hidden shrink-0 relative cursor-pointer"
             onClick={handleAssetClick}
           >
             {asset.thumbnailUrl ? (
-              <img src={asset.thumbnailUrl} alt={asset.title} className="w-full h-full object-cover" />
+              <img src={asset.thumbnailUrl} alt={asset.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                {getAssetIcon()}
+                {isVideo ? <Play className="w-8 h-8 text-muted-foreground" /> : 
+                 isImage ? <Image className="w-8 h-8 text-muted-foreground" /> :
+                 <FileText className="w-8 h-8 text-muted-foreground" />}
               </div>
             )}
             {isVideo && asset.duration && (
-              <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+              <div className="absolute bottom-1 right-1 bg-black/70 backdrop-blur-sm text-white text-xs px-1.5 py-0.5 rounded-md font-mono">
                 {formatDuration(asset.duration)}
               </div>
             )}
@@ -91,7 +94,7 @@ export default function AssetCard({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <h3 
-              className="font-semibold text-slate-900 truncate mb-1 cursor-pointer hover:text-blue-600 transition-colors"
+              className="font-semibold text-foreground truncate mb-1 cursor-pointer group-hover:text-primary transition-colors"
               onClick={handleAssetClick}
             >
               {asset.title}
@@ -115,17 +118,14 @@ export default function AssetCard({
             {isAdmin && !asset.campaignId && (
               <button
                 onClick={() => onVisibilityClick(asset)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-[var(--glass-hover)] rounded-xl transition-colors"
                 title="Manage Visibility"
               >
-                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+                <Eye className="w-5 h-5 text-muted-foreground" />
               </button>
             )}
             <button
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-colors font-medium"
               onClick={handleAssetClick}
             >
               View
@@ -143,26 +143,20 @@ export default function AssetCard({
       whileHover={{ y: -8, scale: 1.02 }}
       onHoverStart={() => setShowActions(true)}
       onHoverEnd={() => setShowActions(false)}
-      className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow overflow-hidden group"
+      className="glass-card hover:shadow-2xl transition-all overflow-hidden group"
     >
       {/* Thumbnail */}
       <div 
-        className="relative aspect-video bg-gradient-to-br from-slate-200 to-slate-300 overflow-hidden cursor-pointer"
+        className="relative aspect-video bg-[var(--glass-hover)] overflow-hidden cursor-pointer"
         onClick={handleAssetClick}
       >
         {asset.thumbnailUrl ? (
-          <img src={asset.thumbnailUrl} alt={asset.title} className="w-full h-full object-cover" />
+          <img src={asset.thumbnailUrl} alt={asset.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            {isVideo ? (
-              <svg className="w-16 h-16 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-              </svg>
-            ) : (
-              <svg className="w-16 h-16 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-              </svg>
-            )}
+            {isVideo ? <Play className="w-16 h-16 text-muted-foreground/50" /> : 
+             isImage ? <Image className="w-16 h-16 text-muted-foreground/50" /> :
+             <FileText className="w-16 h-16 text-muted-foreground/50" />}
           </div>
         )}
 
@@ -170,11 +164,11 @@ export default function AssetCard({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: showActions ? 1 : 0 }}
-          className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2"
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center gap-2"
         >
           <button
             onClick={handleAssetClick}
-            className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-lg font-medium transition-colors"
+            className="px-4 py-2 bg-white/90 hover:bg-white text-foreground rounded-xl font-medium transition-colors shadow-lg"
           >
             View
           </button>
@@ -184,20 +178,17 @@ export default function AssetCard({
                 e.stopPropagation();
                 onVisibilityClick(asset);
               }}
-              className="p-2 bg-white hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 bg-white/90 hover:bg-white rounded-xl transition-colors shadow-lg"
               title="Manage Visibility"
             >
-              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
+              <Eye className="w-5 h-5 text-foreground" />
             </button>
           )}
         </motion.div>
 
         {/* Duration Badge */}
         {isVideo && asset.duration && (
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg font-mono">
             {formatDuration(asset.duration)}
           </div>
         )}
@@ -206,7 +197,7 @@ export default function AssetCard({
       {/* Content */}
       <div className="p-4">
         <h3 
-          className="font-semibold text-slate-900 mb-2 truncate cursor-pointer hover:text-blue-600 transition-colors" 
+          className="font-semibold text-foreground mb-2 truncate cursor-pointer group-hover:text-primary transition-colors" 
           title={asset.title}
           onClick={handleAssetClick}
         >
@@ -221,22 +212,18 @@ export default function AssetCard({
         </div>
 
         {asset.campaign ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <FolderOpen className="w-4 h-4" />
             <span className="truncate">{asset.campaign.name}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm text-amber-600">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+            <Building2 className="w-4 h-4" />
             <span className="truncate">Company Asset</span>
           </div>
         )}
 
-        <div className="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-500">
+        <div className="mt-3 pt-3 border-t border-[var(--glass-border)] text-xs text-muted-foreground">
           {new Date(asset.createdAt).toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric', 
