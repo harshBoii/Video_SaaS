@@ -34,6 +34,7 @@ import {
   FiLogOut,
   FiUserPlus,
   FiGrid,
+  FiFolder,
 } from 'react-icons/fi';
 import {
   HiOutlineSwitchHorizontal,
@@ -464,27 +465,123 @@ const WorkspaceProfileDropdown = ({ user, isOpen, onClose, dropdownRef }) => {
 };
 
 /* ============================================
-   Campaign Item for Secondary Sidebar
+   Campaign Item for Secondary Sidebar - Notion Style
 ============================================ */
-const CampaignItem = ({ campaign, isActive }) => (
-  <Link href={`/campaign/${campaign.id}`}>
-    <motion.div
-      whileHover={{ x: 2 }}
-      whileTap={{ scale: 0.98 }}
-      className={`
-        flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer
-        text-sm transition-all duration-200
-        ${isActive
-          ? 'glass-button text-foreground font-medium'
-          : 'text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
-        }
-      `}
-    >
-      <span className="w-2 h-2 rounded-full bg-primary/60" />
-      <span className="flex-1 truncate">{campaign.name}</span>
-    </motion.div>
-  </Link>
-);
+const CampaignItem = ({ campaign, isActive }) => {
+  const pathname = usePathname();
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Check if any sub-page is active
+  const isSubPageActive = pathname.startsWith(`/campaign/${campaign.id}`) || 
+                          pathname.startsWith(`/docs/${campaign.id}`) ||
+                          pathname.startsWith(`/assets/${campaign.id}`) ||
+                          pathname.startsWith(`/ads/${campaign.id}`);
+  
+  // Auto-expand if sub-page is active
+  useEffect(() => {
+    if (isSubPageActive) {
+      setIsExpanded(true);
+    }
+  }, [isSubPageActive]);
+
+  const subPages = [
+    { 
+      icon: FiFileText, 
+      label: 'Campaign Details', 
+      href: `/docs/${campaign.id}`,
+      isActive: pathname === `/docs/${campaign.id}`
+    },
+    { 
+      icon: FiFolder, 
+      label: 'Assets', 
+      href: `/assets/${campaign.id}`,
+      isActive: pathname === `/assets/${campaign.id}`
+    },
+    { 
+      icon: FiTarget, 
+      label: 'Ads', 
+      href: `/ads/${campaign.id}`,
+      isActive: pathname === `/ads/${campaign.id}`
+    },
+  ];
+
+  return (
+    <div className="space-y-0.5">
+      {/* Main Campaign Item */}
+      <div className="flex items-center gap-1">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }}
+          className="p-1 hover:bg-[var(--glass-hover)] rounded transition-colors"
+        >
+          <motion.div
+            animate={{ rotate: isExpanded ? 90 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <FiChevronRight className="w-3 h-3 text-muted-foreground" />
+          </motion.div>
+        </motion.button>
+        
+        <Link href={`/campaign/${campaign.id}`} className="flex-1">
+          <motion.div
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+            className={`
+              flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer
+              text-sm transition-all duration-200
+              ${pathname === `/campaign/${campaign.id}`
+                ? 'glass-button text-foreground font-medium'
+                : 'text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
+              }
+            `}
+          >
+            <span className="w-2 h-2 rounded-full bg-primary/60" />
+            <span className="flex-1 truncate">{campaign.name}</span>
+          </motion.div>
+        </Link>
+      </div>
+
+      {/* Expandable Sub-Pages */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden ml-4 pl-3 border-l border-[var(--glass-border)]"
+          >
+            <div className="space-y-0.5 py-1">
+              {subPages.map((subPage) => (
+                <Link key={subPage.href} href={subPage.href}>
+                  <motion.div
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`
+                      flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer
+                      text-xs transition-all duration-200
+                      ${subPage.isActive
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
+                      }
+                    `}
+                  >
+                    <subPage.icon className="w-3.5 h-3.5" />
+                    <span className="flex-1 truncate">{subPage.label}</span>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 /* ============================================
    Secondary Sidebar Content - Dynamic per section
