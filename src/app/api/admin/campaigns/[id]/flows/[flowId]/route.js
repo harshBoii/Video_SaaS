@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyJWT } from '@/app/lib/auth';
+import { requireAuth } from '@/app/lib/auth';
 
 export async function DELETE(request, { params }) {
   try {
@@ -9,7 +10,10 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { campaignId, flowId } = params;
+    requireAuth(employee)
+
+    const { id:campaignId, flowId } = await params;
+
 
     // Verify campaign exists and user has access
     const campaign = await prisma.campaign.findUnique({

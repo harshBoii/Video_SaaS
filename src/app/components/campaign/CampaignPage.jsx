@@ -578,7 +578,7 @@ export default function CampaignPage({ campaignId }) {
               <CampaignTeam campaignId={campaignId} />
             )}
             {activeTab === 'flows' && (
-              <CampaignFlows campaignId={campaignId} />
+              <CampaignFlows campaignId={campaignId} permissions={permissions} />
             )}
             {activeTab === 'calendar' && (
               <CampaignCalendar campaignId={campaignId} />

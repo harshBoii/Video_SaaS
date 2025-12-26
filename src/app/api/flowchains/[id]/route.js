@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error }, { status });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const flowChain = await prisma.flowChain.findUnique({
       where: { id },
