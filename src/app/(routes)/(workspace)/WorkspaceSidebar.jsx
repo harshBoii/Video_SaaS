@@ -42,6 +42,7 @@ import {
   HiOutlineCog,
   HiOutlineUserGroup,
   HiTemplate,
+  HiOutlineHome,
 } from 'react-icons/hi';
 import {
   RiDashboardLine,
@@ -49,6 +50,7 @@ import {
   RiFolderLine,
   RiSettings4Line,
   RiAdminLine,
+  RiHome2Fill,
 } from 'react-icons/ri';
 import { FaRegComment } from 'react-icons/fa';
 import { SiGitconnected, SiGooglegemini } from 'react-icons/si';
@@ -196,8 +198,10 @@ const SearchModal = ({ isOpen, onClose }) => {
    MAIN SECTIONS - Slack-like structure
 ============================================ */
 const MAIN_SECTIONS = [
+  { id: 'home', label: 'Home', icon: FiHome, hasSecondary: false, defaultHref: '/' },
+
   { id: 'campaigns', label: 'Campaigns', icon: RiDashboardLine, hasSecondary: true, defaultHref: '/campaign' },
-  { id: 'chat', label: 'AI', icon: SiGooglegemini, hasSecondary: false, defaultHref: '/chat' },
+  // { id: 'chat', label: 'AI', icon: SiGooglegemini, hasSecondary: false, defaultHref: '/chat' },
   { id: 'assets', label: 'Assets', icon: MdOutlinePhotoLibrary, hasSecondary: true, defaultHref: '/assets' },
   { id: 'content', label: 'Content Ops', icon: HiTemplate, hasSecondary: true, defaultHref: '/videos' },
   { id: 'admin', label: 'Admin', icon: RiAdminLine, hasSecondary: true, defaultHref: '/dashboard' },
@@ -779,11 +783,13 @@ const WorkspaceSidebar = ({ user, userType: initialUserType }) => {
 
   // Determine active section based on pathname
   useEffect(() => {
-    if (pathname?.startsWith('/campaign')) setActiveSection('campaigns');
+    if (pathname === '/') setActiveSection('home');
+    else if (pathname?.startsWith('/campaign')) setActiveSection('campaigns');
     else if (pathname?.startsWith('/chat')) setActiveSection('chat');
     else if (pathname?.startsWith('/assets')) setActiveSection('assets');
     else if (pathname?.startsWith('/videos') || pathname?.startsWith('/docs') || pathname?.startsWith('/notification') || pathname?.startsWith('/socials') || pathname?.startsWith('/posts')) setActiveSection('content');
     else if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/employees') || pathname?.startsWith('/roles') || pathname?.startsWith('/hierarchy') || pathname?.startsWith('/integrations') || pathname?.startsWith('/agencies') || pathname?.startsWith('/freelancers') || pathname?.startsWith('/contract') || pathname?.startsWith('/reports')) setActiveSection('admin');
+    else setActiveSection('home');
   }, [pathname]);
 
   // Global keyboard shortcut for search

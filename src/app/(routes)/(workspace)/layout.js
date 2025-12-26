@@ -1,11 +1,26 @@
 "use client";
 
+import { usePathname } from 'next/navigation';
 import MainNav from "@/app/components/general/navbar";
 import { useWorkspaceAuth } from "./workspaceAuth";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 
+// Routes where sidebar should be hidden
+const HIDDEN_SIDEBAR_ROUTES = [
+  // '/chat',
+  '/design',
+  '/video',
+  '/history'
+];
+
 export default function WorkspaceLayout({ children }) {
   const { user, loading, userType } = useWorkspaceAuth();
+  const pathname = usePathname();
+
+  // Check if current route should hide sidebar
+  const shouldHideSidebar = HIDDEN_SIDEBAR_ROUTES.some(route =>
+    pathname === route || pathname?.startsWith(`${route}/`)
+  );
 
   if (loading) {
     return (
@@ -23,12 +38,22 @@ export default function WorkspaceLayout({ children }) {
 
   if (!user) return null;
 
+  // Full-width layout for AI pages
+  if (shouldHideSidebar) {
+    return (
+      <div className="min-h-screen bg-background">
+        {children}
+      </div>
+    );
+  }
+
+  // Standard layout with sidebar
   return (
     <div className="flex min-h-screen bg-background">
       <WorkspaceSidebar user={user} userType={userType} />
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         {/* <MainNav /> */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </main>

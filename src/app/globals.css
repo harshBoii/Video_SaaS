@@ -159,13 +159,15 @@
   --navbar-glass-border: rgba(255, 255, 255, 0.1);
 
   /* Theme colors using Netflix-style palette */
-  --background: oklch(0.15 0.005 280);            /* Lighter than before */
+  /* --background: oklch(0.15 0.005 280);            Lighter than before */
+    --background: rgba(20, 20, 20, 1);        /* #141414 - Netflix main bg */
+
   --foreground: oklch(0.98 0 0);                  /* High contrast text */
   --card: oklch(0.18 0 0);                        /* Lighter cards */
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.18 0 0);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.70 0.16 25);                 /* Clipfox coral */
+  --primary: oklch(71.102% 0.11781 23.622);                 /* Clipfox coral */
   --primary-foreground: oklch(0.12 0 0);
   --secondary: oklch(0.25 0 0);                   /* Lighter secondary */
   --secondary-foreground: oklch(0.98 0 0);
