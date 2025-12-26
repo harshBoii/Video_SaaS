@@ -361,6 +361,14 @@ export function requireAdmin(employee) {
   return null;
 }
 
+export function requireAuth(employee) {
+  if (!employee.isAdmin) {
+    return { error: "Admin access required", status: 403 };
+    return null;
+  }
+  return null;
+}
+
 
 export async function authenticateRequest(request) {
   try {
