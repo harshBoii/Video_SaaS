@@ -72,7 +72,7 @@ function ModalContent({ onClose, campaignId, onUploadComplete }) {
   const fetchVideos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/videos/list?projectId=${campaignId}&limit=100`, {
+      const res = await fetch(`/api/videos?campaignId=${campaignId}&limit=50`, {
         credentials: 'include'
       });
       const data = await res.json();

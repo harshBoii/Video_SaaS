@@ -84,7 +84,23 @@ export async function GET(request) {
               views: true,
               versions: true
             }
-          }
+          },
+          versions: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              version: true,
+              status: true,
+              streamId: true,
+              playbackUrl: true,
+              thumbnailUrl: true,
+              fileSize: true,
+            },
+            take: 1,
+          },
+
         }
       }),
       prisma.video.count({ where })
@@ -207,6 +223,13 @@ export async function GET(request) {
     const serializedVideos = videos.map(video => {
       const workflowState = workflowStateMap.get(video.id);
 
+      const activeVersion = video.versions[0]; // Get active version
+      
+      // Use active version's data if available, fallback to main video data
+      const thumbnailUrl = activeVersion?.thumbnailUrl || video.thumbnailUrl;
+      const playbackUrl = activeVersion?.playbackUrl || video.playbackUrl;
+      const streamId = activeVersion?.streamId || video.streamId;
+      const versionStatus = activeVersion?.status || video.status;
 
       let workflowProgress = null;
       if (workflowState) {
@@ -230,14 +253,16 @@ export async function GET(request) {
         title: video.title,
         filename: video.filename,
         originalSize: video.originalSize.toString(),
+        originalSizeFormatted: formatBytes(video.originalSize),
         duration: video.duration,
+        durationFormatted:formatDuration(video.duration),
         resolution: video.resolution,
         fps: video.fps,
         codec: video.codec,
-        status: video.status,
-        streamId: video.streamId,
-        playbackUrl: video.playbackUrl,
-        thumbnailUrl: video.thumbnailUrl,
+        status: versionStatus,
+        streamId: streamId,
+        playbackUrl: playbackUrl,
+        thumbnailUrl: thumbnailUrl,
         tags: video.tags,
         metadata: video.metadata,
         currentVersion: video.currentVersion,
@@ -346,4 +371,29 @@ export async function GET(request) {
       { status: 500 }
     );
   }
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds === 0) return "0:00";
+  
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+function formatBytes(bytes) {
+  if (bytes === 0 || bytes === 0n) return "0 Bytes";
+  
+  const numBytes = typeof bytes === 'bigint' ? Number(bytes) : bytes;
+  
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(numBytes) / Math.log(k));
+  
+  return Math.round((numBytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
