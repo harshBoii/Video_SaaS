@@ -85,7 +85,7 @@ enum DocumentType {
 
 enum AssetType {
   VIDEO
-  DOCUMENT
+  DOCUMENT // Docs+Images (All Static Creatives)
 }
 
 enum VisibilityScope {
@@ -180,7 +180,7 @@ model Role {
   campaignAssignments CampaignAssignment[]
   campaignSchedules   CampaignSchedule[]
   assetVisibility     AssetVisibility[]
-
+  assetWorkflowAssignments AssetWorkflowState[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -260,7 +260,9 @@ model Employee {
   documentVersions          DocumentVersion[]    @relation("DocumentVersionUploader")
   documentComments          DocumentComment[]    @relation("DocumentComments")
   resolvedDocumentComments  DocumentComment[]  @relation("DocumentCommentResolver")
-  
+  assetWorkflowAssignments AssetWorkflowState[]  
+  workflowActions          AssetWorkflowHistory[] 
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -306,7 +308,7 @@ model FlowChain {
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   steps         FlowStep[]
   campaignFlows CampaignFlow[]
-  
+  assetWorkflowStates AssetWorkflowState[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -328,7 +330,10 @@ model FlowStep {
   role          Role?            @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   nextSteps     FlowTransition[] @relation("NextStepRelation")
   previousSteps FlowTransition[] @relation("PrevStepRelation")
-  
+    assetWorkflowStates AssetWorkflowState[] 
+  historyFrom         AssetWorkflowHistory[] @relation("FromStep") 
+  historyTo           AssetWorkflowHistory[] @relation("ToStep")   
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -357,6 +362,88 @@ model FlowTransition {
   @@unique([fromStepId, toStepId, condition])
 }
 
+// ===================== ASSET WORKFLOW STATE TRACKING =====================
+
+model AssetWorkflowState {
+  id              String   @id @default(cuid())
+  
+  // Polymorphic asset reference (video or document)
+  assetId         String   
+  assetType       AssetType // VIDEO or DOCUMENT (enum already exists)
+  
+  // Workflow tracking
+  campaignId      String
+  flowChainId     String   // Which workflow this asset is following
+  currentStepId   String   // Where the asset is now in the workflow
+  
+  // State information
+  status          String   @default("in_progress") @db.VarChar(50)
+  // in_progress, awaiting_review, approved, rejected, changes_requested, completed
+  
+  // Assignment
+  assignedToRoleId     String?  // Current role responsible for this step
+  assignedToEmployeeId String?  // Specific employee if directly assigned
+  
+  // Relations
+  campaign        Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  flowChain       FlowChain @relation(fields: [flowChainId], references: [id], onDelete: Restrict)
+  currentStep     FlowStep  @relation(fields: [currentStepId], references: [id], onDelete: Restrict)
+  assignedToRole  Role?     @relation(fields: [assignedToRoleId], references: [id], onDelete: SetNull)
+  assignedToEmployee Employee? @relation(fields: [assignedToEmployeeId], references: [id], onDelete: SetNull)
+  
+  // History of transitions
+  history         AssetWorkflowHistory[]
+  
+  // Timestamps
+  startedAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  completedAt     DateTime? @db.Timestamptz(3)
+  dueDate         DateTime? @db.Timestamptz(3) // Optional deadline for this asset
+  
+  // Indexes for performance
+  @@unique([assetId, assetType]) // One workflow state per asset
+  @@index([campaignId])
+  @@index([flowChainId])
+  @@index([currentStepId])
+  @@index([assignedToRoleId])
+  @@index([assignedToEmployeeId])
+  @@index([status])
+  @@index([campaignId, status])
+  @@index([assignedToEmployeeId, status])
+  @@index([assetType, status])
+}
+
+// Track every transition for audit trail
+model AssetWorkflowHistory {
+  id              String   @id @default(cuid())
+  workflowStateId String
+  
+  // Transition info
+  fromStepId      String?  // null if initial step
+  toStepId        String
+  
+  // Action taken
+  action          String   @db.VarChar(50) 
+  // moved, approved, rejected, changes_requested, reassigned, completed
+  
+  actionBy        String   // Employee who took the action
+  comment         String?  @db.Text
+  
+  // Relations
+  workflowState   AssetWorkflowState @relation(fields: [workflowStateId], references: [id], onDelete: Cascade)
+  fromStep        FlowStep? @relation("FromStep", fields: [fromStepId], references: [id], onDelete: SetNull)
+  toStep          FlowStep  @relation("ToStep", fields: [toStepId], references: [id], onDelete: Restrict)
+  actor           Employee  @relation(fields: [actionBy], references: [id], onDelete: Restrict)
+  
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  
+  // Indexes
+  @@index([workflowStateId])
+  @@index([actionBy])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@index([workflowStateId, createdAt(sort: Desc)])
+}
 
 
 model Campaign {
@@ -380,7 +467,7 @@ model Campaign {
   videos      Video[]  
   documents   Document[]
   videoCollections VideoCollection[]
-
+  assetWorkflowStates AssetWorkflowState[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
