@@ -4,7 +4,7 @@ import prisma from '@/app/lib/prisma';
 // PUT → Rename or update role
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { name, description } = await request.json();
 
     const updated = await prisma.role.update({
@@ -30,9 +30,12 @@ export async function DELETE(request, { params }) {
     });
 
     // Then delete the role
-    await prisma.role.delete({
-      where: { id },
-    });
+    // await prisma.role.update({
+    //   where: { id },
+    //   data: {
+    //     isDeleted: true,
+    //   },
+    // });
 
     return NextResponse.json({ message: 'Role deleted successfully' });
   } catch (err) {

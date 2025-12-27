@@ -93,7 +93,53 @@ enum VisibilityScope {
   EMPLOYEE  // Visible to specific employees
   COMPANY   // Visible to entire company
 }
+enum AssetWorkflowStatus {
+  DRAFT
+  PENDING_REVIEW
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  PARTIALLY_APPROVED
+  APPROVED
+  PUBLISHED
+  COMPLETED
+  ARCHIVED
+}
+enum ApprovalPolicy {
+  ALL_MUST_APPROVE
+  ANY_CAN_APPROVE  
+  MAJORITY_MUST_APPROVE
+}
+enum StageExecutionMode {
+  SEQUENTIAL  // Steps run one after another
+  PARALLEL    // All steps in stage run simultaneously
+  CONDITIONAL // Steps run based on conditions
+}
 
+enum StepStatus {
+  PENDING       // Waiting to start
+  IN_PROGRESS   // Reviewer actively working
+  COMPLETED     // Step finished successfully
+  BLOCKED       // Waiting on dependencies
+  SKIPPED       // Step bypassed
+}
+
+enum ApprovalDecision {
+  APPROVE
+  REQUEST_CHANGES
+  REJECT
+}
+
+enum CampaignWorkflowStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  AWAITING_ASSETS      // Waiting for uploads
+  IN_REVIEW            // Assets being reviewed
+  CHANGES_NEEDED       // Some assets need revisions
+  READY_TO_PUBLISH     // All assets approved
+  PUBLISHED
+  COMPLETED
+  ON_HOLD
+}
 
 // ===================== CORE MODELS =====================
 
@@ -169,7 +215,7 @@ model Role {
   description String? @db.Text
   companyId   String
   parentId    String?
-  
+  isDeleted   Boolean @default(false)
   // Relations
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   parent              Role?                @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -181,6 +227,8 @@ model Role {
   campaignSchedules   CampaignSchedule[]
   assetVisibility     AssetVisibility[]
   assetWorkflowAssignments AssetWorkflowState[]
+  stepAssignments     FlowStepRole[]
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -262,7 +310,7 @@ model Employee {
   resolvedDocumentComments  DocumentComment[]  @relation("DocumentCommentResolver")
   assetWorkflowAssignments AssetWorkflowState[]  
   workflowActions          AssetWorkflowHistory[] 
-
+  stepApprovals            StepApproval[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -307,8 +355,11 @@ model FlowChain {
   // Relations
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   steps         FlowStep[]
+  stages        FlowStage[]
   campaignFlows CampaignFlow[]
+
   assetWorkflowStates AssetWorkflowState[]
+  
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -318,21 +369,47 @@ model FlowChain {
   @@index([updatedAt(sort: Desc)])
 }
 
+model FlowStage {
+  id          String @id
+  chainId     String
+  name        String  // "Review Stage", "Edit Stage"
+  order       Int     // Stage sequence
+  executionMode StageExecutionMode @default(SEQUENTIAL)
+  
+  chain       FlowChain @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  steps       FlowStep[]
+  
+  transitionsFrom StageTransition[] @relation("FromStage")
+  transitionsTo   StageTransition[] @relation("ToStage")
+
+  @@unique([chainId, order])
+}
+
 model FlowStep {
   id          String  @id @default(cuid())
   name        String  @db.VarChar(255)
   description String? @db.Text
   chainId     String
   roleId      String?
-  
+
+  stageId String?
+  stage   FlowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  orderInStage Int? 
+
   // Relations
   chain         FlowChain        @relation(fields: [chainId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   role          Role?            @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   nextSteps     FlowTransition[] @relation("NextStepRelation")
   previousSteps FlowTransition[] @relation("PrevStepRelation")
-    assetWorkflowStates AssetWorkflowState[] 
+  
+  assignedRoles   FlowStepRole[]
+  approvalPolicy  ApprovalPolicy @default(ALL_MUST_APPROVE)
+  
+  assetWorkflowStates AssetWorkflowState[] 
   historyFrom         AssetWorkflowHistory[] @relation("FromStep") 
   historyTo           AssetWorkflowHistory[] @relation("ToStep")   
+  activeSteps         AssetActiveStep[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -342,24 +419,74 @@ model FlowStep {
   @@index([roleId])
   @@index([chainId, roleId])
 }
+model FlowStepRole {
+  id       String @id
+  stepId   String
+  roleId   String
+  required Boolean @default(true) // Optional approvers
+  
+  step FlowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  
+  @@unique([stepId, roleId])
+}
+
+// Track individual approvals
+model StepApproval {
+  id           String @id
+  activeStepId String  // Links to AssetActiveStep
+  employeeId   String
+  roleId       String
+  decision     ApprovalDecision // APPROVE, REQUEST_CHANGES, REJECT
+  comment      String?
+  
+  activeStep AssetActiveStep @relation(fields: [activeStepId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  
+  createdAt    DateTime
+  
+  @@unique([activeStepId, employeeId])
+  @@index([activeStepId, decision])
+}
 
 model FlowTransition {
   id         String              @id @default(cuid())
-  fromStepId String
-  toStepId   String
-  condition  TransitionCondition @default(SUCCESS)
+  fromStepId   String?
+  toStepId     String?
+  
+  // Stage-level transition (mutually exclusive with step transitions)
+  fromStageId  String?
+  toStageId    String?
+  
+  condition    TransitionCondition
   
   // Relations
-  fromStep FlowStep @relation("NextStepRelation", fields: [fromStepId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  toStep   FlowStep @relation("PrevStepRelation", fields: [toStepId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  fromStep FlowStep? @relation("NextStepRelation", fields: [fromStepId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  toStep   FlowStep? @relation("PrevStepRelation", fields: [toStepId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   
   createdAt DateTime @default(now()) @db.Timestamptz(3)
+
 
   // Indexes
   @@index([fromStepId])
   @@index([toStepId])
   @@index([fromStepId, condition])
   @@unique([fromStepId, toStepId, condition])
+
+
+
+}
+
+model StageTransition {
+  id          String @id
+  fromStageId String
+  toStageId   String
+  condition   String // "all_approved", "any_rejected", "custom"
+  
+  fromStage FlowStage @relation("FromStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage   FlowStage @relation("ToStage", fields: [toStageId], references: [id], onDelete: Cascade)
+  
+  @@unique([fromStageId, toStageId, condition])
 }
 
 // ===================== ASSET WORKFLOW STATE TRACKING =====================
@@ -375,9 +502,9 @@ model AssetWorkflowState {
   campaignId      String
   flowChainId     String   // Which workflow this asset is following
   currentStepId   String   // Where the asset is now in the workflow
-  
+  activeSteps   AssetActiveStep[]
   // State information
-  status          String   @default("in_progress") @db.VarChar(50)
+  status          AssetWorkflowStatus?   
   // in_progress, awaiting_review, approved, rejected, changes_requested, completed
   
   // Assignment
@@ -412,6 +539,24 @@ model AssetWorkflowState {
   @@index([assignedToEmployeeId, status])
   @@index([assetType, status])
 }
+
+model AssetActiveStep {
+  id                String @id
+  workflowStateId   String
+  stepId            String
+  status            StepStatus // PENDING, IN_PROGRESS, COMPLETED, BLOCKED
+  
+  workflowState AssetWorkflowState @relation(fields: [workflowStateId], references: [id], onDelete: Cascade)
+  step          FlowStep @relation(fields: [stepId], references: [id], onDelete: Restrict)
+  approvals     StepApproval[] 
+  
+  startedAt         DateTime
+  completedAt       DateTime?
+  
+  @@unique([workflowStateId, stepId])
+  @@index([workflowStateId, status])
+}
+
 
 // Track every transition for audit trail
 model AssetWorkflowHistory {
@@ -456,6 +601,12 @@ model Campaign {
   deletedAt  DateTime? @db.Timestamptz(3) //  Soft delete timestamp
   deletedBy  String?  // Who deleted it (Employee ID)
   uploadSessions UploadSession[]
+  workflowStatus CampaignWorkflowStatus @default(NOT_STARTED)
+  
+  // Track progress
+  totalAssets       Int @default(0)
+  completedAssets   Int @default(0)
+  approvedAssets    Int @default(0)
 
   // Relations
   company     Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -593,6 +744,10 @@ model Video {
   socialPosts     SocialPost[]
   companyId       String?
   company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  workflowStatus AssetWorkflowStatus @default(DRAFT)
+  
+
+
 
   // Versions
   currentVersion  Int      @default(1)
@@ -946,7 +1101,7 @@ model VideoCollection {
   id            String   @id @default(uuid()) // This UUID serves as the share token
   name          String   @db.VarChar(255)
   description   String?  @db.Text
-  
+   
   // Ownership
   createdBy     String
   creator       Employee @relation("CollectionCreator", fields: [createdBy], references: [id], onDelete: Restrict)
@@ -1230,7 +1385,11 @@ model Document {
   comments        DocumentComment[]
   shareSettings   DocumentShare?
   versions        DocumentVersion[]
+  workflowStatus AssetWorkflowStatus @default(DRAFT)
   
+
+
+
   currentVersion  Int      @default(1)
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)

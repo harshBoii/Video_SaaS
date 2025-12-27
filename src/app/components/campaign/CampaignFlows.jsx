@@ -22,7 +22,9 @@ import {
   FastForward,
   Filter,
   Search,
-  TrendingUp
+  TrendingUp,
+  PlayCircle, 
+  Split
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm, showLoading, closeSwal } from '@/app/lib/swal';
 import FlowchainBuilderModal from './CampaignApprovalFlow';
@@ -37,14 +39,12 @@ export default function CampaignFlows({ campaignId, permissions }) {
   const [editingFlowChainId, setEditingFlowChainId] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   
-  // Asset management states
   const [assets, setAssets] = useState([]);
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [showAssignWorkflowModal, setShowAssignWorkflowModal] = useState(false);
   const [showManualApprovalModal, setShowManualApprovalModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
 
-  // ✅ Check if user can manage workflows using passed permissions
   const canManageWorkflow = 
     permissions?.isAdmin || 
     permissions?.permissions?.includes('Manage Workflow');
@@ -238,7 +238,6 @@ export default function CampaignFlows({ campaignId, permissions }) {
 
   return (
     <>
-      {/* Tab Navigation */}
       <div className="mb-6 border-b border-gray-200">
         <div className="flex gap-4">
           <button
@@ -275,10 +274,8 @@ export default function CampaignFlows({ campaignId, permissions }) {
         </div>
       </div>
 
-      {/* Tab Content */}
       {activeTab === 'overview' ? (
         <div className="grid grid-cols-12 gap-6">
-          {/* Flow List - Left Side */}
           <div className="col-span-4 space-y-3">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Workflows</h3>
@@ -347,9 +344,16 @@ export default function CampaignFlows({ campaignId, permissions }) {
                       )}
                       
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">
-                          {flow.flowChain.totalSteps} steps
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {flow.flowChain.totalStages > 0 && (
+                            <span className="text-gray-500">
+                              {flow.flowChain.totalStages} stage{flow.flowChain.totalStages !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          <span className="text-gray-500">
+                            {flow.flowChain.totalSteps} step{flow.flowChain.totalSteps !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                         <ChevronRight className={`w-4 h-4 transition-colors ${
                           selectedFlow === flow.flowChain.id ? 'text-blue-600' : 'text-gray-400'
                         }`} />
@@ -371,7 +375,6 @@ export default function CampaignFlows({ campaignId, permissions }) {
             )}
           </div>
 
-          {/* Flow Details - Right Side */}
           <div className="col-span-8">
             {selectedFlow ? (
               <FlowVisualization 
@@ -402,7 +405,6 @@ export default function CampaignFlows({ campaignId, permissions }) {
         />
       )}
 
-      {/* Modals */}
       {showFlowBuilder && (
         <FlowchainBuilderModal
           campaignId={campaignId}
@@ -458,7 +460,432 @@ export default function CampaignFlows({ campaignId, permissions }) {
   );
 }
 
-// Asset Workflows View Component - COMPACT UI with tooltips
+// ============ FLOW VISUALIZATION (REFACTORED) ============
+function FlowVisualization({ flow, onSetDefault, onEdit, canManageWorkflow }) {
+  if (!flow) return null;
+
+  const hasStages = flow.flowChain.stages && flow.flowChain.stages.length > 0;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">
+              {flow.flowChain.name}
+            </h3>
+            {flow.flowChain.description && (
+              <p className="text-sm text-gray-600">{flow.flowChain.description}</p>
+            )}
+          </div>
+          {flow.isDefault && (
+            <span className="flex items-center gap-1 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+              <Star className="w-4 h-4 fill-current" />
+              Default Workflow
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
+          {hasStages && (
+            <>
+              <span className="flex items-center gap-1">
+                <Layers className="w-4 h-4" />
+                {flow.flowChain.totalStages} stage{flow.flowChain.totalStages !== 1 ? 's' : ''}
+              </span>
+              <span>•</span>
+            </>
+          )}
+          <span className="flex items-center gap-1">
+            <GitBranch className="w-4 h-4" />
+            {flow.flowChain.totalSteps} step{flow.flowChain.totalSteps !== 1 ? 's' : ''}
+          </span>
+          <span>•</span>
+          <span>Created {new Date(flow.flowChain.createdAt).toLocaleDateString()}</span>
+        </div>
+      </div>
+
+      <div className="p-6">
+        {hasStages ? (
+          <StageBasedView flow={flow} />
+        ) : (
+          <LegacyFlatView flow={flow} />
+        )}
+      </div>
+
+      {canManageWorkflow && (
+        <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex gap-3">
+            {!flow.isDefault && (
+              <button 
+                onClick={() => onSetDefault(flow.id)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition-colors font-medium text-sm"
+              >
+                Set as Default
+              </button>
+            )}
+            <button 
+              onClick={() => onEdit(flow.flowChain.id)}
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+            >
+              Edit Workflow
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============ STAGE-BASED VIEW (NEW) ============
+function StageBasedView({ flow }) {
+  const getExecutionIcon = (mode) => {
+    const icons = {
+      SEQUENTIAL: PlayCircle,
+      PARALLEL: Split,
+      CONDITIONAL: GitBranch
+    };
+    return icons[mode] || PlayCircle;
+  };
+
+  const getExecutionColor = (mode) => {
+    const colors = {
+      SEQUENTIAL: 'from-blue-500 to-blue-600',
+      PARALLEL: 'from-green-500 to-green-600',
+      CONDITIONAL: 'from-purple-500 to-purple-600'
+    };
+    return colors[mode] || 'from-gray-500 to-gray-600';
+  };
+
+  return (
+    <div className="space-y-6">
+      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+        <Layers className="w-5 h-5 text-purple-600" />
+        Workflow Stages
+      </h4>
+
+      {flow.flowChain.stages.map((stage, stageIndex) => {
+        const ExecutionIcon = getExecutionIcon(stage.executionMode);
+        const executionColor = getExecutionColor(stage.executionMode);
+
+        return (
+          <motion.div
+            key={stage.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: stageIndex * 0.1 }}
+            className="relative"
+          >
+            {stageIndex < flow.flowChain.stages.length - 1 && (
+              <div className="absolute left-8 top-full h-6 w-0.5 bg-gradient-to-b from-purple-300 to-transparent z-0" />
+            )}
+
+            <div className="relative border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50/50 to-blue-50/50 overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-100 to-blue-100 px-6 py-4 border-b border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 bg-gradient-to-br ${executionColor} rounded-xl flex items-center justify-center text-white font-bold shadow-lg`}>
+                      {stageIndex + 1}
+                    </div>
+                    <div>
+                      <h5 className="text-lg font-bold text-gray-900">{stage.name}</h5>
+                      <div className="flex items-center gap-2 mt-1">
+                        <ExecutionIcon className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm font-medium text-gray-700">
+                          {stage.executionMode.replace('_', ' ')}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          • {stage.steps.length} step{stage.steps.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {stage.executionMode === 'PARALLEL' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                      <Split className="w-3.5 h-3.5" />
+                      All steps run simultaneously
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className={`grid gap-4 ${
+                  stage.executionMode === 'PARALLEL' 
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
+                    : 'grid-cols-1'
+                }`}>
+                  {stage.steps.map((step, stepIndex) => (
+                    <StepCard 
+                      key={step.id} 
+                      step={step} 
+                      stepNumber={stepIndex + 1}
+                      isParallel={stage.executionMode === 'PARALLEL'}
+                      showConnector={stage.executionMode === 'SEQUENTIAL' && stepIndex < stage.steps.length - 1}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {stage.transitions && stage.transitions.length > 0 && (
+                <div className="px-6 pb-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4" />
+                      Stage Transitions
+                    </p>
+                    <div className="space-y-2">
+                      {stage.transitions.map((transition, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm text-blue-800">
+                          {transition.condition === 'all_approved' ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-600" />
+                          )}
+                          <span>
+                            When {transition.condition.replace('_', ' ')} → <strong>{transition.toStage.name}</strong>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============ STEP CARD COMPONENT (NEW) ============
+function StepCard({ step, stepNumber, isParallel, showConnector }) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const getApprovalPolicyBadge = (policy) => {
+    const configs = {
+      ALL_MUST_APPROVE: { text: 'All Approve', color: 'bg-red-100 text-red-700', icon: '🔴' },
+      ANY_CAN_APPROVE: { text: 'Any Approve', color: 'bg-green-100 text-green-700', icon: '🟢' },
+      MAJORITY_MUST_APPROVE: { text: 'Majority', color: 'bg-yellow-100 text-yellow-700', icon: '🟡' }
+    };
+    return configs[policy] || configs.ALL_MUST_APPROVE;
+  };
+
+  const policyConfig = getApprovalPolicyBadge(step.approvalPolicy);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="relative"
+    >
+      {showConnector && (
+        <div className="absolute left-6 top-full h-4 w-0.5 bg-gray-300 z-0" />
+      )}
+
+      <div className={`relative bg-white rounded-lg border-2 ${
+        isParallel ? 'border-green-200' : 'border-gray-200'
+      } p-4 hover:shadow-md transition-all`}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 ${
+              isParallel ? 'bg-gradient-to-br from-green-500 to-emerald-500' : 'bg-gradient-to-br from-blue-500 to-purple-500'
+            } rounded-lg flex items-center justify-center text-white font-bold text-sm shadow`}>
+              {stepNumber}
+            </div>
+            <div className="min-w-0">
+              <h6 className="font-semibold text-gray-900 text-sm truncate">
+                {step.name}
+              </h6>
+              <p className="text-xs text-gray-500">Order: {step.orderInStage}</p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          >
+            <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${showDetails ? 'rotate-90' : ''}`} />
+          </button>
+        </div>
+
+        {step.description && (
+          <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+            {step.description}
+          </p>
+        )}
+
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Users className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-xs font-medium text-gray-700">
+              {step.assignedRoles.length} Role(s)
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {step.assignedRoles.slice(0, 3).map((ar, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium"
+                title={ar.required ? 'Required approver' : 'Optional approver'}
+              >
+                {ar.roleName}
+                {ar.required && <span className="text-red-500">*</span>}
+              </span>
+            ))}
+            {step.assignedRoles.length > 3 && (
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                +{step.assignedRoles.length - 3}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${policyConfig.color}`}>
+          <span>{policyConfig.icon}</span>
+          <span>{policyConfig.text}</span>
+        </div>
+
+        <AnimatePresence>
+          {showDetails && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mt-3 pt-3 border-t border-gray-200 space-y-2"
+            >
+              {step.assignedRoles.length > 3 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-1">All Assigned Roles:</p>
+                  <div className="space-y-1">
+                    {step.assignedRoles.map((ar, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-700">{ar.roleName}</span>
+                        <span className={`px-1.5 py-0.5 rounded ${
+                          ar.required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {ar.required ? 'Required' : 'Optional'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {step.transitions && step.transitions.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-1">Transitions:</p>
+                  <div className="space-y-1">
+                    {step.transitions.map((transition, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-xs text-gray-600">
+                        {transition.condition === 'SUCCESS' ? (
+                          <CheckCircle2 className="w-3 h-3 text-green-600" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-red-600" />
+                        )}
+                        <span>
+                          {transition.condition} → {transition.toStep.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============ LEGACY FLAT VIEW ============
+function LegacyFlatView({ flow }) {
+  return (
+    <div className="space-y-3">
+      <h4 className="font-semibold text-gray-900">Workflow Steps</h4>
+      {flow.flowChain.steps.map((step, index) => (
+        <motion.div
+          key={step.id}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.1 }}
+        >
+          <div className="relative">
+            {index < flow.flowChain.steps.length - 1 && (
+              <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-gray-200 -mb-3" />
+            )}
+            
+            <div className="relative bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-blue-300 transition-colors">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                  {index + 1}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <h5 className="font-semibold text-gray-900 mb-1">
+                    {step.name}
+                  </h5>
+                  {step.description && (
+                    <p className="text-sm text-gray-600 mb-2">
+                      {step.description}
+                    </p>
+                  )}
+                  
+                  {step.assignedRoles && step.assignedRoles.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {step.assignedRoles.map((ar, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium"
+                        >
+                          {ar.roleName}{ar.required ? ' *' : ''}
+                        </span>
+                      ))}
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                        {step.approvalPolicy?.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  ) : step.role ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                        Role: {step.role.name}
+                      </span>
+                    </div>
+                  ) : null}
+                  
+                  {step.transitions && step.transitions.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {step.transitions.map((transition) => (
+                        <div
+                          key={transition.id}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          {transition.condition === 'SUCCESS' ? (
+                            <CheckCircle2 className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <XCircle className="w-3 h-3 text-red-600" />
+                          )}
+                          <span className="text-gray-600">
+                            On {transition.condition.toLowerCase()} → {transition.toStep.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// ============ ASSET WORKFLOWS VIEW ============
 function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, onManualApproval, onRefresh, canManageWorkflow }) {
   const [filterWorkflow, setFilterWorkflow] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -516,7 +943,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
@@ -565,7 +991,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="relative">
@@ -624,7 +1049,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
         </div>
       </div>
 
-      {/* COMPACT TABLE with hover tooltips */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -654,7 +1078,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                   const Icon = asset.icon;
                   return (
                     <tr key={`${asset.type}-${asset.id}`} className="hover:bg-gray-50 transition-colors group">
-                      {/* Asset */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2" title={asset.filename}>
                           <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -667,7 +1090,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                         </div>
                       </td>
 
-                      {/* Workflow */}
                       <td className="px-4 py-3">
                         {asset.workflow ? (
                           <div className="flex items-center gap-1.5" title={asset.workflow.flowChain.name}>
@@ -681,7 +1103,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                         )}
                       </td>
 
-                      {/* Step */}
                       <td className="px-4 py-3">
                         {asset.workflow?.currentStep ? (
                           <div className="group/step relative">
@@ -699,7 +1120,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                         )}
                       </td>
 
-                      {/* Status */}
                       <td className="px-4 py-3">
                         {asset.workflow?.status ? (
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(asset.workflow.status)}`}>
@@ -710,7 +1130,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                         )}
                       </td>
 
-                      {/* Progress */}
                       <td className="px-4 py-3">
                         {asset.workflow?.progress ? (
                           <div className="flex items-center gap-2">
@@ -730,7 +1149,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                         )}
                       </td>
 
-                      {/* Assigned */}
                       <td className="px-4 py-3">
                         {asset.workflow?.assignedTo ? (
                           <div className="group/assigned relative flex items-center gap-2">
@@ -759,7 +1177,6 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
                         )}
                       </td>
 
-                      {/* Actions - Only show if user has permission */}
                       {canManageWorkflow && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
@@ -794,7 +1211,7 @@ function AssetWorkflowsView({ assets, loadingAssets, flows, onAssignWorkflow, on
   );
 }
 
-// Assign Workflow Modal
+// ============ MODALS (Keeping existing implementations) ============
 function AssignWorkflowModal({ asset, flows, campaignId, onClose, onSuccess }) {
   const [selectedFlowId, setSelectedFlowId] = useState('');
   const [assignToAll, setAssignToAll] = useState(false);
@@ -866,7 +1283,6 @@ function AssignWorkflowModal({ asset, flows, campaignId, onClose, onSuccess }) {
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Asset Info */}
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
             <div className="flex items-center gap-3">
               {React.createElement(asset.icon, { className: "w-8 h-8 text-blue-600" })}
@@ -877,7 +1293,6 @@ function AssignWorkflowModal({ asset, flows, campaignId, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Current Workflow Info */}
           {asset.workflow && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <p className="text-sm text-yellow-900">
@@ -889,7 +1304,6 @@ function AssignWorkflowModal({ asset, flows, campaignId, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Workflow Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Workflow *
@@ -908,7 +1322,6 @@ function AssignWorkflowModal({ asset, flows, campaignId, onClose, onSuccess }) {
             </select>
           </div>
 
-          {/* Assign to All Option */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
@@ -959,30 +1372,16 @@ function AssignWorkflowModal({ asset, flows, campaignId, onClose, onSuccess }) {
   );
 }
 
-// Manual Approval Modal
-// ✅ Updated Manual Approval Modal - Fixed to use flows data
 function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
   const [selectedStepId, setSelectedStepId] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
-
   const fullWorkflow = flows.find(f => f.flowChain.id === asset.workflow?.flowChain?.id);
   const allSteps = fullWorkflow?.flowChain?.steps || [];
   const currentStepId = asset.workflow?.currentStep?.id;
-  
-  // Find current step index
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId);
-  
-  // Get next steps (all steps after current)
   const nextSteps = currentStepIndex >= 0 ? allSteps.slice(currentStepIndex + 1) : [];
-
-  // Debug logs
-  console.log('Full workflow found:', !!fullWorkflow);
-  console.log('All steps count:', allSteps.length);
-  console.log('Current step:', currentStepId);
-  console.log('Current index:', currentStepIndex);
-  console.log('Next steps:', nextSteps.length);
 
   const handleApprove = async () => {
     if (!selectedStepId) {
@@ -1049,16 +1448,14 @@ function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Warning */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-yellow-900">
               <p className="font-medium mb-1">⚠️ Manual Override</p>
-              <p>This will bypass the normal workflow process and move the asset to the selected step. This action will be logged for audit purposes.</p>
+              <p>This will bypass the normal workflow process and move the asset to the selected step.</p>
             </div>
           </div>
 
-          {/* Asset Info */}
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <div className="flex items-center gap-3">
               {React.createElement(asset.icon, { className: "w-6 h-6 text-gray-600" })}
@@ -1074,27 +1471,14 @@ function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
               <p className="text-sm text-gray-600">
                 <strong>Current Step:</strong> {asset.workflow.currentStep.name}
               </p>
-              <p className="text-sm text-gray-600">
-                <strong>Status:</strong> <span className="font-medium">{asset.workflow.status.replace(/_/g, ' ')}</span>
-              </p>
-              {/* ✅ Debug info */}
-              <p className="text-xs text-gray-500 mt-2">
-                Total steps in workflow: {allSteps.length} | Current position: {currentStepIndex + 1} | Next steps available: {nextSteps.length}
-              </p>
             </div>
           </div>
 
-          {/* Target Step Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Advance to Step *
             </label>
-            {!fullWorkflow ? (
-              <div className="text-sm text-red-700 bg-red-50 rounded-lg p-3 border border-red-200">
-                <AlertCircle className="w-4 h-4 inline mr-2" />
-                Could not load workflow details. Please refresh and try again.
-              </div>
-            ) : nextSteps.length === 0 ? (
+            {nextSteps.length === 0 ? (
               <div className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3 border border-amber-200">
                 <AlertCircle className="w-4 h-4 inline mr-2" />
                 No subsequent steps available. This asset is at the final step.
@@ -1115,7 +1499,6 @@ function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Reason */}
           {nextSteps.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1124,13 +1507,10 @@ function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Explain why this manual approval is needed (required for audit trail)..."
+                placeholder="Explain why this manual approval is needed..."
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
                 rows={4}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                This reason will be recorded in the workflow history
-              </p>
             </div>
           )}
         </div>
@@ -1144,7 +1524,7 @@ function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
           </button>
           <button
             onClick={handleApprove}
-            disabled={loading || !selectedStepId || !reason.trim() || nextSteps.length === 0 || !fullWorkflow}
+            disabled={loading || !selectedStepId || !reason.trim() || nextSteps.length === 0}
             className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -1161,129 +1541,6 @@ function ManualApprovalModal({ asset, flows=[], onClose, onSuccess }) {
           </button>
         </div>
       </motion.div>
-    </div>
-  );
-}
-
-
-// Flow Visualization Component
-function FlowVisualization({ flow, onSetDefault, onEdit, canManageWorkflow }) {
-  if (!flow) return null;
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
-              {flow.flowChain.name}
-            </h3>
-            {flow.flowChain.description && (
-              <p className="text-sm text-gray-600">{flow.flowChain.description}</p>
-            )}
-          </div>
-          {flow.isDefault && (
-            <span className="flex items-center gap-1 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-              <Star className="w-4 h-4 fill-current" />
-              Default Workflow
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
-          <span>{flow.flowChain.totalSteps} steps</span>
-          <span>•</span>
-          <span>Created {new Date(flow.flowChain.createdAt).toLocaleDateString()}</span>
-        </div>
-      </div>
-
-      <div className="p-6">
-        <h4 className="font-semibold text-gray-900 mb-4">Workflow Steps</h4>
-        <div className="space-y-3">
-          {flow.flowChain.steps.map((step, index) => (
-            <motion.div
-              key={step.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <div className="relative">
-                {index < flow.flowChain.steps.length - 1 && (
-                  <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-gray-200 -mb-3" />
-                )}
-                
-                <div className="relative bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-blue-300 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h5 className="font-semibold text-gray-900 mb-1">
-                        {step.name}
-                      </h5>
-                      {step.description && (
-                        <p className="text-sm text-gray-600 mb-2">
-                          {step.description}
-                        </p>
-                      )}
-                      
-                      {step.role && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                            Role: {step.role.name}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {step.transitions && step.transitions.length > 0 && (
-                        <div className="mt-3 space-y-1">
-                          {step.transitions.map((transition) => (
-                            <div
-                              key={transition.id}
-                              className="flex items-center gap-2 text-xs"
-                            >
-                              {transition.condition === 'SUCCESS' ? (
-                                <CheckCircle2 className="w-3 h-3 text-green-600" />
-                              ) : (
-                                <XCircle className="w-3 h-3 text-red-600" />
-                              )}
-                              <span className="text-gray-600">
-                                On {transition.condition.toLowerCase()} → {transition.toStep.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {canManageWorkflow && (
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex gap-3">
-            {!flow.isDefault && (
-              <button 
-                onClick={() => onSetDefault(flow.id)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition-colors font-medium text-sm"
-              >
-                Set as Default
-              </button>
-            )}
-            <button 
-              onClick={() => onEdit(flow.flowChain.id)}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-            >
-              Edit Workflow
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
