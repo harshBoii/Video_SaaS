@@ -1,7 +1,7 @@
-//Cacheable , Invalidate on new workflow creation
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyJWT, requireAdmin } from '@/app/lib/auth';
+
 
 // GET - Fetch all flows for a campaign
 export async function GET(request, { params }) {
@@ -51,32 +51,55 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Fetch campaign flows with full FlowChain details
+    // ✅ Fetch campaign flows with FULL advanced workflow structure
     const campaignFlows = await prisma.campaignFlow.findMany({
       where: { campaignId },
       include: {
         flowChain: {
           include: {
-            steps: {
+            // ✅ Include stages (new)
+            stages: {
+              orderBy: { order: 'asc' },
               include: {
-                role: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-                nextSteps: {
+                steps: {
+                  orderBy: { orderInStage: 'asc' },
                   include: {
-                    toStep: {
-                      select: {
-                        id: true,
-                        name: true,
+                    role: { select: { id: true, name: true } }, // Legacy single role
+                    assignedRoles: { // ✅ Multi-role support (new)
+                      include: {
+                        role: { select: { id: true, name: true } },
+                      },
+                    },
+                    nextSteps: {
+                      include: {
+                        toStep: { select: { id: true, name: true } },
                       },
                     },
                   },
                 },
+                transitionsFrom: { // ✅ Stage transitions (new)
+                  include: {
+                    toStage: { select: { id: true, name: true, order: true } },
+                  },
+                },
               },
+            },
+            // ✅ Also include steps at chain level for backward compatibility
+            steps: {
               orderBy: { createdAt: 'asc' },
+              include: {
+                role: { select: { id: true, name: true } },
+                assignedRoles: {
+                  include: {
+                    role: { select: { id: true, name: true } },
+                  },
+                },
+                nextSteps: {
+                  include: {
+                    toStep: { select: { id: true, name: true } },
+                  },
+                },
+              },
             },
           },
         },
@@ -87,7 +110,7 @@ export async function GET(request, { params }) {
       ],
     });
 
-    // Transform response
+    // ✅ Transform response with new structure
     const flows = campaignFlows.map(cf => ({
       id: cf.id,
       isDefault: cf.isDefault,
@@ -95,18 +118,67 @@ export async function GET(request, { params }) {
         id: cf.flowChain.id,
         name: cf.flowChain.name,
         description: cf.flowChain.description,
-        totalSteps: cf.flowChain.steps.length,
+        
+        // ✅ Stage-based structure (new)
+        stages: cf.flowChain.stages.map(stage => ({
+          id: stage.id,
+          name: stage.name,
+          order: stage.order,
+          executionMode: stage.executionMode,
+          steps: stage.steps.map(step => ({
+            id: step.id,
+            name: step.name,
+            description: step.description,
+            orderInStage: step.orderInStage,
+            approvalPolicy: step.approvalPolicy, // ✅ New
+            
+            // ✅ Multi-role support
+            assignedRoles: step.assignedRoles.map(ar => ({
+              roleId: ar.roleId,
+              roleName: ar.role.name,
+              required: ar.required,
+            })),
+            
+            // Legacy single role (for backward compatibility)
+            role: step.role,
+            
+            // Step transitions
+            transitions: step.nextSteps.map(t => ({
+              id: t.id,
+              condition: t.condition,
+              toStep: t.toStep,
+            })),
+          })),
+          
+          // ✅ Stage transitions
+          transitions: stage.transitionsFrom.map(t => ({
+            id: t.id,
+            condition: t.condition,
+            toStage: t.toStage,
+          })),
+        })),
+        
+        // Legacy flat steps list (for backward compatibility)
         steps: cf.flowChain.steps.map(step => ({
           id: step.id,
           name: step.name,
           description: step.description,
           role: step.role,
+          assignedRoles: step.assignedRoles.map(ar => ({
+            roleId: ar.roleId,
+            roleName: ar.role.name,
+            required: ar.required,
+          })),
+          approvalPolicy: step.approvalPolicy,
           transitions: step.nextSteps.map(t => ({
             id: t.id,
             condition: t.condition,
             toStep: t.toStep,
           })),
         })),
+        
+        totalSteps: cf.flowChain.steps.length,
+        totalStages: cf.flowChain.stages.length, // ✅ New
         createdAt: cf.flowChain.createdAt,
         updatedAt: cf.flowChain.updatedAt,
       },
@@ -247,13 +319,28 @@ export async function POST(request, { params }) {
       include: {
         flowChain: {
           include: {
+            stages: {
+              orderBy: { order: 'asc' },
+              include: {
+                steps: {
+                  orderBy: { orderInStage: 'asc' },
+                  include: {
+                    role: true,
+                    assignedRoles: {
+                      include: { role: true },
+                    },
+                  },
+                },
+              },
+            },
             steps: {
               include: {
                 role: true,
+                assignedRoles: {
+                  include: { role: true },
+                },
                 nextSteps: {
-                  include: {
-                    toStep: true,
-                  },
+                  include: { toStep: true },
                 },
               },
             },
@@ -263,6 +350,7 @@ export async function POST(request, { params }) {
     });
 
     console.log('✅ Campaign flow created:', campaignFlow.id);
+
 
     return NextResponse.json({
       success: true,

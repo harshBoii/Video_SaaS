@@ -1,8 +1,7 @@
-//  invalidate here for flowchain get happening at companies route
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyJWT } from '@/app/lib/auth';
+
 
 export async function POST(request) {
   try {
@@ -12,8 +11,9 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, description, companyId, steps } = body;
+    const { name, description, companyId, stages } = body;
 
+    // ============ VALIDATION ============
     if (!name || !companyId) {
       return NextResponse.json(
         { error: 'Name and company ID are required' },
@@ -28,79 +28,203 @@ export async function POST(request) {
       );
     }
 
-    if (!steps || steps.length === 0) {
+    if (!stages || stages.length === 0) {
       return NextResponse.json(
-        { error: 'At least one step is required' },
+        { error: 'At least one stage is required' },
         { status: 400 }
       );
     }
 
-    // Create flowchain with steps and transitions
+    // Validate stages have steps
+    const stagesWithoutSteps = stages.filter(s => !s.steps || s.steps.length === 0);
+    if (stagesWithoutSteps.length > 0) {
+      return NextResponse.json(
+        { error: 'All stages must have at least one step' },
+        { status: 400 }
+      );
+    }
+
+    // ============ CREATE FLOWCHAIN ============
     const flowChain = await prisma.flowChain.create({
       data: {
         name,
         description,
         companyId,
-        steps: {
-          create: steps.map((step, index) => ({
-            name: step.name,
-            description: step.description,
-            roleId: step.roleId || null,
-          })),
+      },
+    });
+
+    console.log('✅ FlowChain created:', flowChain.id);
+
+    // ============ CREATE STAGES ============
+    const createdStages = [];
+    for (const stage of stages) {
+      const createdStage = await prisma.flowStage.create({
+        data: {
+          id: `stage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          chainId: flowChain.id,
+          name: stage.name,
+          order: stage.order,
+          executionMode: stage.executionMode || 'SEQUENTIAL',
         },
-      },
-      include: {
-        steps: true,
-      },
-    });
+      });
+      createdStages.push({ original: stage, created: createdStage });
+    }
 
-    // Now create transitions
-    // We need to map step names to their IDs
-    const stepNameToId = {};
-    flowChain.steps.forEach(step => {
-      const originalStep = steps.find(s => s.name === step.name);
-      if (originalStep) {
-        stepNameToId[step.name] = step.id;
+    console.log('✅ Created', createdStages.length, 'stages');
+
+    // ============ CREATE STEPS & ROLES ============
+    const stepIdMap = new Map(); // Map temp step IDs to real database IDs
+
+    for (const stageData of createdStages) {
+      const { original: originalStage, created: createdStage } = stageData;
+
+      for (const step of originalStage.steps) {
+        // Create step
+        const createdStep = await prisma.flowStep.create({
+          data: {
+            name: step.name,
+            description: step.description || null,
+            chainId: flowChain.id,
+            stageId: createdStage.id,
+            roleId: step.assignedRoles?.[0]?.roleId || null, // Legacy single role support
+            orderInStage: step.orderInStage,
+            approvalPolicy: step.approvalPolicy || 'ALL_MUST_APPROVE',
+          },
+        });
+
+        // Map temp step ID (from frontend) to real database ID
+        if (step.id) {
+          stepIdMap.set(step.id, createdStep.id);
+        }
+
+        // Create FlowStepRole entries for multi-role support
+        if (step.assignedRoles && step.assignedRoles.length > 0) {
+          const roleAssignments = step.assignedRoles.map(ar => ({
+            id: `step_role_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            stepId: createdStep.id,
+            roleId: ar.roleId,
+            required: ar.required !== undefined ? ar.required : true,
+          }));
+
+          await prisma.flowStepRole.createMany({
+            data: roleAssignments,
+          });
+
+          console.log(`✅ Step "${step.name}" assigned to ${roleAssignments.length} role(s)`);
+        }
       }
+    }
+
+    console.log('✅ Created steps with role assignments');
+
+    // ============ CREATE STEP TRANSITIONS ============
+    const stepTransitions = [];
+
+    for (const stageData of createdStages) {
+      const { original: originalStage } = stageData;
+
+      for (const step of originalStage.steps) {
+        if (step.transitions && step.transitions.length > 0) {
+          for (const transition of step.transitions) {
+            const fromStepId = stepIdMap.get(step.id);
+            const toStepId = stepIdMap.get(transition.toStepId);
+
+            if (fromStepId && toStepId) {
+              stepTransitions.push({
+                fromStepId,
+                toStepId,
+                condition: transition.condition || 'SUCCESS',
+                fromStageId: null, // Step-level transition
+                toStageId: null,
+              });
+            } else {
+              console.warn('⚠️ Could not resolve step IDs for transition:', {
+                from: step.id,
+                to: transition.toStepId,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (stepTransitions.length > 0) {
+      await prisma.flowTransition.createMany({
+        data: stepTransitions,
+      });
+      console.log('✅ Created', stepTransitions.length, 'step transitions');
+    }
+
+    // ============ CREATE STAGE TRANSITIONS ============
+    const stageTransitions = [];
+    const stageIdMap = new Map();
+    
+    createdStages.forEach(sd => {
+      stageIdMap.set(sd.original.id, sd.created.id);
     });
 
-    // Create transitions
-    const transitions = [];
-    for (const step of steps) {
-      if (step.transitions && step.transitions.length > 0) {
-        const fromStepId = stepNameToId[step.name];
-        
-        for (const transition of step.transitions) {
-          const toStepId = stepNameToId[transition.toStepName];
-          
-          if (fromStepId && toStepId) {
-            transitions.push({
-              fromStepId,
-              toStepId,
-              condition: transition.condition,
+    for (const stageData of createdStages) {
+      const { original: originalStage, created: createdStage } = stageData;
+
+      if (originalStage.transitions && originalStage.transitions.length > 0) {
+        for (const transition of originalStage.transitions) {
+          const toStageId = stageIdMap.get(transition.toStageId);
+
+          if (toStageId) {
+            stageTransitions.push({
+              id: `stage_trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              fromStageId: createdStage.id,
+              toStageId,
+              condition: transition.condition || 'all_approved',
             });
           }
         }
       }
     }
 
-    // Bulk create transitions
-    if (transitions.length > 0) {
-      await prisma.flowTransition.createMany({
-        data: transitions,
+    if (stageTransitions.length > 0) {
+      await prisma.stageTransition.createMany({
+        data: stageTransitions,
       });
+      console.log('✅ Created', stageTransitions.length, 'stage transitions');
     }
 
-    // Fetch the complete flowchain with transitions
+    // ============ FETCH COMPLETE FLOWCHAIN ============
     const completeFlowChain = await prisma.flowChain.findUnique({
       where: { id: flowChain.id },
       include: {
+        stages: {
+          orderBy: { order: 'asc' },
+          include: {
+            steps: {
+              orderBy: { orderInStage: 'asc' },
+              include: {
+                role: true,
+                assignedRoles: {
+                  include: {
+                    role: true,
+                  },
+                },
+                nextSteps: {
+                  include: {
+                    toStep: true,
+                  },
+                },
+              },
+            },
+            transitionsFrom: {
+              include: {
+                toStage: true,
+              },
+            },
+          },
+        },
         steps: {
           include: {
             role: true,
-            nextSteps: {
+            assignedRoles: {
               include: {
-                toStep: true,
+                role: true,
               },
             },
           },
@@ -108,17 +232,22 @@ export async function POST(request) {
       },
     });
 
+    console.log('✅ FlowChain creation complete');
+
+
     return NextResponse.json({
       success: true,
       data: completeFlowChain,
+      message: 'Advanced workflow created successfully',
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating flowchain:', error);
+    console.error('❌ Error creating flowchain:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );
