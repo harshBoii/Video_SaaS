@@ -357,7 +357,9 @@ model FlowChain {
   steps         FlowStep[]
   stages        FlowStage[]
   campaignFlows CampaignFlow[]
+
   assetWorkflowStates AssetWorkflowState[]
+  
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -366,6 +368,7 @@ model FlowChain {
   @@index([companyId, name])
   @@index([updatedAt(sort: Desc)])
 }
+
 model FlowStage {
   id          String @id
   chainId     String

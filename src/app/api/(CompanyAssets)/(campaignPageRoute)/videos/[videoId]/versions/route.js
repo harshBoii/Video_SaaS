@@ -291,7 +291,7 @@ export async function POST(request, { params }) {
         fileType: fileType || 'video/mp4',
         totalParts,
         uploadedParts: [], // Json array (empty initially)
-        status: 'IN_PROGRESS', // Match schema default
+        status: 'UNDER_REVIEW', // Match schema default
         uploadedBy: decoded.id,
         expiresAt, // Required field
         metadata: JSON.stringify({ // Convert to string if schema expects String
