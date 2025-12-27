@@ -215,7 +215,7 @@ model Role {
   description String? @db.Text
   companyId   String
   parentId    String?
-  
+  isDeleted   Boolean @default(false)
   // Relations
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   parent              Role?                @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
